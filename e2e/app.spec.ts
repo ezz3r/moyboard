@@ -346,3 +346,14 @@ test("settings: quick panel mode can be switched to hold", async ({ page }) => {
   await page.getByRole("radio", { name: /Hold: shown/ }).check();
   await expect(page.getByRole("radio", { name: /Hold: shown/ })).toBeChecked();
 });
+
+test("settings: start with Windows and minimized start can be switched", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  const autostart = page.getByRole("checkbox", { name: "Start moyboard with Windows" });
+  const minimized = page.getByRole("checkbox", { name: "Start minimized to tray" });
+  await expect(autostart).not.toBeChecked();
+  await autostart.check();
+  await expect(autostart).toBeChecked();
+  await minimized.check();
+  await expect(minimized).toBeChecked();
+});

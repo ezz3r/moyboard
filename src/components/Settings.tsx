@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, pickFolder } from "../api";
-import type { AppSettings, OutputState, QuickPanelSettings } from "../types";
+import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings } from "../types";
 import { HotkeyField } from "./HotkeyField";
 
 type Props = {
@@ -137,6 +137,8 @@ export function Settings({ libraryDir, output, onLibraryChanged, onOutputChanged
       <CloseToTray onError={onError} />
 
       <QuickPanelSection onError={onError} />
+
+      <StartupSection onError={onError} />
 
     </div>
   );
@@ -276,6 +278,59 @@ function QuickPanelSection({ onError }: { onError: (m: string) => void }) {
           </fieldset>
         </>
       )}
+    </section>
+  );
+}
+
+/** Start with Windows writes the Run entry. The state is read from the system each time Settings opens. */
+function StartupSection({ onError }: { onError: (m: string) => void }) {
+  const [state, setState] = useState<AutostartSettings | null>(null);
+  useEffect(() => {
+    api
+      .getAutostart()
+      .then(setState)
+      .catch((e) => onError(String(e)));
+  }, [onError]);
+
+  // Applies one change; on failure the switch goes back to what the system reports.
+  const change = async (patch: Partial<AutostartSettings>) => {
+    if (!state) return;
+    const next = { ...state, ...patch };
+    setState(next);
+    try {
+      if (patch.enabled !== undefined) await api.setAutostart(patch.enabled);
+      if (patch.startMinimized !== undefined) await api.setStartMinimized(patch.startMinimized);
+    } catch (e) {
+      onError(String(e));
+      api
+        .getAutostart()
+        .then(setState)
+        .catch((err) => onError(String(err)));
+    }
+  };
+
+  return (
+    <section className="settings-section">
+      <h2>Startup</h2>
+      <label className="inline-field">
+        <input
+          type="checkbox"
+          checked={state?.enabled ?? false}
+          disabled={!state}
+          onChange={(e) => void change({ enabled: e.target.checked })}
+        />
+        <span>Start moyboard with Windows</span>
+      </label>
+      <label className="inline-field">
+        <input
+          type="checkbox"
+          checked={state?.startMinimized ?? false}
+          disabled={!state}
+          onChange={(e) => void change({ startMinimized: e.target.checked })}
+        />
+        <span>Start minimized to tray</span>
+      </label>
+      <p className="hint">Minimized start only applies when moyboard starts with Windows.</p>
     </section>
   );
 }

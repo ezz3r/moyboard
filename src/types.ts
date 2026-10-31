@@ -48,6 +48,12 @@ export type QuickPanelSettings = {
   mode: "hold" | "toggle";
 };
 
+export type AutostartSettings = {
+  /** The system's Run entry, read when Settings opens. */
+  enabled: boolean;
+  startMinimized: boolean;
+};
+
 export type AppSettings = {
   autoRescan: boolean;
   closeToTray: boolean;

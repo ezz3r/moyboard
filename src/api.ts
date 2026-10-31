@@ -5,6 +5,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppSettings,
+  AutostartSettings,
   CategoryMeta,
   QuickPanelSettings,
   ImportReport,
@@ -58,6 +59,9 @@ export const api = {
   getSettings: () => call<AppSettings>("get_settings"),
   setAutoRescan: (enabled: boolean) => call<void>("set_auto_rescan", { enabled }),
   setCloseToTray: (enabled: boolean) => call<void>("set_close_to_tray", { enabled }),
+  getAutostart: () => call<AutostartSettings>("get_autostart"),
+  setAutostart: (enabled: boolean) => call<void>("set_autostart", { enabled }),
+  setStartMinimized: (enabled: boolean) => call<void>("set_start_minimized", { enabled }),
   getQuickPanelSettings: () => call<QuickPanelSettings>("get_quick_panel_settings"),
   setQuickPanelSettings: (hotkey: string | null, mode: "hold" | "toggle") =>
     call<void>("set_quick_panel_settings", { hotkey, mode }),

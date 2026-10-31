@@ -47,6 +47,8 @@ export function subscribePlayback(handler: (p: Playing[]) => void): () => void {
 }
 let autoRescan = true;
 let closeToTray = true;
+let autostart = false;
+let startMinimized = false;
 let quickHotkey: string | null = null;
 let quickMode: "hold" | "toggle" = "toggle";
 let library = dir;
@@ -152,6 +154,14 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       return undefined as T;
     case "show_quick_panel":
     case "hide_quick_panel":
+      return undefined as T;
+    case "get_autostart":
+      return { enabled: autostart, startMinimized } as T;
+    case "set_autostart":
+      autostart = args.enabled as boolean;
+      return undefined as T;
+    case "set_start_minimized":
+      startMinimized = args.enabled as boolean;
       return undefined as T;
     case "set_close_to_tray":
       closeToTray = args.enabled as boolean;

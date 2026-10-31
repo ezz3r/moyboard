@@ -86,6 +86,8 @@ pub struct Config {
     pub quick_panel_hotkey: Option<String>,
     /// `"hold"` (shown while the key is down) or `"toggle"`. `None` means toggle.
     pub quick_panel_mode: Option<String>,
+    /// Start hidden in the tray when launched with Windows (`--minimized`). `None` means off.
+    pub start_minimized: Option<bool>,
     /// Last position and size of the Quick Panel. `None` means the default.
     pub quick_panel_geometry: Option<PanelGeometry>,
     pub sounds: BTreeMap<String, SoundMeta>,

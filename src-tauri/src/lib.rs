@@ -16,6 +16,7 @@ use std::time::Duration;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use tauri_plugin_autostart::ManagerExt;
 use watch::Watch;
 
 type AudioState = Mutex<Engine>;
@@ -39,6 +40,14 @@ pub struct OutputState {
     monitor_volume: f32,
     /// Saved preview choice; `None` means system default.
     preview_selected: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutostartSettings {
+    /// Read from the system, not from the config: the Run entry can be removed elsewhere.
+    enabled: bool,
+    start_minimized: bool,
 }
 
 #[derive(Serialize)]
@@ -490,6 +499,25 @@ fn get_settings(store: tauri::State<Store>) -> AppSettings {
 }
 
 #[tauri::command]
+fn get_autostart(app: AppHandle, store: tauri::State<Store>) -> Result<AutostartSettings, String> {
+    Ok(AutostartSettings {
+        enabled: app.autolaunch().is_enabled().map_err(|e| e.to_string())?,
+        start_minimized: store.get(|cfg| cfg.start_minimized.unwrap_or(false)),
+    })
+}
+
+#[tauri::command]
+fn set_autostart(enabled: bool, app: AppHandle) -> Result<(), String> {
+    let manager = app.autolaunch();
+    if enabled { manager.enable() } else { manager.disable() }.map_err(|e| format!("start with Windows: {e}"))
+}
+
+#[tauri::command]
+fn set_start_minimized(enabled: bool, store: tauri::State<Store>) -> Result<(), String> {
+    store.update(|cfg| cfg.start_minimized = Some(enabled))
+}
+
+#[tauri::command]
 fn set_close_to_tray(enabled: bool, store: tauri::State<Store>) -> Result<(), String> {
     store.update(|cfg| cfg.close_to_tray = Some(enabled))
 }
@@ -779,6 +807,10 @@ pub fn run() {
     tauri::Builder::default()
         // First, so a second launch hands its arguments here and exits.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -808,6 +840,10 @@ pub fn run() {
                 eprintln!("moyboard: saved preview device unavailable: {e}");
             }
 
+            // The Run entry always passes --minimized; the setting decides whether it is honoured.
+            let hide_at_start = std::env::args().any(|a| a == "--minimized")
+                && store.get(|cfg| cfg.start_minimized.unwrap_or(false));
+
             app.manage(store);
             app.manage(Mutex::new(engine));
             app.manage(Hotkeys::default());
@@ -823,6 +859,9 @@ pub fn run() {
 
             if let Err(e) = build_tray(app.handle()) {
                 eprintln!("moyboard: tray icon: {e}");
+            }
+            if !hide_at_start {
+                show_main(app.handle());
             }
             // Hidden until its hotkey (or the tray) shows it. Shown without taking focus.
             let panel = WebviewWindowBuilder::new(app, QUICK_LABEL, WebviewUrl::App("index.html".into()))
@@ -888,6 +927,9 @@ pub fn run() {
             get_settings,
             set_auto_rescan,
             set_close_to_tray,
+            get_autostart,
+            set_autostart,
+            set_start_minimized,
             get_quick_panel_settings,
             set_quick_panel_settings,
             show_quick_panel,
