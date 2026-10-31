@@ -1,0 +1,79 @@
+// Browser-preview backend. Dev builds only, loaded by api.ts when not inside Tauri.
+import type { SoundMeta } from "./types";
+
+const dir = "C:\\Users\\you\\Music\\moyboard";
+const files: Record<string, SoundMeta> = {
+  "airhorn.mp3": { ...blank(), category: "Memes", emoji: "📣" },
+  "rimshot.wav": { ...blank(), category: "Memes", emoji: "🥁" },
+  "crowd-cheer.ogg": { ...blank(), category: "Reactions", emoji: "👏", volume: 1.4 },
+  "sad-trombone.flac": { ...blank(), category: "Reactions", emoji: "🎺" },
+  "frog.mp3": { ...blank(), category: "Animals", emoji: "🐸" },
+  "duck.wav": { ...blank(), emoji: "🦆" },
+  "intro theme.mp3": { ...blank(), category: "Music" },
+  "bruh.wav": { ...blank(), category: "Memes" },
+};
+const missing: Record<string, SoundMeta> = {
+  "old-alarm.wav": { ...blank(), category: "Alerts", emoji: "🚨" },
+};
+let output: string | null = null;
+let library = dir;
+
+function blank(): SoundMeta {
+  return { category: null, emoji: null, volume: null, hotkey: null, trimStart: null, trimEnd: null };
+}
+
+const devices = [
+  { name: "Speakers (Realtek Audio)", isDefault: true },
+  { name: "CABLE Input (VB-Audio Virtual Cable)", isDefault: false },
+  { name: "Headphones (USB Audio)", isDefault: false },
+];
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export async function call<T>(cmd: string, args: Record<string, unknown> = {}): Promise<T> {
+  await delay(40);
+  const name = args.fileName as string | undefined;
+  switch (cmd) {
+    case "get_library_dir":
+      return library as T;
+    case "set_library_dir":
+      library = args.path as string;
+      return library as T;
+    case "rescan":
+      return [
+        ...Object.entries(files).map(([fileName, meta]) => ({ fileName, missing: false, meta })),
+        ...Object.entries(missing).map(([fileName, meta]) => ({ fileName, missing: true, meta })),
+      ] as T;
+    case "import_files": {
+      const paths = args.paths as string[];
+      const imported = paths.map((p) => p.split(/[\\/]/).pop() as string);
+      imported.forEach((f) => (files[f] = blank()));
+      return { imported, errors: [] } as T;
+    }
+    case "set_sound_meta":
+      files[name!] = args.meta as SoundMeta;
+      return undefined as T;
+    case "rename_sound": {
+      const to = args.newName as string;
+      files[to] = files[name!];
+      delete files[name!];
+      return to as T;
+    }
+    case "forget_sound":
+      delete missing[name!];
+      return undefined as T;
+    case "list_output_devices":
+      return { devices, selected: output } as T;
+    case "set_output_device":
+      output = (args.name as string | null) ?? null;
+      return undefined as T;
+    case "play_sound":
+      if (!files[name!]) throw new Error(`file missing: ${name}`);
+      return undefined as T;
+    case "stop_all":
+    case "set_master_volume":
+      return undefined as T;
+    default:
+      throw new Error(`unknown command: ${cmd}`);
+  }
+}

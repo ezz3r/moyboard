@@ -5,6 +5,7 @@ mod library;
 use audio::{DeviceInfo, Engine};
 use config::{Config, SoundMeta, Store};
 use serde::Serialize;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::Manager;
@@ -104,6 +105,38 @@ fn import_files(paths: Vec<String>, store: tauri::State<Store>) -> Result<Import
     Ok(report)
 }
 
+/// Renames the file on disk and moves its metadata to the new name.
+#[tauri::command]
+fn rename_sound(file_name: String, new_name: String, store: tauri::State<Store>) -> Result<String, String> {
+    library::check_file_name(&file_name)?;
+    library::check_file_name(&new_name)?;
+    if !library::is_supported(Path::new(&new_name)) {
+        return Err(format!("unsupported format: {new_name}"));
+    }
+    let dir = current_dir(&store)?;
+    let from = dir.join(&file_name);
+    let to = dir.join(&new_name);
+    // A case-only rename on Windows matches the same file, so compare canonical paths.
+    let same_file = fs::canonicalize(&from).ok() == fs::canonicalize(&to).ok();
+    if to.exists() && !same_file {
+        return Err(format!("a sound named {new_name} already exists"));
+    }
+    fs::rename(&from, &to).map_err(|e| format!("rename {file_name}: {e}"))?;
+    store.update(|cfg| {
+        if let Some(meta) = cfg.sounds.remove(&file_name) {
+            cfg.sounds.insert(new_name.clone(), meta);
+        }
+    })?;
+    Ok(new_name)
+}
+
+/// Drops the metadata of a sound whose file is gone.
+#[tauri::command]
+fn forget_sound(file_name: String, store: tauri::State<Store>) -> Result<(), String> {
+    store.update(|cfg| cfg.sounds.remove(&file_name))?;
+    Ok(())
+}
+
 #[tauri::command]
 fn set_sound_meta(file_name: String, meta: SoundMeta, store: tauri::State<Store>) -> Result<(), String> {
     library::check_file_name(&file_name)?;
@@ -157,6 +190,7 @@ fn set_master_volume(volume: f32, engine: tauri::State<AudioState>) -> Result<()
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             let store = Store::load(dir.join("moyboard.json"))
@@ -179,6 +213,8 @@ pub fn run() {
             rescan,
             import_files,
             set_sound_meta,
+            rename_sound,
+            forget_sound,
             list_output_devices,
             set_output_device,
             play_sound,

@@ -9,7 +9,6 @@ use std::sync::Mutex;
 #[serde(rename_all = "camelCase", default)]
 pub struct SoundMeta {
     pub category: Option<String>,
-    pub display_name: Option<String>,
     pub emoji: Option<String>,
     pub volume: Option<f32>,
     pub hotkey: Option<String>,
@@ -77,10 +76,10 @@ mod tests {
         let mut cfg = Config::default();
         cfg.sounds.insert(
             "a.mp3".into(),
-            SoundMeta { display_name: Some("Air horn".into()), volume: Some(0.8), ..Default::default() },
+            SoundMeta { emoji: Some("📣".into()), volume: Some(0.8), ..Default::default() },
         );
         let text = serde_json::to_string(&cfg).unwrap();
-        assert!(text.contains("displayName"));
+        assert!(text.contains("emoji"));
         let back: Config = serde_json::from_str(&text).unwrap();
         assert_eq!(back.sounds["a.mp3"], cfg.sounds["a.mp3"]);
     }

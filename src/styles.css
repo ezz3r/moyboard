@@ -1,0 +1,643 @@
+/*
+ * Design direction: a broadcast cue board. Dark green-graphite ground, warm paper
+ * text, one signal colour (amber) that means "live". No shadows, no gradients,
+ * radii kept small. Bricolage Grotesque for everything; weight and width carry hierarchy.
+ */
+:root {
+  --ground: #121614;
+  --surface: #1a201d;
+  --raised: #232b27;
+  --line: #2c3631;
+  --ink: #e9e4d6;
+  --ink-2: #9aa59d;
+  --signal: #f2a93b;
+  --signal-ink: #1a1206;
+  --alarm: #e0664f;
+
+  --radius: 4px;
+  --space: 12px;
+  --font: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif;
+
+  color-scheme: dark;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--ground);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Shell ---------- */
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-right: 8px;
+}
+
+.top-field select,
+.field input,
+.field select,
+.select-wide {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+.device select {
+  width: 280px;
+  max-width: 34vw;
+}
+
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+}
+
+.top-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.rail {
+  width: 184px;
+  flex: none;
+  border-right: 1px solid var(--line);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.rail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  text-align: left;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.rail-item:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.rail-item[aria-current="true"] {
+  color: var(--ink);
+  background: var(--raised);
+  font-weight: 650;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--ink-2);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--signal-ink);
+  font-weight: 650;
+}
+
+.btn-primary:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.btn-quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--ink-2);
+}
+
+.btn-quiet:hover:not(:disabled),
+.btn-quiet[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: transparent;
+}
+
+/* ---------- Pads ---------- */
+
+.pads {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+}
+
+.pad {
+  position: relative;
+  aspect-ratio: 1.08 / 1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color 120ms ease;
+}
+
+.pad:hover {
+  border-color: var(--ink-2);
+}
+
+.pad-play {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  cursor: pointer;
+  border-radius: var(--radius);
+  position: relative;
+  overflow: hidden;
+  transition: transform 80ms ease;
+}
+
+.pad-play:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+.pad-play:active {
+  transform: scale(0.98);
+}
+
+.pad-play:disabled {
+  cursor: default;
+}
+
+.pad-glyph {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.pad-name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  width: 100%;
+}
+
+.pad-note {
+  position: absolute;
+  left: 12px;
+  bottom: 30px;
+  font-size: 12px;
+  color: var(--alarm);
+}
+
+/* Playing: the whole pad flips to signal colour for a moment, then back. */
+.pad.is-playing {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--signal-ink);
+}
+
+.pad.is-missing {
+  border-style: dashed;
+  border-color: var(--alarm);
+  background: transparent;
+}
+
+.pad.is-missing .pad-name {
+  color: var(--ink-2);
+}
+
+.pad-action {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.pad:hover .pad-action,
+.pad:focus-within .pad-action,
+.pad.is-missing .pad-action {
+  opacity: 1;
+}
+
+.pad.is-missing .pad-action {
+  color: var(--alarm);
+  width: auto;
+  font-size: 12px;
+  font-weight: 650;
+  top: auto;
+  bottom: 8px;
+  right: 10px;
+}
+
+.pad-action:hover {
+  color: var(--ink);
+  background: var(--raised);
+}
+
+.empty {
+  color: var(--ink-2);
+  max-width: 44ch;
+  margin: 48px auto;
+  text-align: center;
+}
+
+/* ---------- Drop overlay ---------- */
+
+.drop {
+  position: absolute;
+  inset: 8px;
+  border: 2px dashed var(--signal);
+  border-radius: var(--radius);
+  background: rgb(18 22 20 / 0.85);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: fade 150ms ease-out;
+  z-index: 5;
+}
+
+.drop p {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--signal);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Sheet (edit dialog) ---------- */
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(10 12 11 / 0.6);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+  padding: 16px;
+}
+
+.sheet {
+  width: min(440px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sheet h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field > span,
+.field legend {
+  color: var(--ink-2);
+  font-size: 13px;
+  padding: 0;
+}
+
+.field input[type="text"],
+.field input:not([type]),
+.field input[type="range"] {
+  width: 100%;
+}
+
+.field input[type="range"] {
+  accent-color: var(--signal);
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.name-row input {
+  flex: 1;
+}
+
+.ext {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.value {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+}
+
+.emoji-cell {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  background: var(--ground);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 0;
+}
+
+.emoji-cell:hover {
+  border-color: var(--line);
+}
+
+.emoji-cell[aria-pressed="true"] {
+  border-color: var(--signal);
+  background: var(--raised);
+}
+
+.emoji-none {
+  grid-column: span 2;
+  aspect-ratio: auto;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.error {
+  margin: 0;
+  color: var(--alarm);
+}
+
+/* ---------- Settings ---------- */
+
+.settings {
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-section {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.settings-section:first-child {
+  padding-top: 0;
+}
+
+.settings-section h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.hint {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.path {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.select-wide {
+  width: 100%;
+  max-width: 480px;
+}
+
+.cat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-row input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+.cat-row .count {
+  width: 28px;
+  text-align: right;
+}
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100% - 32px));
+  background: var(--raised);
+  border: 1px solid var(--alarm);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  color: var(--ink);
+  cursor: pointer;
+  z-index: 20;
+  white-space: pre-line;
+}
+
+/* ---------- Narrow windows ---------- */
+
+@media (max-width: 720px) {
+  .top {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 12px;
+  }
+
+  .device select {
+    width: 200px;
+  }
+
+  .top-actions {
+    margin-left: 0;
+  }
+
+  .body {
+    flex-direction: column;
+  }
+
+  .rail {
+    width: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 8px;
+  }
+
+  .rail-item {
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
