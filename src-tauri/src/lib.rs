@@ -1,10 +1,27 @@
+mod audio;
 mod config;
 mod library;
 
+use audio::{DeviceInfo, Engine};
 use config::{Config, SoundMeta, Store};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use tauri::Manager;
+
+type AudioState = Mutex<Engine>;
+
+fn lock(engine: &AudioState) -> Result<std::sync::MutexGuard<'_, Engine>, String> {
+    engine.lock().map_err(|_| "audio engine poisoned".to_string())
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OutputState {
+    devices: Vec<DeviceInfo>,
+    /// Saved choice; `None` means system default.
+    selected: Option<String>,
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -94,6 +111,49 @@ fn set_sound_meta(file_name: String, meta: SoundMeta, store: tauri::State<Store>
     Ok(())
 }
 
+#[tauri::command]
+fn list_output_devices(store: tauri::State<Store>) -> Result<OutputState, String> {
+    Ok(OutputState {
+        devices: Engine::list_devices()?,
+        selected: store.get(|cfg| cfg.output_device.clone()),
+    })
+}
+
+/// Opens the device first, then saves the choice, so a failed open changes nothing.
+#[tauri::command]
+fn set_output_device(
+    name: Option<String>,
+    store: tauri::State<Store>,
+    engine: tauri::State<AudioState>,
+) -> Result<(), String> {
+    lock(&engine)?.set_device(name.as_deref())?;
+    store.update(|cfg| cfg.output_device = name)
+}
+
+#[tauri::command]
+fn play_sound(file_name: String, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
+    library::check_file_name(&file_name)?;
+    let dir = current_dir(&store)?;
+    let path = dir.join(&file_name);
+    if !path.is_file() {
+        return Err(format!("file missing: {file_name}"));
+    }
+    let meta = store.get(|cfg| cfg.sounds.get(&file_name).cloned()).unwrap_or_default();
+    lock(&engine)?.play(&path, &meta)
+}
+
+#[tauri::command]
+fn stop_all(engine: tauri::State<AudioState>) -> Result<(), String> {
+    lock(&engine)?.stop_all();
+    Ok(())
+}
+
+#[tauri::command]
+fn set_master_volume(volume: f32, engine: tauri::State<AudioState>) -> Result<(), String> {
+    lock(&engine)?.set_master(volume);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -101,7 +161,16 @@ pub fn run() {
             let dir = app.path().app_data_dir()?;
             let store = Store::load(dir.join("moyboard.json"))
                 .map_err(Box::<dyn std::error::Error>::from)?;
+
+            let mut engine = Engine::new();
+            if let Some(name) = store.get(|cfg| cfg.output_device.clone()) {
+                // A saved device that is gone (unplugged, renamed) falls back to default on play.
+                if let Err(e) = engine.set_device(Some(&name)) {
+                    eprintln!("moyboard: saved output device unavailable: {e}");
+                }
+            }
             app.manage(store);
+            app.manage(Mutex::new(engine));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -109,7 +178,12 @@ pub fn run() {
             set_library_dir,
             rescan,
             import_files,
-            set_sound_meta
+            set_sound_meta,
+            list_output_devices,
+            set_output_device,
+            play_sound,
+            stop_all,
+            set_master_volume
         ])
         .run(tauri::generate_context!())
         .expect("error while running moyboard");

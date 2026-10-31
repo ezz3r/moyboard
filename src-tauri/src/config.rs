@@ -21,6 +21,8 @@ pub struct SoundMeta {
 #[serde(rename_all = "camelCase", default)]
 pub struct Config {
     pub library_dir: Option<PathBuf>,
+    /// `None` means system default output.
+    pub output_device: Option<String>,
     pub sounds: BTreeMap<String, SoundMeta>,
 }
 
