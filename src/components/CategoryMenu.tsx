@@ -25,17 +25,26 @@ type Props = {
 export function CategoryMenu({ value, options, onChange, onNew, onEdit, editable = true }: Props) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLDivElement>(null);
   const listId = useId();
   const current = options.find((o) => o.key === value) ?? options[0];
 
-  // Close on a click outside, or Escape from anywhere in the page.
+  // Opening moves focus to the current entry, so the keyboard starts where the user is.
+  useEffect(() => {
+    if (open) list.current?.querySelector<HTMLButtonElement>("[aria-selected=true]")?.focus();
+  }, [open]);
+
+  // Close on a click outside, or Escape from anywhere; Escape returns focus to the trigger.
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
       if (!wrap.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      trigger.current?.focus();
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -58,6 +67,7 @@ export function CategoryMenu({ value, options, onChange, onNew, onEdit, editable
   return (
     <div className="cat-menu" ref={wrap}>
       <button
+        ref={trigger}
         type="button"
         className="cat-trigger"
         aria-haspopup="listbox"
@@ -88,7 +98,14 @@ export function CategoryMenu({ value, options, onChange, onNew, onEdit, editable
       )}
 
       {open && (
-        <div id={listId} className="cat-pop" role="listbox" aria-label="Categories" onKeyDown={onListKey}>
+        <div
+          ref={list}
+          id={listId}
+          className="cat-pop"
+          role="listbox"
+          aria-label="Categories"
+          onKeyDown={onListKey}
+        >
           {options.map((o) => {
             const selected = o.key === value;
             return (

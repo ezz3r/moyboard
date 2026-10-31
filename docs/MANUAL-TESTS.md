@@ -47,7 +47,8 @@ Setup: install VB-CABLE (or another virtual cable), then run
 - [ ] Rename renames the file in Explorer.
 - [ ] Rename to an existing name shows an error; no file is overwritten.
 - [ ] Case-only rename (`Airhorn` → `airhorn`) works.
-- [ ] Sidebar → category name: renaming updates the rail and every pad in it; sounds keep their category.
+- [ ] Top bar category menu: renaming a category (Edit button → sidebar) updates the menu and every pad in it; sounds keep their category.
+- [ ] Edit button is disabled for All and Uncategorized; for a category it opens that category's editor.
 - [ ] Deleting a category moves its sounds to Uncategorized; the files stay in Explorer.
 - [ ] Emoji picker opens offline; searching "fire" finds 🔥 and shows the emoji with the system font.
 
@@ -72,6 +73,40 @@ Setup: install VB-CABLE (or another virtual cable), then run
 ## Colours and icons (v2)
 - [ ] Category colour shows as a stripe on every pad in that category; a sound colour overrides it.
 - [ ] Clearing a sound colour returns it to the category colour.
+
+## Multi-instance and pads (v3)
+- [ ] Pressing Play on a playing sound starts another copy; the pad shows `x2`, and the count drops as each copy ends.
+- [ ] The centre Stop appears while a sound plays and stops every copy of it; other sounds keep playing.
+- [ ] Play, Preview and Stop buttons on a pad appear on hover and when the tile has keyboard focus.
+
+## Tray and window (v3)
+- [ ] Closing the main window hides it; sounds and hotkeys keep working; the tray icon stays.
+- [ ] Tray left-click toggles the main window.
+- [ ] Tray menu: Open moyboard, Quick Panel, Stop all sounds, Quit. Quit exits the process (check Task Manager).
+- [ ] Settings → Close to tray off: closing the window quits the app.
+- [ ] Launching moyboard a second time focuses the running window; no second tray icon appears.
+
+## Quick Panel (v3)
+- [ ] Hotkey (Toggle mode) shows the panel; the same hotkey hides it; Esc hides it.
+- [ ] Hold mode: the panel shows while the key is down and hides on release. Auto-repeat does not flicker it.
+- [ ] Showing the panel does not take focus from the game or app in front (type in Notepad before and after).
+- [ ] Works over a windowed or borderless game. Note the result for exclusive fullscreen (expected: not visible).
+- [ ] Typing in the panel's search box: check whether keys reach it while the panel is shown without focus. If not, record it as a known limit.
+- [ ] Drag the grip to move; drag the corner to resize; the window stays within its minimum size.
+- [ ] Move and resize, hide, show again: the position and size are restored.
+- [ ] Move the panel onto a second monitor, unplug that monitor, show the panel: it appears on the remaining screen.
+- [ ] Settings → Reset panel position and size: the panel is back at its default size, centred.
+- [ ] Play a sound from the panel: the same sound shows as playing in the main window, and vice versa.
+- [ ] Add or rename a sound in the main window while the panel is hidden: the panel shows the change when opened.
+- [ ] A Quick Panel hotkey that a sound already uses is refused with a message; the previous hotkey is kept.
+
+## Startup (v3)
+- [ ] Settings → Start moyboard with Windows on: a `moyboard` entry appears under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
+- [ ] Settings → Start with Windows off: the entry is removed.
+- [ ] Remove the Run entry in Regedit, reopen Settings: the checkbox shows off.
+- [ ] Start minimized on, start with Windows on, sign out and in: no window appears; tray icon is present.
+- [ ] Start minimized off, start with Windows on: the window appears at sign-in.
+- [ ] Launching by hand (no `--minimized`) always shows the window, even with minimized start on.
 
 ## Windows-only items not run in WSL
 The v2 playback routing (preview device, Stop per sound, playback events),

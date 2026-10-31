@@ -357,3 +357,22 @@ test("settings: start with Windows and minimized start can be switched", async (
   await minimized.check();
   await expect(minimized).toBeChecked();
 });
+
+test("quick panel: no horizontal scroll at 360 px", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 420 });
+  await page.goto("/?view=quick");
+  await expect(page.locator(".quick .pad").first()).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("category menu: arrow keys move through entries, Escape closes", async ({ page }) => {
+  await menuTrigger(page).click();
+  const options = page.getByRole("option");
+  await expect(options.first()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(options.nth(1)).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(menuTrigger(page)).toBeFocused();
+});
