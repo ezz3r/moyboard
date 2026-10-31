@@ -489,6 +489,8 @@ button.group-title:hover {
 /* Button row: Stop, Play and Preview. Shown on hover or keyboard focus; Stop also while playing.
    Hidden, not removed, so the slots keep their place and nothing moves. */
 .pad-row {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 4px;
 }
@@ -548,16 +550,19 @@ button.group-title:hover {
   border-color: var(--signal);
 }
 
-/* Info row: icon and name side by side, one line. Selects the sound. */
+/* Info row: the name, at the bottom of the tile. Selects the sound. */
 .pad-select {
   all: unset;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
   width: 100%;
-  padding: 2px 2px 20px;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 4px 22px;
   cursor: pointer;
   border-radius: var(--radius);
 }
@@ -577,17 +582,17 @@ button.group-title:hover {
   outline-offset: 2px;
 }
 
+/* Icon as the tile background: behind the buttons and the name, faint, not clickable. */
 .pad-glyph {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   display: grid;
   place-items: center;
-  flex: none;
-  width: calc(var(--pad-min, 128px) * 0.22);
-  height: calc(var(--pad-min, 128px) * 0.22);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--ground);
-  font-size: calc(var(--pad-min, 128px) * 0.13);
+  font-size: calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.5);
   line-height: 1;
+  opacity: 0.28;
+  pointer-events: none;
 }
 
 /* One line. A long name fades out at the end instead of wrapping. The full name is in the tooltip. */
@@ -628,6 +633,7 @@ button.group-title:hover {
 /* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
 .pad-key {
   position: absolute;
+  z-index: 1;
   left: 8px;
   bottom: 4px;
   max-width: 45%;
@@ -648,6 +654,7 @@ button.group-title:hover {
 /* Bottom-right: instance count and equalizer. */
 .pad-status {
   position: absolute;
+  z-index: 1;
   bottom: 4px;
   right: 8px;
   display: flex;

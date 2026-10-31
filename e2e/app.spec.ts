@@ -90,12 +90,15 @@ test("pad buttons show on hover or keyboard focus, and are large enough to hit",
   await expect(play).toBeVisible();
 });
 
-test("pad: icon and name sit side by side on one row", async ({ page }) => {
+test("pad: icon is the background, name sits inside the tile", async ({ page }) => {
   const frog = pad(page, "frog");
+  const tile = await frog.boundingBox();
   const glyph = await frog.locator(".pad-glyph").boundingBox();
   const name = await frog.locator(".pad-name").boundingBox();
-  expect(glyph!.x + glyph!.width).toBeLessThanOrEqual(name!.x);
-  expect(Math.abs(glyph!.y + glyph!.height / 2 - (name!.y + name!.height / 2))).toBeLessThan(10);
+  expect(glyph!.x).toBeGreaterThanOrEqual(tile!.x);
+  expect(glyph!.x + glyph!.width).toBeLessThanOrEqual(tile!.x + tile!.width + 1);
+  expect(name!.x).toBeGreaterThanOrEqual(tile!.x);
+  expect(name!.y + name!.height).toBeLessThanOrEqual(tile!.y + tile!.height);
 });
 
 test("preview button is separate and turns into a stop button", async ({ page }) => {

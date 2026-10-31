@@ -51,6 +51,10 @@ export function Pad({
 
   return (
     <div className={classes} style={accent ? ({ "--accent": accent } as CSSProperties) : undefined}>
+      <span className="pad-glyph" aria-hidden="true">
+        {missing ? "!" : (entry.meta.emoji ?? "♪")}
+      </span>
+
       {missing ? null : (
         <div className="pad-row">
           <button
@@ -98,9 +102,6 @@ export function Pad({
         aria-current={selected ? "true" : undefined}
         aria-label={missing ? `${name}, file missing` : `Select ${name}`}
       >
-        <span className="pad-glyph" aria-hidden="true">
-          {missing ? "!" : (entry.meta.emoji ?? "♪")}
-        </span>
         <span className="pad-name">{name}</span>
       </button>
 
