@@ -30,6 +30,13 @@ export type OutputState = {
   selected: string | null;
   monitorSelected: string | null;
   monitorVolume: number;
+  previewSelected: string | null;
+};
+
+/** One voice that is sounding. A sound can have a main voice, a preview voice, or both. */
+export type Playing = {
+  fileName: string;
+  previewing: boolean;
 };
 
 export type AppSettings = {

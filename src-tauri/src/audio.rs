@@ -15,7 +15,18 @@ pub struct DeviceInfo {
     pub is_default: bool,
 }
 
+/// One sound that is playing, as sent to the UI. `previewing` is true for the headphone preview.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Playing {
+    pub file_name: String,
+    pub previewing: bool,
+}
+
 struct Voice {
+    file: String,
+    /// Plays on the preview device only, never on the main or monitor output.
+    preview: bool,
     main: Player,
     monitor: Option<Player>,
     /// Per-sound volume, before master volume is applied.
@@ -31,6 +42,9 @@ pub struct Engine {
     monitor_sink: Option<MixerDeviceSink>,
     monitor_name: Option<String>,
     monitor_gain: f32,
+    preview_sink: Option<MixerDeviceSink>,
+    /// Name of the preview device; `None` means system default.
+    preview_name: Option<String>,
     voices: Vec<Voice>,
     master: f32,
 }
@@ -43,6 +57,8 @@ impl Engine {
             monitor_sink: None,
             monitor_name: None,
             monitor_gain: 1.0,
+            preview_sink: None,
+            preview_name: None,
             voices: Vec::new(),
             master: 1.0,
         }
@@ -57,14 +73,14 @@ impl Engine {
             .collect())
     }
 
-    /// `None` selects the system default output. Stops current playback.
+    /// `None` selects the system default output. Stops main playback, keeps previews.
     pub fn set_device(&mut self, name: Option<&str>) -> Result<(), String> {
         let chosen = name.map(str::to_string).or_else(default_device_name);
         if chosen.is_some() && chosen == self.monitor_name {
             return Err("primary and monitor output must differ".to_string());
         }
         let sink = open(name)?;
-        self.voices.clear();
+        self.voices.retain(|v| v.preview);
         self.sink = Some(sink);
         self.primary_name = name.map(str::to_string);
         Ok(())
@@ -94,12 +110,24 @@ impl Engine {
         }
     }
 
+    /// `None` means the system default output. The stream opens now only for a named
+    /// device, so a bad name is reported at once; the default opens on first preview.
+    pub fn set_preview(&mut self, name: Option<&str>) -> Result<(), String> {
+        self.preview_sink = match name {
+            Some(_) => Some(open(name)?),
+            None => None,
+        };
+        self.preview_name = name.map(str::to_string);
+        Ok(())
+    }
+
     pub fn set_monitor_gain(&mut self, gain: f32) {
         self.monitor_gain = gain.clamp(0.0, 2.0);
         self.apply_volumes();
     }
 
-    pub fn play(&mut self, path: &Path, meta: &SoundMeta) -> Result<(), String> {
+    /// Plays `path` on the main output (and the monitor, if on).
+    pub fn play(&mut self, file: &str, path: &Path, meta: &SoundMeta) -> Result<(), String> {
         let (start, take) = trim_window(meta.trim_start, meta.trim_end)?;
         let volume = meta.volume.unwrap_or(1.0).clamp(0.0, 2.0);
 
@@ -114,9 +142,62 @@ impl Engine {
         };
 
         self.voices.retain(|v| !v.main.empty());
-        self.voices.push(Voice { main, monitor, volume });
+        self.voices.push(Voice { file: file.to_string(), preview: false, main, monitor, volume });
         self.apply_volumes();
         Ok(())
+    }
+
+    /// Plays `path` on the preview device only. Refuses if that device is the main output,
+    /// so a preview can never reach the virtual cable.
+    pub fn play_preview(&mut self, file: &str, path: &Path, meta: &SoundMeta) -> Result<(), String> {
+        let (start, take) = trim_window(meta.trim_start, meta.trim_end)?;
+        let volume = meta.volume.unwrap_or(1.0).clamp(0.0, 2.0);
+
+        let primary = self.primary_name.clone().or_else(default_device_name);
+        let preview = self.preview_name.clone().or_else(default_device_name);
+        if preview.is_some() && preview == primary {
+            return Err("preview and main output are the same device. Pick a preview device in Settings".into());
+        }
+        if self.preview_sink.is_none() {
+            self.preview_sink = Some(open(None)?);
+        }
+        let sink = self.preview_sink.as_ref().ok_or("no preview stream")?;
+        let player = spawn(sink, path, start, take)?;
+
+        self.voices.retain(|v| !v.main.empty());
+        self.voices.push(Voice { file: file.to_string(), preview: true, main: player, monitor: None, volume });
+        self.apply_volumes();
+        Ok(())
+    }
+
+    /// Stops the voices for `file`. `preview`: `Some(true)` only the preview,
+    /// `Some(false)` only the main output, `None` both.
+    pub fn stop_file(&mut self, file: &str, preview: Option<bool>) {
+        self.voices.retain(|v| {
+            if v.file != file || preview.is_some_and(|p| p != v.preview) {
+                return true;
+            }
+            v.main.stop();
+            if let Some(m) = &v.monitor {
+                m.stop();
+            }
+            false
+        });
+    }
+
+    pub fn is_playing(&self, file: &str, preview: Option<bool>) -> bool {
+        self.voices
+            .iter()
+            .any(|v| v.file == file && preview.is_none_or(|p| p == v.preview) && !v.main.empty())
+    }
+
+    /// Drops finished voices and lists the rest.
+    pub fn playing(&mut self) -> Vec<Playing> {
+        self.voices.retain(|v| !v.main.empty());
+        self.voices
+            .iter()
+            .map(|v| Playing { file_name: v.file.clone(), previewing: v.preview })
+            .collect()
     }
 
     pub fn stop_all(&mut self) {
@@ -135,6 +216,10 @@ impl Engine {
 
     fn apply_volumes(&self) {
         for v in &self.voices {
+            if v.preview {
+                v.main.set_volume(v.volume);
+                continue;
+            }
             v.main.set_volume(v.volume * self.master);
             if let Some(m) = &v.monitor {
                 m.set_volume(v.volume * self.master * self.monitor_gain);

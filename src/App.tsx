@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, onFileDrop, onLibraryChanged } from "./api";
+import { api, onFileDrop, onLibraryChanged, onPlayback } from "./api";
 import { SoundPanel } from "./components/SoundPanel";
 import { Pad } from "./components/Pad";
 import { Settings as SettingsView } from "./components/Settings";
-import { emptyMeta, type OutputState, type SoundEntry } from "./types";
+import { emptyMeta, type OutputState, type Playing, type SoundEntry } from "./types";
 import { RefreshCw, Settings, Square } from "lucide-react";
 
 const ALL = "all";
@@ -19,12 +19,13 @@ export default function App() {
     selected: null,
     monitorSelected: null,
     monitorVolume: 1,
+    previewSelected: null,
   });
   const [master, setMaster] = useState(1);
   const [view, setView] = useState<"pads" | "settings">("pads");
   const [filter, setFilter] = useState(ALL);
   const [selection, setSelection] = useState<Selection>(null);
-  const [playing, setPlaying] = useState<string | null>(null);
+  const [playing, setPlaying] = useState<Playing[]>([]);
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "info" | "error" } | null>(null);
 
@@ -127,14 +128,22 @@ export default function App() {
     };
   }, [importPaths]);
 
-  async function play(fileName: string) {
-    setPlaying(fileName);
-    window.setTimeout(() => setPlaying((p) => (p === fileName ? null : p)), 350);
-    try {
-      await api.playSound(fileName);
-    } catch (e) {
-      notify(String(e));
-    }
+  useEffect(() => {
+    let alive = true;
+    let unsubscribe: (() => void) | undefined;
+    void onPlayback(setPlaying).then((off) => {
+      if (alive) unsubscribe = off;
+      else off();
+    });
+    return () => {
+      alive = false;
+      unsubscribe?.();
+    };
+  }, []);
+
+  /** Runs a playback command. The list of sounding voices arrives by event, so no state is set here. */
+  function act(run: () => Promise<void>) {
+    void run().catch((e) => notify(String(e)));
   }
 
   async function forget(fileName: string) {
@@ -258,9 +267,14 @@ export default function App() {
                 <Pad
                   key={s.fileName}
                   entry={s}
-                  playing={playing === s.fileName}
-                  onPlay={() => void play(s.fileName)}
-                  onEdit={() => setSelection({ type: "sound", id: s.fileName })}
+                  selected={selection?.type === "sound" && selection.id === s.fileName}
+                  playing={playing.some((p) => p.fileName === s.fileName && !p.previewing)}
+                  previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
+                  onSelect={() => setSelection({ type: "sound", id: s.fileName })}
+                  onPlay={() => act(() => api.playSound(s.fileName))}
+                  onStop={() => act(() => api.stopSound(s.fileName, false))}
+                  onPreview={() => act(() => api.previewSound(s.fileName))}
+                  onStopPreview={() => act(() => api.stopSound(s.fileName, true))}
                   onForget={() => void forget(s.fileName)}
                 />
               ))}

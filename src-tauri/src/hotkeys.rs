@@ -54,7 +54,7 @@ pub fn sync(app: &AppHandle) -> Result<(), String> {
     }
 }
 
-/// Plugin handler. Plays the sound bound to a pressed shortcut.
+/// Plugin handler. Plays or stops the sound bound to a pressed shortcut.
 pub fn on_event(app: &AppHandle, shortcut: &Shortcut, event: tauri_plugin_global_shortcut::ShortcutEvent) {
     if event.state != ShortcutState::Pressed {
         return;
@@ -63,7 +63,7 @@ pub fn on_event(app: &AppHandle, shortcut: &Shortcut, event: tauri_plugin_global
         Some(f) => f.clone(),
         None => return,
     };
-    if let Err(e) = crate::play_file(app, &file) {
+    if let Err(e) = crate::toggle_file(app, &file) {
         eprintln!("moyboard: hotkey play failed: {e}");
     }
 }

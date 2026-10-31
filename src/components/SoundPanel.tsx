@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { EMOJIS } from "../emojis";
 import { HotkeyField } from "./HotkeyField";
@@ -28,14 +28,28 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
   const [volume, setVolume] = useState(entry.meta.volume ?? 1);
   const listId = `cats-${entry.fileName}`;
 
-  async function save(patch: Partial<SoundMeta>) {
-    try {
-      await api.setSoundMeta(entry.fileName, { ...entry.meta, ...patch });
-      onChanged();
-    } catch (e) {
-      onError(String(e));
-      throw e;
-    }
+  // Saves are queued and built on the latest known meta, so two quick edits
+  // (emoji, then category) do not overwrite each other before the rescan lands.
+  const latest = useRef(entry.meta);
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => {
+    latest.current = entry.meta;
+  }, [entry.meta]);
+
+  function save(patch: Partial<SoundMeta>): Promise<void> {
+    const run = queue.current.then(async () => {
+      const next = { ...latest.current, ...patch };
+      try {
+        await api.setSoundMeta(entry.fileName, next);
+        latest.current = next;
+        onChanged();
+      } catch (e) {
+        onError(String(e));
+        throw e;
+      }
+    });
+    queue.current = run.catch(() => {});
+    return run;
   }
 
   // Volume is a slider: save 250 ms after the last move.

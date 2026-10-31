@@ -9,7 +9,7 @@ const sidebar = (page: Page) => page.getByRole("complementary", { name: "Selecte
 /** Selects a pad (its edit button) and waits for the sidebar to show it. */
 async function openEdit(page: Page, name: string) {
   await pad(page, name).hover();
-  await page.getByRole("button", { name: `Edit ${name}` }).click();
+  await page.getByRole("button", { name: `Select ${name}` }).click();
   await expect(sidebar(page).getByRole("textbox", { name: "Name" })).toHaveValue(name);
 }
 
@@ -40,9 +40,29 @@ test("missing file is flagged and can be forgotten", async ({ page }) => {
   await expect(railCount(page, "All")).toHaveText("8");
 });
 
-test("clicking a pad plays it without error", async ({ page }) => {
+test("clicking the pad body selects it and does not play", async ({ page }) => {
+  await pad(page, "airhorn").getByRole("button", { name: "Select airhorn" }).click();
+  await expect(pad(page, "airhorn")).toHaveClass(/is-selected/);
+  await expect(pad(page, "airhorn").getByRole("button", { name: "Play airhorn" })).toBeVisible();
+  await expect(pad(page, "airhorn")).not.toHaveClass(/is-playing/);
+});
+
+test("play button turns into stop while the sound plays", async ({ page }) => {
   await pad(page, "airhorn").getByRole("button", { name: "Play airhorn" }).click();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(pad(page, "airhorn").getByRole("button", { name: "Stop airhorn" })).toBeVisible();
+  // The mock ends the sound after 3 s; the button flips back on its own.
+  await expect(pad(page, "airhorn").getByRole("button", { name: "Play airhorn" })).toBeVisible({ timeout: 6000 });
+});
+
+test("preview button is separate and turns into a stop button", async ({ page }) => {
+  await pad(page, "rimshot").getByRole("button", { name: "Preview rimshot on headphones" }).click();
+  await expect(pad(page, "rimshot").getByRole("button", { name: "Stop preview of rimshot" })).toBeVisible();
+  await expect(pad(page, "rimshot").getByRole("button", { name: "Play rimshot" })).toBeVisible();
+});
+
+test("preview output setting is offered in settings", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { name: "Preview output" })).toBeVisible();
 });
 
 test("sidebar shows a placeholder until a sound is selected", async ({ page }) => {

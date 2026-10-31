@@ -114,6 +114,34 @@ export function Settings({
         </label>
       </section>
 
+      <section className="settings-section">
+        <h2>Preview output</h2>
+        <p className="hint">
+          Headphone previews play here and never on the output above. Must differ from it.
+        </p>
+        <select
+          className="select-wide"
+          value={output.previewSelected ?? ""}
+          onChange={async (e) => {
+            const name = e.target.value || null;
+            try {
+              await api.setPreviewDevice(name);
+              onOutputChanged({ previewSelected: name });
+            } catch (err) {
+              onError(String(err));
+            }
+          }}
+        >
+          <option value="">System default</option>
+          {output.devices.map((d) => (
+            <option key={d.name} value={d.name}>
+              {d.name}
+              {d.isDefault ? " (default)" : ""}
+            </option>
+          ))}
+        </select>
+      </section>
+
       <AutoRescan onError={onError} onChanged={onCategoriesChanged} />
 
       <CategoryList

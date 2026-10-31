@@ -18,6 +18,33 @@ const missing: Record<string, SoundMeta> = {
 let output: string | null = null;
 let monitor: string | null = null;
 let monitorVolume = 1;
+let preview: string | null = null;
+// Playback is simulated: a sound plays for 3 s, then ends on its own.
+type Playing = { fileName: string; previewing: boolean };
+let playing: Playing[] = [];
+const listeners = new Set<(p: Playing[]) => void>();
+
+function setPlaying(next: Playing[]) {
+  playing = next;
+  listeners.forEach((l) => l(next));
+}
+
+function start(fileName: string, previewing: boolean) {
+  setPlaying([...playing, { fileName, previewing }]);
+  setTimeout(() => {
+    const i = playing.findIndex((p) => p.fileName === fileName && p.previewing === previewing);
+    if (i >= 0) setPlaying(playing.filter((_, j) => j !== i));
+  }, 3000);
+}
+
+/** Each call gets its own entry, so the same handler can subscribe twice (StrictMode does). */
+export function subscribePlayback(handler: (p: Playing[]) => void): () => void {
+  const entry = (p: Playing[]) => handler(p);
+  listeners.add(entry);
+  return () => {
+    listeners.delete(entry);
+  };
+}
 let autoRescan = true;
 let library = dir;
 
@@ -66,7 +93,10 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       delete missing[name!];
       return undefined as T;
     case "list_output_devices":
-      return { devices, selected: output, monitorSelected: monitor, monitorVolume } as T;
+      return { devices, selected: output, monitorSelected: monitor, monitorVolume, previewSelected: preview } as T;
+    case "set_preview_device":
+      preview = (args.name as string | null) ?? null;
+      return undefined as T;
     case "set_monitor_device":
       monitor = (args.name as string | null) ?? null;
       return undefined as T;
@@ -83,7 +113,13 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       return undefined as T;
     case "play_sound":
       if (!files[name!]) throw new Error(`file missing: ${name}`);
+      start(name!, false);
       return undefined as T;
+    case "stop_sound": {
+      const previewOnly = args.previewOnly as boolean | undefined;
+      setPlaying(playing.filter((p) => p.fileName !== name || (previewOnly !== undefined && p.previewing !== previewOnly)));
+      return undefined as T;
+    }
     case "waveform": {
       if (!files[name!]) throw new Error(`file missing: ${name}`);
       const perSec = 100;
@@ -98,6 +134,10 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
     }
     case "preview_sound":
       if (!files[name!]) throw new Error(`file missing: ${name}`);
+      start(name!, true);
+      return undefined as T;
+    case "preview_region":
+      if (!files[name!]) throw new Error(`file missing: ${name}`);
       return undefined as T;
     case "export_trim": {
       const stem = name!.replace(/\.[^.]+$/, "");
@@ -106,6 +146,8 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       return out as T;
     }
     case "stop_all":
+      setPlaying([]);
+      return undefined as T;
     case "set_master_volume":
       return undefined as T;
     default:

@@ -4,17 +4,22 @@ mod watch;
 
 use moyboard_core::{config, library, wav};
 
-use audio::{DeviceInfo, Engine};
+use audio::{DeviceInfo, Engine, Playing};
 use config::{Config, SoundMeta, Store};
 use hotkeys::Hotkeys;
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager};
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager};
 use watch::Watch;
 
 type AudioState = Mutex<Engine>;
+
+/// Last playback list sent to the UI. `publish` sends only when this changes.
+#[derive(Default)]
+struct LastPlayback(Mutex<Vec<Playing>>);
 
 fn lock(engine: &AudioState) -> Result<std::sync::MutexGuard<'_, Engine>, String> {
     engine.lock().map_err(|_| "audio engine poisoned".to_string())
@@ -29,6 +34,8 @@ pub struct OutputState {
     /// `None` means monitoring is off.
     monitor_selected: Option<String>,
     monitor_volume: f32,
+    /// Saved preview choice; `None` means system default.
+    preview_selected: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -76,12 +83,45 @@ fn sound_path(store: &Store, file_name: &str) -> Result<PathBuf, String> {
     Ok(path)
 }
 
-/// Plays a sound with its saved metadata. Used by the hotkey handler.
+/// Plays a sound with its saved metadata on the main output.
 pub fn play_file(app: &AppHandle, file_name: &str) -> Result<(), String> {
     let store = app.state::<Store>();
     let path = sound_path(&store, file_name)?;
     let meta = store.get(|cfg| cfg.sounds.get(file_name).cloned()).unwrap_or_default();
-    lock(&app.state::<AudioState>())?.play(&path, &meta)
+    let audio = app.state::<AudioState>();
+    let result = lock(&audio)?.play(file_name, &path, &meta);
+    publish(app);
+    result
+}
+
+/// Plays the sound, or stops it if it is already playing. Used by the hotkey handler.
+pub fn toggle_file(app: &AppHandle, file_name: &str) -> Result<(), String> {
+    let audio = app.state::<AudioState>();
+    let playing = lock(&audio)?.is_playing(file_name, Some(false));
+    if playing {
+        lock(&audio)?.stop_file(file_name, Some(false));
+        publish(app);
+        Ok(())
+    } else {
+        play_file(app, file_name)
+    }
+}
+
+/// Sends the playback list to the UI if it changed since the last send.
+pub fn publish(app: &AppHandle) {
+    let audio = app.state::<AudioState>();
+    let now = match lock(&audio) {
+        Ok(mut engine) => engine.playing(),
+        Err(_) => return,
+    };
+    let last = app.state::<LastPlayback>();
+    let mut prev = last.0.lock().unwrap();
+    if *prev == now {
+        return;
+    }
+    *prev = now.clone();
+    drop(prev);
+    let _ = app.emit("playback", now);
 }
 
 /// Starts, stops, or moves the folder watcher to match the current settings.
@@ -220,14 +260,27 @@ fn set_sound_meta(
 
 #[tauri::command]
 fn list_output_devices(store: tauri::State<Store>) -> Result<OutputState, String> {
-    let (selected, monitor_selected, monitor_volume) =
-        store.get(|cfg| (cfg.output_device.clone(), cfg.monitor_device.clone(), cfg.monitor_volume));
+    let (selected, monitor_selected, monitor_volume, preview_selected) = store.get(|cfg| {
+        (cfg.output_device.clone(), cfg.monitor_device.clone(), cfg.monitor_volume, cfg.preview_device.clone())
+    });
     Ok(OutputState {
         devices: Engine::list_devices()?,
         selected,
         monitor_selected,
         monitor_volume: monitor_volume.unwrap_or(1.0),
+        preview_selected,
     })
+}
+
+/// Same order as `set_output_device`: open first, save only on success.
+#[tauri::command]
+fn set_preview_device(
+    name: Option<String>,
+    store: tauri::State<Store>,
+    engine: tauri::State<AudioState>,
+) -> Result<(), String> {
+    lock(&engine)?.set_preview(name.as_deref())?;
+    store.update(|cfg| cfg.preview_device = name)
 }
 
 /// Opens the device first, then saves the choice, so a failed open changes nothing.
@@ -273,20 +326,48 @@ fn play_sound(file_name: String, app: AppHandle) -> Result<(), String> {
     play_file(&app, &file_name)
 }
 
-/// Plays a region using trim values from the editor, which are not saved yet.
+/// Stops one sound. `preview_only` limits it to the headphone preview, or to the main output.
 #[tauri::command]
-fn preview_sound(
+fn stop_sound(
+    file_name: String,
+    preview_only: Option<bool>,
+    app: AppHandle,
+    engine: tauri::State<AudioState>,
+) -> Result<(), String> {
+    lock(&engine)?.stop_file(&file_name, preview_only);
+    publish(&app);
+    Ok(())
+}
+
+/// Auditions a sound on the preview device only, with its saved trim.
+#[tauri::command]
+fn preview_sound(file_name: String, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
+    let path = sound_path(&store, &file_name)?;
+    let meta = store.get(|cfg| cfg.sounds.get(&file_name).cloned()).unwrap_or_default();
+    let audio = app.state::<AudioState>();
+    let result = lock(&audio)?.play_preview(&file_name, &path, &meta);
+    publish(&app);
+    result
+}
+
+/// Plays a region using trim values from the editor, which are not saved yet.
+/// Goes to the preview device, like the headphone button.
+#[tauri::command]
+fn preview_region(
     file_name: String,
     trim_start: Option<f64>,
     trim_end: Option<f64>,
+    app: AppHandle,
     store: tauri::State<Store>,
-    engine: tauri::State<AudioState>,
 ) -> Result<(), String> {
     let path = sound_path(&store, &file_name)?;
     let mut meta = store.get(|cfg| cfg.sounds.get(&file_name).cloned()).unwrap_or_default();
     meta.trim_start = trim_start;
     meta.trim_end = trim_end;
-    lock(&engine)?.play(&path, &meta)
+    let audio = app.state::<AudioState>();
+    let result = lock(&audio)?.play_preview(&file_name, &path, &meta);
+    publish(&app);
+    result
 }
 
 #[derive(Serialize)]
@@ -389,11 +470,23 @@ pub fn run() {
                 }
             }
             engine.set_monitor_gain(mon_gain.unwrap_or(1.0));
+            let preview = store.get(|cfg| cfg.preview_device.clone());
+            if let Err(e) = engine.set_preview(preview.as_deref()) {
+                eprintln!("moyboard: saved preview device unavailable: {e}");
+            }
 
             app.manage(store);
             app.manage(Mutex::new(engine));
             app.manage(Hotkeys::default());
             app.manage(Watch::default());
+            app.manage(LastPlayback::default());
+
+            // Sounds end on their own, so the UI learns about it by polling. Cheap: one lock.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::from_millis(150));
+                publish(&handle);
+            });
 
             if let Err(e) = hotkeys::sync(app.handle()) {
                 eprintln!("moyboard: hotkeys: {e}");
@@ -415,10 +508,13 @@ pub fn run() {
             set_output_device,
             set_monitor_device,
             set_monitor_volume,
+            set_preview_device,
             get_settings,
             set_auto_rescan,
             play_sound,
+            stop_sound,
             preview_sound,
+            preview_region,
             waveform,
             export_trim,
             stop_all,

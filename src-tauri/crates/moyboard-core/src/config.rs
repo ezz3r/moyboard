@@ -25,6 +25,8 @@ pub struct Config {
     /// `None` means monitoring is off.
     pub monitor_device: Option<String>,
     pub monitor_volume: Option<f32>,
+    /// `None` means system default output. Used for headphone previews.
+    pub preview_device: Option<String>,
     /// `None` means on.
     pub auto_rescan: Option<bool>,
     pub sounds: BTreeMap<String, SoundMeta>,

@@ -121,7 +121,7 @@ export function TrimEditor({ entry, onSaved, onExported }: Props) {
               type="button"
               className="btn"
               disabled={busy || !wave}
-              onClick={() => run("", () => api.previewSound(entry.fileName, trimStart, trimEnd))}
+              onClick={() => run("", () => api.previewRegion(entry.fileName, trimStart, trimEnd))}
             >
               Play region
             </button>

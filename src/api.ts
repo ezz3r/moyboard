@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { AppSettings, ImportReport, OutputState, SoundEntry, SoundMeta, Waveform } from "./types";
+import type { AppSettings, ImportReport, OutputState, Playing, SoundEntry, SoundMeta, Waveform } from "./types";
 
 export const isTauri = "__TAURI_INTERNALS__" in window;
 
@@ -26,8 +26,13 @@ export const api = {
   listOutputDevices: () => call<OutputState>("list_output_devices"),
   setOutputDevice: (name: string | null) => call<void>("set_output_device", { name }),
   playSound: (fileName: string) => call<void>("play_sound", { fileName }),
-  previewSound: (fileName: string, trimStart: number | null, trimEnd: number | null) =>
-    call<void>("preview_sound", { fileName, trimStart, trimEnd }),
+  stopSound: (fileName: string, previewOnly?: boolean) => call<void>("stop_sound", { fileName, previewOnly }),
+  /** Headphone button: plays on the preview device only. */
+  previewSound: (fileName: string) => call<void>("preview_sound", { fileName }),
+  /** Trim editor: plays the region being edited on the preview device. */
+  previewRegion: (fileName: string, trimStart: number | null, trimEnd: number | null) =>
+    call<void>("preview_region", { fileName, trimStart, trimEnd }),
+  setPreviewDevice: (name: string | null) => call<void>("set_preview_device", { name }),
   waveform: (fileName: string) => call<Waveform>("waveform", { fileName }),
   exportTrim: (fileName: string, trimStart: number | null, trimEnd: number | null) =>
     call<string>("export_trim", { fileName, trimStart, trimEnd }),
@@ -55,6 +60,15 @@ export async function onFileDrop(handler: (ev: DropEvent) => void): Promise<() =
     if (p.type === "drop") handler({ type: "drop", paths: p.paths });
     else if (p.type === "enter" || p.type === "leave") handler({ type: p.type });
   });
+}
+
+/** Calls back with the full list of sounding voices whenever it changes. */
+export async function onPlayback(handler: (playing: Playing[]) => void): Promise<() => void> {
+  if (!isTauri) {
+    const mock = await import("./mock");
+    return mock.subscribePlayback(handler);
+  }
+  return listen<Playing[]>("playback", (e) => handler(e.payload));
 }
 
 /** Calls back when the library folder changes on disk. Returns an unsubscribe function. */
