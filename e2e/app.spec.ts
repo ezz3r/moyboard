@@ -1,8 +1,21 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const pad = (page: Page, name: string) => page.locator(".pad", { hasText: name });
-const railCount = (page: Page, label: string) =>
-  page.locator(".rail-item", { hasText: label }).locator(".count");
+const menuTrigger = (page: Page) => page.getByRole("button", { name: /^Category:/ });
+
+/** Opens the top-bar category menu and picks an entry by its label. */
+async function pickCategory(page: Page, label: string) {
+  await menuTrigger(page).click();
+  await page.getByRole("option").filter({ hasText: label }).click();
+}
+
+/** Reads the count shown next to a category in the open menu, then closes it. */
+async function categoryCount(page: Page, label: string) {
+  await menuTrigger(page).click();
+  const count = await page.getByRole("option").filter({ hasText: label }).locator(".count").textContent();
+  await page.keyboard.press("Escape");
+  return count;
+}
 
 const sidebar = (page: Page) => page.getByRole("complementary", { name: "Selected item" });
 
@@ -19,13 +32,13 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("lists sounds with category counts", async ({ page }) => {
-  await expect(railCount(page, "All")).toHaveText("9");
-  await expect(railCount(page, "Memes")).toHaveText("3");
+  expect(await categoryCount(page, "All")).toBe("9");
+  expect(await categoryCount(page, "Memes")).toBe("3");
   await expect(page.locator(".pad")).toHaveCount(9);
 });
 
 test("category filter narrows the pad grid", async ({ page }) => {
-  await page.locator(".rail-item", { hasText: "Memes" }).click();
+  await pickCategory(page, "Memes");
   await expect(page.locator(".pad")).toHaveCount(3);
   await expect(pad(page, "airhorn")).toBeVisible();
   await expect(pad(page, "frog")).toHaveCount(0);
@@ -37,7 +50,7 @@ test("missing file is flagged and can be forgotten", async ({ page }) => {
   await expect(missing.getByRole("button", { name: /old-alarm, file missing/ })).toBeDisabled();
   await missing.getByRole("button", { name: "Forget" }).click();
   await expect(missing).toHaveCount(0);
-  await expect(railCount(page, "All")).toHaveText("8");
+  expect(await categoryCount(page, "All")).toBe("8");
 });
 
 test("clicking the pad body selects it and does not play", async ({ page }) => {
@@ -115,7 +128,7 @@ test("emoji and category are saved from the sidebar", async ({ page }) => {
   await picker.getByRole("button", { name: /🎺/ }).first().click();
   await expect(picker).toHaveCount(0);
   await sidebar(page).getByLabel("Category", { exact: true }).selectOption({ label: "Reactions" });
-  await expect(railCount(page, "Reactions")).toHaveText("3");
+  expect(await categoryCount(page, "Reactions")).toBe("3");
   await expect(pad(page, "frog").locator(".pad-glyph")).toHaveText("🎺");
 });
 
@@ -170,24 +183,36 @@ test("trim saved on the sound is still there after reselecting", async ({ page }
 });
 
 test("category: rename from the sidebar keeps its sounds", async ({ page }) => {
-  await page.locator(".rail-item", { hasText: "Memes" }).click();
+  await pickCategory(page, "Memes");
+  await page.getByRole("button", { name: "Edit category" }).click();
   const name = sidebar(page).getByRole("textbox", { name: "Category name" });
   await expect(name).toHaveValue("Memes");
   await name.fill("Jokes");
   await name.press("Enter");
-  await expect(railCount(page, "Jokes")).toHaveText("3");
-  await expect(page.locator(".rail-item", { hasText: "Memes" })).toHaveCount(0);
+  expect(await categoryCount(page, "Jokes")).toBe("3");
+  await menuTrigger(page).click();
+  await expect(page.getByRole("option").filter({ hasText: "Memes" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await expect(pad(page, "airhorn")).toBeVisible();
 });
 
+test("category: the edit button opens the editor for the picked category", async ({ page }) => {
+  await expect(page.getByRole("button", { name: "Edit category" })).toBeDisabled();
+  await pickCategory(page, "Animals");
+  await page.getByRole("button", { name: "Edit category" }).click();
+  await expect(sidebar(page).getByRole("textbox", { name: "Category name" })).toHaveValue("Animals");
+});
+
 test("category: new category is created and selected", async ({ page }) => {
+  await menuTrigger(page).click();
   await page.getByRole("button", { name: "New category" }).click();
   await expect(sidebar(page).getByRole("textbox", { name: "Category name" })).toHaveValue("New category");
-  await expect(page.locator(".rail-item", { hasText: "New category" })).toBeVisible();
+  await expect(menuTrigger(page)).toHaveAccessibleName("Category: New category");
 });
 
 test("category colour is applied to its sounds", async ({ page }) => {
-  await page.locator(".rail-item", { hasText: "Memes" }).click();
+  await pickCategory(page, "Memes");
+  await page.getByRole("button", { name: "Edit category" }).click();
   await sidebar(page).getByRole("radio", { name: "Colour #5fb3c9" }).click();
   await expect(pad(page, "airhorn")).toHaveAttribute("style", /#5fb3c9/);
 });
@@ -250,7 +275,7 @@ test("delete: confirm, then the sound leaves the pads and the selection", async 
   await expect(dialog).toContainText("Delete airhorn?");
   await dialog.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(pad(page, "airhorn")).toHaveCount(0);
-  await expect(railCount(page, "All")).toHaveText("8");
+  expect(await categoryCount(page, "All")).toBe("8");
   await expect(sidebar(page)).toContainText("Select a sound or a category to edit it.");
 });
 

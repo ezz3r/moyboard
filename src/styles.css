@@ -156,59 +156,115 @@ select {
   font-size: 13px;
 }
 
-.rail {
-  width: 184px;
-  flex: none;
-  border-right: 1px solid var(--line);
-  padding: 12px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-}
-
-.rail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  background: none;
-  border: 0;
-  border-radius: var(--radius);
-  padding: 7px 10px;
-  text-align: left;
-  color: var(--ink-2);
-  cursor: pointer;
-}
-
-.rail-item:hover {
-  color: var(--ink);
-  background: var(--surface);
-}
-
-.rail-add {
+/* Category switcher in the top bar. The popover is a plain listbox; no shadow, just a border. */
+.cat-menu {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  background: none;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
-  padding: 6px 10px;
-  color: var(--ink-2);
-  cursor: pointer;
-  text-align: left;
+  gap: 4px;
 }
 
-.rail-add:hover {
+.cat-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 160px;
+  max-width: 220px;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cat-trigger:hover {
   border-color: var(--ink-2);
 }
 
-.rail-item[aria-current="true"] {
-  color: var(--ink);
+.cat-trigger:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+.cat-trigger-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.cat-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 240px;
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
+  padding: 4px;
   background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.cat-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cat-option:hover,
+.cat-option:focus-visible {
+  color: var(--ink);
+  background: var(--surface);
+  outline: none;
+}
+
+.cat-option[aria-selected="true"] {
+  color: var(--ink);
   font-weight: 650;
+}
+
+.cat-check {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  color: var(--signal);
+}
+
+.cat-option-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-new {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius) var(--radius);
+  color: var(--ink-2);
+}
+
+/* No colour: keep the space so labels line up, draw nothing. */
+.swatch-dot.is-empty {
+  visibility: hidden;
 }
 
 .count {
@@ -918,19 +974,6 @@ button.group-title:hover {
     border-top: 1px solid var(--line);
   }
 
-  .rail {
-    width: auto;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    padding: 8px;
-  }
-
-  .rail-item {
-    white-space: nowrap;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

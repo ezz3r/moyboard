@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { api, onFileDrop, onLibraryChanged, onPlayback } from "./api";
+import { CategoryMenu, type CategoryOption } from "./components/CategoryMenu";
 import { CategoryPanel } from "./components/CategoryPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { Pad } from "./components/Pad";
@@ -7,7 +8,7 @@ import { SoundPanel } from "./components/SoundPanel";
 import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry } from "./types";
 import { stemOf } from "./names";
-import { ChevronDown, Plus, RefreshCw, Search, Settings, Square, X } from "lucide-react";
+import { ChevronDown, RefreshCw, Search, Settings, Square, X } from "lucide-react";
 
 const ALL = "all";
 const NONE = "uncategorized";
@@ -152,6 +153,23 @@ export default function App() {
         ? sounds.filter((s) => !s.meta.category).length
         : sounds.filter((s) => s.meta.category === key).length;
 
+  const categoryOptions: CategoryOption[] = [
+    { key: ALL, label: "All", color: null, count: sounds.length },
+    { key: NONE, label: "Uncategorized", color: null, count: countFor(NONE) },
+    ...catList.map((c) => ({
+      key: c.id,
+      label: c.name,
+      color: categories[c.id]?.color ?? null,
+      count: countFor(c.id),
+    })),
+  ];
+
+  function editFilter() {
+    if (filter === ALL || filter === NONE) return;
+    setView("pads");
+    setSelection({ type: "category", id: filter });
+  }
+
   async function addCategory() {
     const taken = new Set(catList.map((c) => c.name.toLowerCase()));
     let name = "New category";
@@ -284,6 +302,18 @@ export default function App() {
       <header className="top">
         <span className="brand">moyboard</span>
 
+        <CategoryMenu
+          value={filter}
+          options={categoryOptions}
+          onChange={(key) => {
+            setFilter(key);
+            setView("pads");
+          }}
+          onNew={() => void addCategory()}
+          onEdit={editFilter}
+          editable={filter !== ALL && filter !== NONE}
+        />
+
         <label className="top-field device">
           <span className="sr-only">Output device</span>
           <select
@@ -372,32 +402,6 @@ export default function App() {
       </header>
 
       <div className="body">
-        <nav className="rail" aria-label="Categories">
-          {[
-            { key: ALL, label: "All" },
-            { key: NONE, label: "Uncategorized" },
-            ...catList.map((c) => ({ key: c.id, label: c.name })),
-          ].map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className="rail-item"
-              aria-current={view === "pads" && filter === item.key ? "true" : undefined}
-              onClick={() => {
-                setFilter(item.key);
-                setView("pads");
-                if (item.key !== ALL && item.key !== NONE) setSelection({ type: "category", id: item.key });
-              }}
-            >
-              <span>{item.label}</span>
-              <span className="count">{countFor(item.key)}</span>
-            </button>
-          ))}
-          <button type="button" className="rail-add" onClick={() => void addCategory()}>
-            <Plus size={14} aria-hidden="true" />
-            New category
-          </button>
-        </nav>
 
         <main className="main">
           {view === "settings" ? (
