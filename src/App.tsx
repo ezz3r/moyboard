@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, onFileDrop, onLibraryChanged } from "./api";
-import { EditSound } from "./components/EditSound";
-import { TrimEditor } from "./components/TrimEditor";
+import { SoundPanel } from "./components/SoundPanel";
 import { Pad } from "./components/Pad";
 import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type OutputState, type SoundEntry } from "./types";
@@ -9,6 +8,8 @@ import { RefreshCw, Settings, Square } from "lucide-react";
 
 const ALL = "all";
 const NONE = "uncategorized";
+
+type Selection = { type: "sound" | "category"; id: string } | null;
 
 export default function App() {
   const [sounds, setSounds] = useState<SoundEntry[]>([]);
@@ -22,8 +23,7 @@ export default function App() {
   const [master, setMaster] = useState(1);
   const [view, setView] = useState<"pads" | "settings">("pads");
   const [filter, setFilter] = useState(ALL);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [trimming, setTrimming] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Selection>(null);
   const [playing, setPlaying] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "info" | "error" } | null>(null);
@@ -146,8 +146,8 @@ export default function App() {
     }
   }
 
-  const editingEntry = sounds.find((s) => s.fileName === editing) ?? null;
-  const trimmingEntry = sounds.find((s) => s.fileName === trimming) ?? null;
+  const selectedSound =
+    selection?.type === "sound" ? (sounds.find((s) => s.fileName === selection.id) ?? null) : null;
 
   return (
     <div className="app">
@@ -260,51 +260,42 @@ export default function App() {
                   entry={s}
                   playing={playing === s.fileName}
                   onPlay={() => void play(s.fileName)}
-                  onEdit={() => setEditing(s.fileName)}
+                  onEdit={() => setSelection({ type: "sound", id: s.fileName })}
                   onForget={() => void forget(s.fileName)}
                 />
               ))}
             </div>
           )}
         </main>
+
+        <aside className="sidebar" aria-label="Selected item">
+          {selectedSound ? (
+            <SoundPanel
+              key={selectedSound.fileName}
+              entry={selectedSound}
+              sounds={sounds}
+              categories={categories}
+              onChanged={() => void refresh()}
+              onRenamed={(name) => {
+                setSelection({ type: "sound", id: name });
+                void refresh();
+              }}
+              onExported={(newName) => {
+                say(`Saved as ${newName}`);
+                void refresh();
+              }}
+              onError={notify}
+            />
+          ) : (
+            <p className="side-empty">Select a sound to edit it.</p>
+          )}
+        </aside>
       </div>
 
       {dragging && (
         <div className="drop" aria-hidden="true">
           <p>Drop to copy into moyboard</p>
         </div>
-      )}
-
-      {editingEntry && (
-        <EditSound
-          entry={editingEntry}
-          categories={categories}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            void refresh();
-          }}
-          onTrim={() => {
-            setTrimming(editing);
-            setEditing(null);
-          }}
-        />
-      )}
-
-      {trimmingEntry && (
-        <TrimEditor
-          entry={trimmingEntry}
-          onClose={() => setTrimming(null)}
-          onSaved={() => {
-            setTrimming(null);
-            void refresh();
-          }}
-          onExported={(newName) => {
-            setTrimming(null);
-            say(`Saved as ${newName}`);
-            void refresh();
-          }}
-        />
       )}
 
       {toast && (

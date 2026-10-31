@@ -1,6 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import { stemOf } from "../names";
 import type { SoundEntry, Waveform } from "../types";
 
 const MIN_LEN = 0.05; // seconds; start and end never cross
@@ -8,13 +7,12 @@ const EPS = 0.005;
 
 type Props = {
   entry: SoundEntry;
-  onClose: () => void;
   onSaved: () => void;
   onExported: (newName: string) => void;
 };
 
-export function TrimEditor({ entry, onClose, onSaved, onExported }: Props) {
-  const name = stemOf(entry.fileName);
+/** Inline in the sidebar. The parent keys it by file name so state resets per sound. */
+export function TrimEditor({ entry, onSaved, onExported }: Props) {
   const [wave, setWave] = useState<Waveform | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [start, setStart] = useState(entry.meta.trimStart ?? 0);
@@ -22,7 +20,6 @@ export function TrimEditor({ entry, onClose, onSaved, onExported }: Props) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const titleId = useId();
 
   const duration = wave?.durationSecs ?? 0;
   const endPos = end ?? duration;
@@ -41,12 +38,6 @@ export function TrimEditor({ entry, onClose, onSaved, onExported }: Props) {
       alive = false;
     };
   }, [entry.fileName]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const full = duration > 0 && start <= EPS && endPos >= duration - EPS;
   const trimStart = full ? null : start;
@@ -74,9 +65,8 @@ export function TrimEditor({ entry, onClose, onSaved, onExported }: Props) {
   }
 
   return (
-    <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="sheet sheet-wide" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <h2 id={titleId}>Trim {name}</h2>
+    <section className="trim" aria-label="Trim">
+        <h3>Trim</h3>
 
         {loadError && <p className="error" role="alert">{loadError}</p>}
         {!wave && !loadError && <p className="hint">Reading waveform…</p>}
@@ -188,8 +178,7 @@ export function TrimEditor({ entry, onClose, onSaved, onExported }: Props) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </section>
   );
 }
 

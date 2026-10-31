@@ -4,10 +4,13 @@ const pad = (page: Page, name: string) => page.locator(".pad", { hasText: name }
 const railCount = (page: Page, label: string) =>
   page.locator(".rail-item", { hasText: label }).locator(".count");
 
+const sidebar = (page: Page) => page.getByRole("complementary", { name: "Selected item" });
+
+/** Selects a pad (its edit button) and waits for the sidebar to show it. */
 async function openEdit(page: Page, name: string) {
   await pad(page, name).hover();
   await page.getByRole("button", { name: `Edit ${name}` }).click();
-  await expect(page.getByRole("dialog", { name: "Edit sound" })).toBeVisible();
+  await expect(sidebar(page).getByRole("textbox", { name: "Name" })).toHaveValue(name);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -42,41 +45,39 @@ test("clicking a pad plays it without error", async ({ page }) => {
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
+test("sidebar shows a placeholder until a sound is selected", async ({ page }) => {
+  await expect(sidebar(page)).toContainText("Select a sound to edit it.");
+  await openEdit(page, "airhorn");
+  await expect(sidebar(page)).not.toContainText("Select a sound to edit it.");
+});
+
 test("rename changes the file name shown on the pad", async ({ page }) => {
   await openEdit(page, "airhorn");
-  const input = page.getByRole("dialog").getByRole("textbox").first();
-  await input.fill("horn");
-  await page.getByRole("button", { name: "Save" }).click();
+  await sidebar(page).getByRole("textbox", { name: "Name" }).fill("horn");
+  await sidebar(page).getByRole("textbox", { name: "Name" }).press("Enter");
   await expect(pad(page, "horn")).toBeVisible();
   await expect(pad(page, "airhorn")).toHaveCount(0);
 });
 
 test("empty name is rejected", async ({ page }) => {
   await openEdit(page, "airhorn");
-  await page.getByRole("dialog").getByRole("textbox").first().fill("   ");
-  await page.getByRole("button", { name: "Save" }).click();
+  await sidebar(page).getByRole("textbox", { name: "Name" }).fill("   ");
+  await sidebar(page).getByRole("textbox", { name: "Name" }).press("Enter");
   await expect(page.getByRole("alert")).toHaveText("Name cannot be empty.");
 });
 
-test("emoji and category are saved from the edit sheet", async ({ page }) => {
+test("emoji and category are saved from the sidebar", async ({ page }) => {
   await openEdit(page, "frog");
-  await page.getByRole("button", { name: "🎺", exact: true }).click();
-  await page.getByRole("dialog").getByPlaceholder("None").fill("Reactions");
-  await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await sidebar(page).getByRole("button", { name: "🎺", exact: true }).click();
+  await sidebar(page).getByPlaceholder("None").fill("Reactions");
+  await sidebar(page).getByPlaceholder("None").blur();
   await expect(railCount(page, "Reactions")).toHaveText("3");
   await expect(pad(page, "frog").locator(".pad-glyph")).toHaveText("🎺");
 });
 
-test("Escape closes the edit sheet", async ({ page }) => {
-  await openEdit(page, "airhorn");
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-});
-
 test("hotkey is recorded, and Escape cancels recording", async ({ page }) => {
   await openEdit(page, "airhorn");
-  const hk = page.locator("button.hotkey");
+  const hk = sidebar(page).locator("button.hotkey");
   await hk.click();
   await page.keyboard.press("Control+Shift+Digit1");
   await expect(hk).toHaveText("Ctrl+Shift+Digit1");
@@ -87,7 +88,6 @@ test("hotkey is recorded, and Escape cancels recording", async ({ page }) => {
 
 test("trim: drag start marker, save as new file", async ({ page }) => {
   await openEdit(page, "airhorn");
-  await page.getByRole("button", { name: "Trim" }).click();
   const wave = page.locator(".wave");
   await expect(wave.locator("canvas")).toBeVisible();
   const box = (await wave.boundingBox())!;
@@ -98,13 +98,12 @@ test("trim: drag start marker, save as new file", async ({ page }) => {
   const startValue = Number(await page.getByLabel("Start, s").inputValue());
   expect(startValue).toBeGreaterThan(0.9);
   await page.getByRole("button", { name: "Save as new file" }).click();
-  await expect(page.getByRole("status")).toHaveText("Saved as airhorn (trimmed).wav");
+  await expect(page.locator(".toast")).toHaveText("Saved as airhorn (trimmed).wav");
   await expect(pad(page, "airhorn (trimmed)")).toBeVisible();
 });
 
 test("trim: end cannot cross start", async ({ page }) => {
   await openEdit(page, "airhorn");
-  await page.getByRole("button", { name: "Trim" }).click();
   await expect(page.locator(".wave canvas")).toBeVisible();
   await page.getByLabel("Start, s").fill("3");
   await page.getByLabel("Start, s").blur();
@@ -115,16 +114,15 @@ test("trim: end cannot cross start", async ({ page }) => {
   expect(end).toBeGreaterThan(start);
 });
 
-test("trim saved on the sound shows in the edit sheet", async ({ page }) => {
+test("trim saved on the sound is still there after reselecting", async ({ page }) => {
   await openEdit(page, "airhorn");
-  await page.getByRole("button", { name: "Trim" }).click();
   await expect(page.locator(".wave canvas")).toBeVisible();
   await page.getByLabel("Start, s").fill("0.5");
   await page.getByLabel("Start, s").blur();
   await page.getByRole("button", { name: "Save trim" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await openEdit(page, "frog");
   await openEdit(page, "airhorn");
-  await expect(page.getByRole("button", { name: "Trimmed. Edit trim" })).toBeVisible();
+  await expect(page.getByLabel("Start, s")).toHaveValue("0.50");
 });
 
 test("settings: renaming a category updates every sound in it", async ({ page }) => {

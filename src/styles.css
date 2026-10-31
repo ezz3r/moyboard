@@ -122,6 +122,32 @@ select {
   min-height: 0;
 }
 
+/* Always rendered: the selected sound's editor, or a placeholder. */
+.sidebar {
+  width: 300px;
+  flex: none;
+  border-left: 1px solid var(--line);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.side-empty {
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.warn {
+  margin: 0;
+  color: var(--signal);
+  font-size: 13px;
+}
+
 .rail {
   width: 184px;
   flex: none;
@@ -382,38 +408,6 @@ select {
   }
 }
 
-/* ---------- Sheet (edit dialog) ---------- */
-
-.scrim {
-  position: absolute;
-  inset: 0;
-  background: rgb(10 12 11 / 0.6);
-  display: grid;
-  place-items: center;
-  z-index: 10;
-  padding: 16px;
-}
-
-.sheet {
-  width: min(440px, 100%);
-  max-height: 100%;
-  overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.sheet h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
 .field {
   border: 0;
   padding: 0;
@@ -495,21 +489,23 @@ select {
   color: var(--ink-2);
 }
 
-.sheet-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 .error {
   margin: 0;
   color: var(--alarm);
 }
 
-/* ---------- Trim editor ---------- */
+/* ---------- Trim editor (sidebar) ---------- */
 
-.sheet-wide {
-  width: min(680px, 100%);
+.trim h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .sheet-split {
@@ -714,6 +710,18 @@ select {
 
   .body {
     flex-direction: column;
+  }
+
+  .main {
+    flex: 1 1 45%;
+    min-height: 0;
+  }
+
+  .sidebar {
+    flex: 0 1 55%;
+    width: auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
 
   .rail {
