@@ -1,11 +1,11 @@
 import { Headphones, Play, Square } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { SoundEntry } from "../types";
-import { stemOf } from "../names";
+import { hotkeyLabel, stemOf } from "../names";
 
 type Props = {
   entry: SoundEntry;
-  /** Category or per-sound colour, `#rrggbb`. Drawn as a stripe on the top edge. */
+  /** Category or per-sound colour, `#rrggbb`. Drawn as a stripe on the left edge. */
   accent: string | null;
   selected: boolean;
   /** Number of main-output instances still sounding. Play always starts one more. */
@@ -62,13 +62,32 @@ export function Pad({
         <span className="pad-glyph" aria-hidden="true">
           {missing ? "!" : entry.meta.emoji ?? "♪"}
         </span>
-        <span className="pad-name">{name}</span>
+        <span className="pad-name" title={name}>
+          {name}
+        </span>
         {missing && <span className="pad-note">File missing</span>}
       </button>
 
-      {instances > 1 && (
-        <span className="pad-count" aria-label={`${instances} playing`}>
-          x{instances}
+      {(playing || previewing) && (
+        <div className="pad-status">
+          {instances > 1 && (
+            <span className="pad-count" aria-label={`${instances} playing`}>
+              x{instances}
+            </span>
+          )}
+          {playing && (
+            <span className="pad-eq" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          )}
+        </div>
+      )}
+
+      {entry.meta.hotkey && !missing && (
+        <span className="pad-key" title={`Hotkey ${hotkeyLabel(entry.meta.hotkey)}`}>
+          {hotkeyLabel(entry.meta.hotkey)}
         </span>
       )}
 

@@ -405,6 +405,11 @@ button.group-title:hover {
 
 /* ---------- Pads ---------- */
 
+/*
+ * Pad anatomy: emoji box top-left, name below it (two lines max), a bottom strip for the
+ * hotkey badge (left) and the hover controls (right). The strip is always reserved, so the
+ * controls never move the name or the hotkey.
+ */
 .pads {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
@@ -424,14 +429,15 @@ button.group-title:hover {
   border-color: var(--ink-2);
 }
 
+/* Category or pad colour as a stripe on the left edge. */
 .pad::before {
   content: "";
   position: absolute;
   left: -1px;
-  right: -1px;
   top: -1px;
-  height: 4px;
-  border-radius: var(--radius) var(--radius) 0 0;
+  bottom: -1px;
+  width: 4px;
+  border-radius: var(--radius) 0 0 var(--radius);
   background: var(--accent, transparent);
 }
 
@@ -441,10 +447,9 @@ button.group-title:hover {
   box-sizing: border-box;
   position: absolute;
   inset: 0;
-  padding: 12px 12px 46px;
+  padding: 10px 10px 42px 14px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   align-items: flex-start;
   cursor: pointer;
   border-radius: var(--radius);
@@ -462,16 +467,26 @@ button.group-title:hover {
 
 .pad.is-selected {
   border-color: var(--signal);
-  outline: 1px solid var(--signal);
-  outline-offset: -2px;
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
 }
 
 .pad-glyph {
-  font-size: 28px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ground);
+  font-size: 20px;
   line-height: 1;
 }
 
 .pad-name {
+  margin-top: auto;
+  width: 100%;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
@@ -480,7 +495,6 @@ button.group-title:hover {
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
-  width: 100%;
   text-align: left;
 }
 
@@ -489,13 +503,31 @@ button.group-title:hover {
   color: var(--alarm);
 }
 
+/* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
+.pad-key {
+  position: absolute;
+  left: 14px;
+  bottom: 8px;
+  max-width: 55%;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ground);
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 .pad-controls {
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+  right: 6px;
+  bottom: 6px;
   display: flex;
-  justify-content: space-between;
   gap: 4px;
 }
 
@@ -516,12 +548,12 @@ button.group-title:hover {
 .pad-btn {
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   background: var(--ground);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 50%;
   color: var(--ink-2);
   cursor: pointer;
 }
@@ -536,21 +568,69 @@ button.group-title:hover {
   border-color: var(--signal);
 }
 
-/* Playing: the whole pad flips to signal colour until the sound ends. */
+/* Playing: amber edge and tint, an equalizer, and an instance count when several play. */
 .pad.is-playing {
-  background: var(--signal);
   border-color: var(--signal);
-  color: var(--signal-ink);
+  background: rgb(242 169 59 / 0.12);
+}
+
+.pad.is-playing .pad-glyph {
+  border-color: var(--signal);
+  color: var(--signal);
 }
 
 .pad.is-playing .pad-btn {
-  background: var(--signal-ink);
-  color: var(--signal);
-  border-color: var(--signal-ink);
+  background: var(--ground);
 }
 
 .pad.is-playing .pad-btn[aria-pressed="true"] {
   color: var(--signal);
+}
+
+/* Top-right status: instance count and equalizer. */
+.pad-status {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.pad-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+  width: 12px;
+}
+
+.pad-eq i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  background: var(--signal);
+  transform-origin: bottom;
+  animation: eq 900ms ease-in-out infinite;
+}
+
+.pad-eq i:nth-child(2) {
+  animation-delay: -300ms;
+}
+
+.pad-eq i:nth-child(3) {
+  animation-delay: -600ms;
+}
+
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
 }
 
 /* Stop all instances of this sound. Shown only while at least one is sounding. */
@@ -564,7 +644,7 @@ button.group-title:hover {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--signal-ink);
+  border: 1px solid var(--signal);
   border-radius: 50%;
   background: var(--signal-ink);
   color: var(--signal);
@@ -573,14 +653,11 @@ button.group-title:hover {
 }
 
 .pad-stop:focus-visible {
-  outline: 2px solid var(--signal-ink);
+  outline: 2px solid var(--signal);
   outline-offset: 2px;
 }
 
 .pad-count {
-  position: absolute;
-  top: 8px;
-  right: 8px;
   padding: 1px 6px;
   border-radius: var(--radius);
   background: var(--signal-ink);
