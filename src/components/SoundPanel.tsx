@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import { EMOJIS } from "../emojis";
+import { EmojiField } from "./EmojiField";
 import { HotkeyField } from "./HotkeyField";
 import { TrimEditor } from "./TrimEditor";
 import { extOf, stemOf } from "../names";
@@ -107,31 +107,7 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
         />
       </label>
 
-      <fieldset className="field">
-        <legend>Icon</legend>
-        <div className="emoji-grid">
-          <button
-            type="button"
-            className="emoji-cell emoji-none"
-            aria-pressed={!entry.meta.emoji}
-            onClick={() => void save({ emoji: null })}
-          >
-            None
-          </button>
-          {EMOJIS.map((e) => (
-            <button
-              key={e}
-              type="button"
-              className="emoji-cell"
-              aria-label={e}
-              aria-pressed={entry.meta.emoji === e}
-              onClick={() => void save({ emoji: e })}
-            >
-              {e}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      <EmojiField value={entry.meta.emoji} onChange={(e) => void save({ emoji: e })} />
 
       <label className="field">
         <span>Category</span>

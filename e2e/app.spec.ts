@@ -88,7 +88,11 @@ test("empty name is rejected", async ({ page }) => {
 
 test("emoji and category are saved from the sidebar", async ({ page }) => {
   await openEdit(page, "frog");
-  await sidebar(page).getByRole("button", { name: "🎺", exact: true }).click();
+  await sidebar(page).getByRole("button", { name: "Icon 🐸. Change icon" }).click();
+  const picker = page.getByRole("dialog", { name: "Choose icon" });
+  await picker.getByRole("searchbox").fill("trumpet");
+  await picker.getByRole("button", { name: /🎺/ }).first().click();
+  await expect(picker).toHaveCount(0);
   await sidebar(page).getByLabel("Category", { exact: true }).selectOption({ label: "Reactions" });
   await expect(railCount(page, "Reactions")).toHaveText("3");
   await expect(pad(page, "frog").locator(".pad-glyph")).toHaveText("🎺");

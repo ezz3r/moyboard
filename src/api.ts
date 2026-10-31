@@ -79,6 +79,7 @@ export async function onFileDrop(handler: (ev: DropEvent) => void): Promise<() =
 /** Calls back with the full list of sounding voices whenever it changes. */
 export async function onPlayback(handler: (playing: Playing[]) => void): Promise<() => void> {
   if (!isTauri) {
+    if (!import.meta.env.DEV) return () => {};
     const mock = await import("./mock");
     return mock.subscribePlayback(handler);
   }
