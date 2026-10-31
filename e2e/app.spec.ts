@@ -388,6 +388,15 @@ test("sidebar: keyboard resizes and stops at the minimum", async ({ page }) => {
   await expect(handle).toHaveAttribute("aria-valuenow", "280");
 });
 
+test("tile size: soundboard and Quick Panel sizes are set in Settings", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.locator("label.inline-field", { hasText: "Soundboard" }).locator("input").fill("200");
+  await page.getByRole("button", { name: "Back to pads" }).click();
+  await expect(pad(page, "airhorn")).toBeVisible();
+  const width = (await pad(page, "airhorn").boundingBox())!.width;
+  expect(width).toBeGreaterThan(190);
+});
+
 test("settings: quick panel mode can be switched to hold", async ({ page }) => {
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("radio", { name: /Toggle: press to show/ })).toBeChecked();

@@ -48,6 +48,7 @@ export function subscribePlayback(handler: (p: Playing[]) => void): () => void {
 let autoRescan = true;
 let closeToTray = true;
 let sidebarWidth = 300;
+let tileSizes = { pad: 128, quick: 56 };
 let autostart = false;
 let startMinimized = false;
 let quickHotkey: string | null = null;
@@ -163,6 +164,11 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       return undefined as T;
     case "set_start_minimized":
       startMinimized = args.enabled as boolean;
+      return undefined as T;
+    case "get_tile_sizes":
+      return { ...tileSizes } as T;
+    case "set_tile_size":
+      tileSizes = { ...tileSizes, [args.kind as string]: args.size as number };
       return undefined as T;
     case "get_sidebar_width":
       return sidebarWidth as T;

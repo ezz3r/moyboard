@@ -90,6 +90,10 @@ pub struct Config {
     pub start_minimized: Option<bool>,
     /// Width of the edit sidebar in CSS pixels. `None` means the default.
     pub sidebar_width: Option<u32>,
+    /// Smallest width of a soundboard pad in CSS pixels. `None` means the default.
+    pub pad_size: Option<u32>,
+    /// Smallest width of a Quick Panel tile in CSS pixels. `None` means the default.
+    pub quick_tile_size: Option<u32>,
     /// Last position and size of the Quick Panel. `None` means the default.
     pub quick_panel_geometry: Option<PanelGeometry>,
     pub sounds: BTreeMap<String, SoundMeta>,

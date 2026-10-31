@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, pickFolder } from "../api";
-import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings } from "../types";
+import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings, TileSizes } from "../types";
 import { HotkeyField } from "./HotkeyField";
 
 type Props = {
@@ -10,9 +10,20 @@ type Props = {
   onOutputChanged: (patch: Partial<OutputState>) => void;
   onRefresh: () => void;
   onError: (message: string) => void;
+  tileSizes: TileSizes;
+  onTileSizeChanged: (kind: "pad" | "quick", size: number) => void;
 };
 
-export function Settings({ libraryDir, output, onLibraryChanged, onOutputChanged, onRefresh, onError }: Props) {
+export function Settings({
+  libraryDir,
+  output,
+  onLibraryChanged,
+  onOutputChanged,
+  onRefresh,
+  onError,
+  tileSizes,
+  onTileSizeChanged,
+}: Props) {
   return (
     <div className="settings">
       <section className="settings-section">
@@ -102,6 +113,25 @@ export function Settings({ libraryDir, output, onLibraryChanged, onOutputChanged
             }}
           />
         </label>
+      </section>
+
+      <section className="settings-section">
+        <h2>Tile size</h2>
+        <p className="hint">Smallest width of a tile. Tiles reflow to fit the window.</p>
+        <TileSlider
+          label="Soundboard"
+          value={tileSizes.pad}
+          min={96}
+          max={240}
+          onChange={(v) => onTileSizeChanged("pad", v)}
+        />
+        <TileSlider
+          label="Quick Panel"
+          value={tileSizes.quick}
+          min={48}
+          max={120}
+          onChange={(v) => onTileSizeChanged("quick", v)}
+        />
       </section>
 
       <section className="settings-section">
@@ -332,5 +362,28 @@ function StartupSection({ onError }: { onError: (m: string) => void }) {
       </label>
       <p className="hint">Minimized start only applies when moyboard starts with Windows.</p>
     </section>
+  );
+}
+
+function TileSlider({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="inline-field">
+      <span>
+        {label} <output className="value">{value} px</output>
+      </span>
+      <input type="range" min={min} max={max} step={4} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </label>
   );
 }

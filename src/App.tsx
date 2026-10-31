@@ -7,7 +7,7 @@ import { Pad } from "./components/Pad";
 import { SIDEBAR_DEFAULT, SidebarHandle } from "./components/SidebarHandle";
 import { SoundPanel } from "./components/SoundPanel";
 import { Settings as SettingsView } from "./components/Settings";
-import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry } from "./types";
+import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry, type TileSizes } from "./types";
 import { stemOf } from "./names";
 import { ChevronDown, RefreshCw, Search, Settings, Square, X } from "lucide-react";
 
@@ -40,6 +40,7 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "info" | "error" } | null>(null);
   const [sideWidth, setSideWidth] = useState(SIDEBAR_DEFAULT);
+  const [tileSizes, setTileSizes] = useState<TileSizes>({ pad: 128, quick: 56 });
 
   const notify = useCallback((text: string) => setToast({ text, tone: "error" }), []);
   const say = useCallback((text: string) => setToast({ text, tone: "info" }), []);
@@ -60,6 +61,7 @@ export default function App() {
         setLibraryDir(await api.getLibraryDir());
         setOutput(await api.listOutputDevices());
         setSideWidth(await api.getSidebarWidth());
+        setTileSizes(await api.getTileSizes());
       } catch (e) {
         notify(String(e));
       }
@@ -301,7 +303,7 @@ export default function App() {
   );
 
   return (
-    <div className="app">
+    <div className="app" style={{ "--pad-min": `${tileSizes.pad}px` } as CSSProperties}>
       <header className="top">
         <span className="brand">moyboard</span>
 
@@ -434,6 +436,11 @@ export default function App() {
               onOutputChanged={(patch) => setOutput((o) => ({ ...o, ...patch }))}
               onRefresh={() => void refresh()}
               onError={notify}
+              tileSizes={tileSizes}
+              onTileSizeChanged={(kind, size) => {
+                setTileSizes((t) => ({ ...t, [kind]: size }));
+                void api.setTileSize(kind, size).catch((e) => notify(String(e)));
+              }}
             />
           ) : needle && (filter === ALL ? !sounds.some(matches) : visible.length === 0) ? (
             <p className="empty">No sounds found.</p>

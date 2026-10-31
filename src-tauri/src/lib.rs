@@ -558,6 +558,43 @@ fn set_sidebar_width(width: u32, store: tauri::State<Store>) -> Result<(), Strin
     store.update(|cfg| cfg.sidebar_width = Some(width))
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TileSizes {
+    pad: u32,
+    quick: u32,
+}
+
+#[tauri::command]
+fn get_tile_sizes(store: tauri::State<Store>) -> TileSizes {
+    store.get(|cfg| TileSizes {
+        pad: cfg.pad_size.unwrap_or(128),
+        quick: cfg.quick_tile_size.unwrap_or(56),
+    })
+}
+
+/// `kind` is `"pad"` (soundboard) or `"quick"` (Quick Panel). Sizes are minimum tile widths.
+#[tauri::command]
+fn set_tile_size(kind: String, size: u32, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
+    let (range, pad) = match kind.as_str() {
+        "pad" => (96..=240, true),
+        "quick" => (48..=120, false),
+        _ => return Err(format!("unknown tile kind: {kind}")),
+    };
+    if !range.contains(&size) {
+        return Err(format!("tile size {size} is out of range"));
+    }
+    store.update(|cfg| {
+        if pad {
+            cfg.pad_size = Some(size);
+        } else {
+            cfg.quick_tile_size = Some(size);
+        }
+    })?;
+    notify_changed(&app);
+    Ok(())
+}
+
 #[tauri::command]
 fn set_close_to_tray(enabled: bool, store: tauri::State<Store>) -> Result<(), String> {
     store.update(|cfg| cfg.close_to_tray = Some(enabled))
@@ -974,6 +1011,8 @@ pub fn run() {
             set_close_to_tray,
             get_sidebar_width,
             set_sidebar_width,
+            get_tile_sizes,
+            set_tile_size,
             get_autostart,
             set_autostart,
             set_start_minimized,

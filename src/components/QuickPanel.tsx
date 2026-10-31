@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { api, isTauri, onLibraryChanged, onPlayback } from "../api";
 import { stemOf } from "../names";
@@ -22,12 +22,14 @@ export function QuickPanel() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [folded, setFolded] = useState<Set<string>>(() => new Set());
+  const [tileMin, setTileMin] = useState(56);
 
   const refresh = useCallback(async () => {
     try {
-      const [list, cats] = await Promise.all([api.rescan(), api.listCategories()]);
+      const [list, cats, sizes] = await Promise.all([api.rescan(), api.listCategories(), api.getTileSizes()]);
       setSounds(list);
       setCategories(cats);
+      setTileMin(sizes.quick);
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -147,7 +149,7 @@ export function QuickPanel() {
   const act = (run: () => Promise<void>) => void run().catch((e) => setError(String(e)));
 
   return (
-    <div className="quick">
+    <div className="quick" style={{ "--tile-min": `${tileMin}px` } as CSSProperties}>
       <header className="quick-head">
         <button
           type="button"

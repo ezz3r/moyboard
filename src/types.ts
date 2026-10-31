@@ -79,3 +79,6 @@ export type Waveform = {
   peaksPerSec: number;
   durationSecs: number;
 };
+
+/** Minimum tile width in CSS pixels: soundboard pads and Quick Panel tiles. */
+export type TileSizes = { pad: number; quick: number };
