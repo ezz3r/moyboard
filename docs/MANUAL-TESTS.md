@@ -108,6 +108,30 @@ Setup: install VB-CABLE (or another virtual cable), then run
 - [ ] Start minimized off, start with Windows on: the window appears at sign-in.
 - [ ] Launching by hand (no `--minimized`) always shows the window, even with minimized start on.
 
+## Quick Panel hotkeys (v4)
+Run on the Windows build. Debug builds print `moyboard: quick panel key Pressed/Released` to the console; release builds print nothing, so use a debug build to diagnose a failure.
+- [ ] Quick Panel hotkey `Ctrl+Backquote` (Toggle): each press opens and closes the panel.
+- [ ] Same hotkey in Hold mode: panel shows while held, hides on release; holding does not flicker.
+- [ ] `Ctrl+Shift+<letter>` and `Alt+<letter>` work in Toggle and Hold.
+- [ ] A single key (e.g. `PageDown`) still works in both modes.
+- [ ] Change the Quick Panel hotkey without restarting: the new one works, the old one does not.
+- [ ] Restart the app: the saved hotkey works.
+- [ ] A hotkey another app already owns shows "Hotkey … is already in use or invalid" in Settings, and the previous hotkey still works.
+- [ ] Recording a hotkey with only a modifier pressed does not save anything; Backspace clears it.
+- [ ] Hold: release the modifier before the main key; the panel still hides when the main key is released.
+
+## Instant Quick Panel (v4)
+- [ ] The panel appears and disappears with no fade (DWM transitions forced off). Known limit: if Windows still animates on some builds, note the build here.
+- [ ] First show after launch is immediate (the window is created hidden at startup).
+- [ ] Sounds added while the panel is hidden appear when it is shown.
+
+## Sidebar and pads (v4)
+- [ ] Drag the sidebar handle: the pad grid reflows; the width stops at 280 px and at half the window.
+- [ ] Double-click the handle: back to 300 px.
+- [ ] Restart the app: the sidebar width is restored.
+- [ ] Trim waveform redraws at the new width.
+- [ ] Pad hover controls (Play, Preview) do not move the name or the hotkey badge.
+
 ## Windows-only items not run in WSL
 The v2 playback routing (preview device, Stop per sound, playback events),
 global hotkey toggling, Recycle Bin delete and the Windows installer were not
