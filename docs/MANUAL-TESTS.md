@@ -132,6 +132,20 @@ Run on the Windows build. Debug builds print `moyboard: quick panel key Pressed/
 - [ ] Trim waveform redraws at the new width.
 - [ ] Pad hover controls (Play, Preview) do not move the name or the hotkey badge.
 
+## Device identity and preview (v5)
+- [ ] Main = virtual cable, preview = headphones: Preview plays only on headphones, with no error.
+- [ ] Same check after an app restart (saved device IDs load and match).
+- [ ] Two outputs with the same or similar name: each is selected and used separately.
+- [ ] Preview = main (both explicit): Settings shows the inline warning; Preview shows the message with an "Open Settings" action.
+- [ ] Preview unset while Windows default is the main output: same-device message, not a false error.
+- [ ] Unplug the saved main or preview device, restart: play shows "Device not found, please select it again in Settings".
+- [ ] A config from before v5 (device names) still selects the same devices after the first start.
+
+## Quick Panel v5
+- [ ] Right click a tile: sound plays only on the preview device, not on the cable.
+- [ ] Stop button next to search stops main and preview sounds.
+- [ ] Hint line reads "Left click: play · Right click: preview".
+
 ## Windows-only items not run in WSL
 The v2 playback routing (preview device, Stop per sound, playback events),
 global hotkey toggling, Recycle Bin delete and the Windows installer were not
