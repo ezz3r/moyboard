@@ -63,6 +63,9 @@ export const api = {
     call<void>("set_quick_panel_settings", { hotkey, mode }),
   showQuickPanel: () => call<void>("show_quick_panel"),
   hideQuickPanel: () => call<void>("hide_quick_panel"),
+  saveQuickPanelGeometry: (x: number, y: number, width: number, height: number) =>
+    call<void>("save_quick_panel_geometry", { x, y, width, height }),
+  resetQuickPanelGeometry: () => call<void>("reset_quick_panel_geometry"),
   stopAll: () => call<void>("stop_all"),
   setMasterVolume: (volume: number) => call<void>("set_master_volume", { volume }),
 };

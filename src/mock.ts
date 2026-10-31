@@ -147,6 +147,9 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       quickMode = args.mode as "hold" | "toggle";
       return undefined as T;
     }
+    case "save_quick_panel_geometry":
+    case "reset_quick_panel_geometry":
+      return undefined as T;
     case "show_quick_panel":
     case "hide_quick_panel":
       return undefined as T;

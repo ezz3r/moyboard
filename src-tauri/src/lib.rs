@@ -5,7 +5,7 @@ mod watch;
 use moyboard_core::{config, library, wav};
 
 use audio::{DeviceInfo, Engine, Playing};
-use config::{CategoryMeta, Config, SoundMeta, Store, check_color, clean_category_name};
+use config::{CategoryMeta, Config, PanelGeometry, SoundMeta, Store, check_color, clean_category_name};
 use hotkeys::Hotkeys;
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -141,8 +141,35 @@ fn quick_window(app: &AppHandle) -> Option<WebviewWindow> {
 
 pub fn show_quick(app: &AppHandle) {
     if let Some(w) = quick_window(app) {
+        apply_quick_geometry(app, &w);
         let _ = w.show();
     }
+}
+
+/// Puts the panel where the user left it, clamped to the monitor it is on (or the first one).
+fn apply_quick_geometry(app: &AppHandle, w: &WebviewWindow) {
+    let Some(saved) = app.state::<Store>().get(|cfg| cfg.quick_panel_geometry) else {
+        return;
+    };
+    let Ok(monitors) = w.available_monitors() else {
+        return;
+    };
+    let (cx, cy) = (saved.x + saved.width as i32 / 2, saved.y + saved.height as i32 / 2);
+    let on_it = |m: &&tauri::Monitor| {
+        let a = m.work_area();
+        cx >= a.position.x
+            && cx < a.position.x + a.size.width as i32
+            && cy >= a.position.y
+            && cy < a.position.y + a.size.height as i32
+    };
+    let Some(monitor) = monitors.iter().find(on_it).or(monitors.first()) else {
+        return;
+    };
+    let a = monitor.work_area();
+    let area = (a.position.x, a.position.y, a.size.width, a.size.height);
+    let g = config::clamp_geometry(saved, area);
+    let _ = w.set_size(tauri::PhysicalSize::new(g.width, g.height));
+    let _ = w.set_position(tauri::PhysicalPosition::new(g.x, g.y));
 }
 
 pub fn hide_quick(app: &AppHandle) {
@@ -156,9 +183,7 @@ pub fn toggle_quick(app: &AppHandle) {
         Some(w) if w.is_visible().unwrap_or(false) => {
             let _ = w.hide();
         }
-        Some(w) => {
-            let _ = w.show();
-        }
+        Some(_) => show_quick(app),
         None => {}
     }
 }
@@ -701,6 +726,32 @@ fn set_quick_panel_settings(
     Ok(())
 }
 
+/// Saved by the panel after a move or resize has settled.
+#[tauri::command]
+fn save_quick_panel_geometry(
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    store: tauri::State<Store>,
+) -> Result<(), String> {
+    if width == 0 || height == 0 {
+        return Err("panel size must be positive".to_string());
+    }
+    store.update(|cfg| cfg.quick_panel_geometry = Some(PanelGeometry { x, y, width, height }))
+}
+
+/// Forgets the saved position and size, and puts the panel back at its default size, centred.
+#[tauri::command]
+fn reset_quick_panel_geometry(app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
+    store.update(|cfg| cfg.quick_panel_geometry = None)?;
+    if let Some(w) = quick_window(&app) {
+        w.set_size(tauri::LogicalSize::new(360.0, 420.0)).map_err(|e| e.to_string())?;
+        w.center().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn show_quick_panel(app: AppHandle) {
     show_quick(&app);
@@ -841,6 +892,8 @@ pub fn run() {
             set_quick_panel_settings,
             show_quick_panel,
             hide_quick_panel,
+            save_quick_panel_geometry,
+            reset_quick_panel_geometry,
             play_sound,
             stop_sound,
             preview_sound,

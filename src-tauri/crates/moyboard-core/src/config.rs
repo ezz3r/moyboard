@@ -28,6 +28,27 @@ pub struct CategoryMeta {
     pub color: Option<String>,
 }
 
+/// Quick Panel position and size in physical pixels.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PanelGeometry {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// Shrinks `g` to fit inside `area` (x, y, width, height), then moves it inside.
+/// Handles a saved position on a monitor that has since been unplugged or moved.
+pub fn clamp_geometry(g: PanelGeometry, area: (i32, i32, u32, u32)) -> PanelGeometry {
+    let (ax, ay, aw, ah) = area;
+    let width = g.width.min(aw);
+    let height = g.height.min(ah);
+    let max_x = ax + aw as i32 - width as i32;
+    let max_y = ay + ah as i32 - height as i32;
+    PanelGeometry { x: g.x.clamp(ax, max_x), y: g.y.clamp(ay, max_y), width, height }
+}
+
 /// Accepts `#rrggbb` only, so the frontend cannot store arbitrary CSS.
 pub fn check_color(color: &str) -> Result<(), String> {
     let ok = color.len() == 7 && color.starts_with('#') && color[1..].chars().all(|c| c.is_ascii_hexdigit());
@@ -65,6 +86,8 @@ pub struct Config {
     pub quick_panel_hotkey: Option<String>,
     /// `"hold"` (shown while the key is down) or `"toggle"`. `None` means toggle.
     pub quick_panel_mode: Option<String>,
+    /// Last position and size of the Quick Panel. `None` means the default.
+    pub quick_panel_geometry: Option<PanelGeometry>,
     pub sounds: BTreeMap<String, SoundMeta>,
     pub categories: BTreeMap<String, CategoryMeta>,
 }
@@ -142,6 +165,25 @@ mod tests {
         assert_eq!(clean_category_name("  Memes ").unwrap(), "Memes");
         assert!(clean_category_name("   ").is_err());
         assert!(clean_category_name(&"x".repeat(41)).is_err());
+    }
+
+    #[test]
+    fn panel_geometry_inside_area_is_unchanged() {
+        let g = PanelGeometry { x: 100, y: 50, width: 360, height: 420 };
+        assert_eq!(clamp_geometry(g, (0, 0, 1920, 1040)), g);
+    }
+
+    #[test]
+    fn panel_geometry_off_screen_moves_back_in() {
+        let area = (0, 0, 1920, 1040);
+        let far_right = PanelGeometry { x: 3000, y: -200, width: 360, height: 420 };
+        assert_eq!(clamp_geometry(far_right, area), PanelGeometry { x: 1560, y: 0, width: 360, height: 420 });
+    }
+
+    #[test]
+    fn panel_geometry_larger_than_area_shrinks() {
+        let g = PanelGeometry { x: 0, y: 0, width: 2000, height: 1200 };
+        assert_eq!(clamp_geometry(g, (0, 0, 1280, 720)), PanelGeometry { x: 0, y: 0, width: 1280, height: 720 });
     }
 
     #[test]

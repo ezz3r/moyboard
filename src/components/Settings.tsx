@@ -244,6 +244,15 @@ function QuickPanelSection({ onError }: { onError: (m: string) => void }) {
               <HotkeyField value={cfg.hotkey} onChange={(h) => void save({ ...cfg, hotkey: h })} />
             </span>
           </div>
+          <p>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void api.resetQuickPanelGeometry().catch((e) => onError(String(e)))}
+            >
+              Reset panel position and size
+            </button>
+          </p>
           <fieldset className="radio-row">
             <legend>Mode</legend>
             <label className="inline-field">

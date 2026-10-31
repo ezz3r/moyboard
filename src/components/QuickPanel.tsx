@@ -48,6 +48,35 @@ export function QuickPanel() {
     };
   }, [refresh]);
 
+  // Position and size are saved once a move or resize has settled, so the next show restores them.
+  useEffect(() => {
+    if (!isTauri) return;
+    const win = getCurrentWebviewWindow();
+    let timer: number | undefined;
+    let alive = true;
+    const offs: Array<() => void> = [];
+    const save = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(async () => {
+        try {
+          const pos = await win.outerPosition();
+          const size = await win.outerSize();
+          await api.saveQuickPanelGeometry(pos.x, pos.y, size.width, size.height);
+        } catch (e) {
+          setError(String(e));
+        }
+      }, 400);
+    };
+    for (const pending of [win.onMoved(save), win.onResized(save)]) {
+      void pending.then((off) => (alive ? offs.push(off) : off()));
+    }
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+      offs.forEach((off) => off());
+    };
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") void hide();
