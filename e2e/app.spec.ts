@@ -75,15 +75,19 @@ test("play again starts another instance; the center stop ends all of them", asy
   await expect(airhorn).not.toHaveClass(/is-playing/);
 });
 
-test("pad buttons are always visible and large enough to hit", async ({ page }) => {
+test("pad buttons show on hover or keyboard focus, and are large enough to hit", async ({ page }) => {
   const rimshot = pad(page, "rimshot");
+  const play = rimshot.getByRole("button", { name: "Play rimshot" });
   await page.mouse.move(0, 0);
-  for (const name of ["Play rimshot", "Preview rimshot on headphones"]) {
-    const button = rimshot.getByRole("button", { name });
-    await expect(button).toBeVisible();
-    const box = await button.boundingBox();
-    expect(box!.height).toBeGreaterThanOrEqual(32);
-  }
+  await expect(play).toBeHidden();
+  await rimshot.hover();
+  await expect(play).toBeVisible();
+  const box = await play.boundingBox();
+  expect(box!.height).toBeGreaterThanOrEqual(32);
+  await page.mouse.move(0, 0);
+  await expect(play).toBeHidden();
+  await rimshot.getByRole("button", { name: "Select rimshot" }).focus();
+  await expect(play).toBeVisible();
 });
 
 test("pad: icon and name sit side by side on one row", async ({ page }) => {
@@ -269,9 +273,10 @@ test("settings: closing to tray can be switched off", async ({ page }) => {
   await box.check();
 });
 
-test("settings: monitor volume is disabled while monitor is off", async ({ page }) => {
+test("settings: You has a volume but no output picker", async ({ page }) => {
   await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.locator(".inline-field input[type=range]").first()).toBeDisabled();
+  await expect(page.locator(".inline-field input[type=range]").first()).toBeEnabled();
+  await expect(page.getByRole("combobox", { name: /For you/ })).toHaveCount(0);
 });
 
 test("no horizontal scroll at phone width", async ({ page }) => {
@@ -376,13 +381,14 @@ test("quick panel: right click previews, and the Stop button stops everything", 
   const airhorn = page.locator(".quick .tile", { hasText: "airhorn" });
   await airhorn.hover();
   await airhorn.getByRole("button", { name: "Play airhorn" }).click({ button: "right" });
-  await expect(airhorn.getByRole("button", { name: "Stop preview of airhorn" })).toBeVisible();
+  await expect(airhorn).toHaveClass(/is-previewing/);
+  await expect(airhorn.getByRole("button", { name: /preview/i })).toHaveCount(0);
   await expect(airhorn.locator(".tile-eq")).toHaveCount(0);
   await airhorn.getByRole("button", { name: "Play airhorn" }).click();
   await expect(airhorn.locator(".tile-eq")).toBeVisible();
   await page.getByRole("button", { name: "Stop all sounds" }).click();
   await expect(airhorn.locator(".tile-eq")).toHaveCount(0);
-  await expect(airhorn.getByRole("button", { name: "Stop preview of airhorn" })).toHaveCount(0);
+  await expect(airhorn).not.toHaveClass(/is-previewing/);
 });
 
 test("quick panel: rows are grouped and folding hides them", async ({ page }) => {
@@ -435,11 +441,13 @@ test("sidebar: keyboard resizes and stops at the minimum", async ({ page }) => {
 
 test("tile size: soundboard and Quick Panel sizes are set in Settings", async ({ page }) => {
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.locator("label.inline-field", { hasText: "Soundboard" }).locator("input").fill("200");
+  await page.locator("label.inline-field", { hasText: "Soundboard width" }).locator("input").fill("200");
+  await page.locator("label.inline-field", { hasText: "Soundboard height" }).locator("input").fill("148");
   await page.getByRole("button", { name: "Back to pads" }).click();
   await expect(pad(page, "airhorn")).toBeVisible();
-  const width = (await pad(page, "airhorn").boundingBox())!.width;
-  expect(width).toBeGreaterThan(190);
+  const box = await pad(page, "airhorn").boundingBox();
+  expect(box!.width).toBeGreaterThan(190);
+  expect(box!.height).toBeGreaterThan(140);
 });
 
 test("settings: quick panel mode can be switched to hold", async ({ page }) => {

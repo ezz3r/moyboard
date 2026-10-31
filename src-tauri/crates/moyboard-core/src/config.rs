@@ -73,7 +73,7 @@ pub struct Config {
     pub library_dir: Option<PathBuf>,
     /// `None` means system default output.
     pub output_device: Option<String>,
-    /// `None` means monitoring is off.
+    /// Unused since "You" follows the Windows default output. Kept so older configs still load.
     pub monitor_device: Option<String>,
     pub monitor_volume: Option<f32>,
     /// `None` means system default output. Used for headphone previews.
@@ -92,8 +92,12 @@ pub struct Config {
     pub sidebar_width: Option<u32>,
     /// Smallest width of a soundboard pad in CSS pixels. `None` means the default.
     pub pad_size: Option<u32>,
+    /// Height of a soundboard pad in CSS pixels. `None` means the default.
+    pub pad_height: Option<u32>,
     /// Smallest width of a Quick Panel tile in CSS pixels. `None` means the default.
     pub quick_tile_size: Option<u32>,
+    /// Height of a Quick Panel tile in CSS pixels. `None` means the default.
+    pub quick_tile_height: Option<u32>,
     /// Last position and size of the Quick Panel. `None` means the default.
     pub quick_panel_geometry: Option<PanelGeometry>,
     pub sounds: BTreeMap<String, SoundMeta>,

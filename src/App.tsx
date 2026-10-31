@@ -24,7 +24,7 @@ export default function App() {
   const [output, setOutput] = useState<OutputState>({
     devices: [],
     selected: null,
-    monitorSelected: null,
+    monitorActive: false,
     monitorVolume: 1,
     previewSelected: null,
   });
@@ -40,7 +40,7 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "info" | "error"; settings?: boolean } | null>(null);
   const [sideWidth, setSideWidth] = useState(SIDEBAR_DEFAULT);
-  const [tileSizes, setTileSizes] = useState<TileSizes>({ pad: 128, quick: 56 });
+  const [tileSizes, setTileSizes] = useState<TileSizes>({ pad: 128, padHeight: 96, quick: 56, quickHeight: 56 });
 
   // Same-device errors get an "Open Settings" action; the message text is the marker.
   const notify = useCallback(
@@ -307,7 +307,7 @@ export default function App() {
   );
 
   return (
-    <div className="app" style={{ "--pad-min": `${tileSizes.pad}px` } as CSSProperties}>
+    <div className="app" style={{ "--pad-min": `${tileSizes.pad}px`, "--pad-h": `${tileSizes.padHeight}px` } as CSSProperties}>
       <header className="top">
         <span className="brand">moyboard</span>
 
@@ -364,7 +364,7 @@ export default function App() {
           />
         </label>
 
-        <label className="top-field volume" title={output.monitorSelected ? "Your volume: what you hear on the monitor output" : "Pick a monitor output under For you in Settings"}>
+        <label className="top-field volume" title={output.monitorActive ? "Your volume: sounds you hear on the Windows default output" : "Off: the Windows default output is the main output"}>
           <span>You</span>
           <input
             type="range"
@@ -372,7 +372,7 @@ export default function App() {
             max={2}
             step={0.01}
             value={output.monitorVolume}
-            disabled={!output.monitorSelected}
+            disabled={!output.monitorActive}
             onChange={(e) => {
               const v = Number(e.target.value);
               setOutput((o) => ({ ...o, monitorVolume: v }));

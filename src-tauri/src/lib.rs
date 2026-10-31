@@ -36,8 +36,8 @@ pub struct OutputState {
     devices: Vec<DeviceInfo>,
     /// Saved choice; `None` means system default.
     selected: Option<String>,
-    /// `None` means monitoring is off.
-    monitor_selected: Option<String>,
+    /// True when "You" hears sounds: the Windows default output is not the main output.
+    monitor_active: bool,
     monitor_volume: f32,
     /// Saved preview choice; `None` means system default.
     preview_selected: Option<String>,
@@ -464,14 +464,15 @@ fn ensure_unique_name(cfg: &Config, name: &str, own: Option<&str>) -> Result<(),
 }
 
 #[tauri::command]
-fn list_output_devices(store: tauri::State<Store>) -> Result<OutputState, String> {
-    let (selected, monitor_selected, monitor_volume, preview_selected) = store.get(|cfg| {
-        (cfg.output_device.clone(), cfg.monitor_device.clone(), cfg.monitor_volume, cfg.preview_device.clone())
+fn list_output_devices(store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<OutputState, String> {
+    let (selected, monitor_volume, preview_selected) = store.get(|cfg| {
+        (cfg.output_device.clone(), cfg.monitor_volume, cfg.preview_device.clone())
     });
+    let monitor_active = lock(&engine)?.monitor_active();
     Ok(OutputState {
         devices: Engine::list_devices()?,
         selected,
-        monitor_selected,
+        monitor_active,
         monitor_volume: monitor_volume.unwrap_or(1.0),
         preview_selected,
     })
@@ -497,16 +498,6 @@ fn set_output_device(
 ) -> Result<(), String> {
     lock(&engine)?.set_device(name.as_deref())?;
     store.update(|cfg| cfg.output_device = name)
-}
-
-#[tauri::command]
-fn set_monitor_device(
-    name: Option<String>,
-    store: tauri::State<Store>,
-    engine: tauri::State<AudioState>,
-) -> Result<(), String> {
-    lock(&engine)?.set_monitor(name.as_deref())?;
-    store.update(|cfg| cfg.monitor_device = name)
 }
 
 #[tauri::command]
@@ -561,35 +552,42 @@ fn set_sidebar_width(width: u32, store: tauri::State<Store>) -> Result<(), Strin
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TileSizes {
+    /// Minimum width of a soundboard pad.
     pad: u32,
+    pad_height: u32,
+    /// Minimum width of a Quick Panel tile.
     quick: u32,
+    quick_height: u32,
 }
 
 #[tauri::command]
 fn get_tile_sizes(store: tauri::State<Store>) -> TileSizes {
     store.get(|cfg| TileSizes {
         pad: cfg.pad_size.unwrap_or(128),
+        pad_height: cfg.pad_height.unwrap_or(96),
         quick: cfg.quick_tile_size.unwrap_or(56),
+        quick_height: cfg.quick_tile_height.unwrap_or(56),
     })
 }
 
-/// `kind` is `"pad"` (soundboard) or `"quick"` (Quick Panel). Sizes are minimum tile widths.
+/// `kind` is `"pad"` or `"quick"` (minimum width) or `"padHeight"` / `"quickHeight"`.
 #[tauri::command]
 fn set_tile_size(kind: String, size: u32, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
-    let (range, pad) = match kind.as_str() {
-        "pad" => (96..=240, true),
-        "quick" => (48..=120, false),
+    let range = match kind.as_str() {
+        "pad" => 96..=240,
+        "quick" => 48..=120,
+        "padHeight" => 64..=240,
+        "quickHeight" => 40..=140,
         _ => return Err(format!("unknown tile kind: {kind}")),
     };
     if !range.contains(&size) {
         return Err(format!("tile size {size} is out of range"));
     }
-    store.update(|cfg| {
-        if pad {
-            cfg.pad_size = Some(size);
-        } else {
-            cfg.quick_tile_size = Some(size);
-        }
+    store.update(|cfg| match kind.as_str() {
+        "pad" => cfg.pad_size = Some(size),
+        "padHeight" => cfg.pad_height = Some(size),
+        "quick" => cfg.quick_tile_size = Some(size),
+        _ => cfg.quick_tile_height = Some(size),
     })?;
     notify_changed(&app);
     Ok(())
@@ -901,14 +899,12 @@ pub fn run() {
                 .map_err(Box::<dyn std::error::Error>::from)?;
 
             // Older configs store device names; convert them to IDs once and save the result.
-            let migrated = store.get(|cfg| {
+            let (out, prev) = store.get(|cfg| {
                 let fix = |v: &Option<String>| v.as_deref().map(audio::migrate_device);
-                (fix(&cfg.output_device), fix(&cfg.monitor_device), fix(&cfg.preview_device))
+                (fix(&cfg.output_device), fix(&cfg.preview_device))
             });
-            let (out, mon, prev) = migrated;
             store.update(|cfg| {
                 cfg.output_device = out.clone();
-                cfg.monitor_device = mon.clone();
                 cfg.preview_device = prev.clone();
             })?;
 
@@ -918,11 +914,6 @@ pub fn run() {
             if let Err(e) = engine.set_device(out.as_deref()) {
                 eprintln!("moyboard: saved output device unavailable: {e}");
                 engine.keep_unavailable(out.as_deref(), None);
-            }
-            if let Some(id) = &mon {
-                if let Err(e) = engine.set_monitor(Some(id)) {
-                    eprintln!("moyboard: saved monitor device unavailable: {e}");
-                }
             }
             engine.set_monitor_gain(mon_gain.unwrap_or(1.0));
             if let Err(e) = engine.set_preview(prev.as_deref()) {
@@ -1015,7 +1006,6 @@ pub fn run() {
             delete_category,
             list_output_devices,
             set_output_device,
-            set_monitor_device,
             set_monitor_volume,
             set_preview_device,
             get_settings,

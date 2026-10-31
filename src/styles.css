@@ -459,6 +459,7 @@ button.group-title:hover {
 
 .pad {
   position: relative;
+  height: var(--pad-h, 96px);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -485,10 +486,24 @@ button.group-title:hover {
   background: var(--accent, transparent);
 }
 
-/* Main content: Stop, Play and Preview, always visible and easy to hit. */
+/* Button row: Stop, Play and Preview. Shown on hover or keyboard focus; Stop also while playing.
+   Hidden, not removed, so the slots keep their place and nothing moves. */
 .pad-row {
   display: flex;
   gap: 4px;
+}
+
+.pad-row .pad-btn {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease, visibility 0s linear 120ms;
+}
+
+.pad:hover .pad-row .pad-btn:not(.pad-stop),
+.pad:focus-within .pad-row .pad-btn:not(.pad-stop) {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .pad-btn {
@@ -526,11 +541,9 @@ button.group-title:hover {
 }
 
 /* Stop shows only while an instance sounds. Its slot is reserved when idle, so Play never moves. */
-.pad-stop:disabled {
-  visibility: hidden;
-}
-
 .pad-stop:not(:disabled) {
+  opacity: 1;
+  visibility: visible;
   color: var(--signal);
   border-color: var(--signal);
 }
@@ -1479,7 +1492,7 @@ button.group-title:hover {
 
 .tile {
   position: relative;
-  aspect-ratio: 1 / 1;
+  height: var(--tile-h, 56px);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -1618,53 +1631,6 @@ button.group-title:hover {
 
 .tile-eq i:nth-child(3) {
   animation-delay: -600ms;
-}
-
-/* Preview and stop: shown on hover or focus, so the grid stays quiet. */
-.tile-actions {
-  position: absolute;
-  left: 50%;
-  top: 3px;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 2px;
-  opacity: 0;
-  visibility: hidden;
-}
-
-.tile:hover .tile-actions,
-.tile:focus-within .tile-actions,
-.tile-actions:has([aria-pressed="true"]) {
-  opacity: 1;
-  visibility: visible;
-}
-
-.tile-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--ground);
-  color: var(--ink-2);
-  cursor: pointer;
-}
-
-.tile-btn:hover {
-  color: var(--ink);
-  border-color: var(--ink-2);
-}
-
-.tile-btn[aria-pressed="true"] {
-  color: var(--signal);
-  border-color: var(--signal);
-}
-
-.tile-btn:focus-visible {
-  outline: 2px solid var(--signal);
-  outline-offset: 1px;
 }
 
 .quick-resize {

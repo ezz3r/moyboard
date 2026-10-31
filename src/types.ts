@@ -34,7 +34,8 @@ export type OutputDevice = {
 export type OutputState = {
   devices: OutputDevice[];
   selected: string | null;
-  monitorSelected: string | null;
+  /** "You" hears sounds: the Windows default output is not the main output. */
+  monitorActive: boolean;
   monitorVolume: number;
   previewSelected: string | null;
 };
@@ -84,4 +85,8 @@ export type Waveform = {
 };
 
 /** Minimum tile width in CSS pixels: soundboard pads and Quick Panel tiles. */
-export type TileSizes = { pad: number; quick: number };
+/** Soundboard and Quick Panel tile sizes in CSS pixels: minimum width, and height. */
+/** Which tile size a Settings slider changes. */
+export type TileSizeKind = "pad" | "padHeight" | "quick" | "quickHeight";
+
+export type TileSizes = { pad: number; padHeight: number; quick: number; quickHeight: number };

@@ -45,7 +45,9 @@ pub struct Engine {
     sink: Option<MixerDeviceSink>,
     /// ID of the chosen primary device; `None` means system default.
     primary_id: Option<String>,
+    /// Monitor stream on the Windows default output; see `monitor_stream`.
     monitor_sink: Option<MixerDeviceSink>,
+    /// ID of the device `monitor_sink` is open on.
     monitor_id: Option<String>,
     monitor_gain: f32,
     preview_sink: Option<MixerDeviceSink>,
@@ -84,10 +86,6 @@ impl Engine {
 
     /// `None` selects the system default output. Stops main playback, keeps previews.
     pub fn set_device(&mut self, id: Option<&str>) -> Result<(), String> {
-        let chosen = id.map(str::to_string).or_else(default_device_id);
-        if chosen.is_some() && chosen == self.monitor_id {
-            return Err("primary and monitor output must differ".to_string());
-        }
         let sink = open(id)?;
         self.voices.retain(|v| v.preview);
         self.sink = Some(sink);
@@ -95,27 +93,28 @@ impl Engine {
         Ok(())
     }
 
-    /// `None` turns monitoring off. Monitor must differ from the primary output.
-    pub fn set_monitor(&mut self, id: Option<&str>) -> Result<(), String> {
-        match id {
-            None => {
-                self.monitor_sink = None;
-                self.monitor_id = None;
-                for v in &mut self.voices {
-                    v.monitor = None;
-                }
-                Ok(())
-            }
-            Some(wanted) => {
-                if resolved(&self.primary_id) == Some(wanted.to_string()) {
-                    return Err("monitor and primary output must differ".to_string());
-                }
-                let sink = open(Some(wanted))?;
-                self.monitor_sink = Some(sink);
-                self.monitor_id = Some(wanted.to_string());
-                Ok(())
-            }
+    /// "You" hears the sound on the Windows default output. It is off when that device is the
+    /// main output, so the cable never gets a second copy.
+    pub fn monitor_active(&self) -> bool {
+        let default = default_device_id();
+        default.is_some() && default != resolved(&self.primary_id)
+    }
+
+    /// Opens (or reuses) the monitor stream on the Windows default output. `None` when the
+    /// default is the main output.
+    fn monitor_stream(&mut self) -> Result<Option<&MixerDeviceSink>, String> {
+        if !self.monitor_active() {
+            self.monitor_sink = None;
+            self.monitor_id = None;
+            return Ok(None);
         }
+        // shortcut: a default-device change applies to sounds started after it, upgrade by watching the default device
+        let default = default_device_id();
+        if self.monitor_id != default {
+            self.monitor_sink = Some(open(None)?);
+            self.monitor_id = default;
+        }
+        Ok(self.monitor_sink.as_ref())
     }
 
     /// `None` means the system default output. The stream opens now only for a named
@@ -155,7 +154,7 @@ impl Engine {
         }
         let main_sink = self.sink.as_ref().ok_or("no output stream")?;
         let main = spawn(main_sink, path, start, take)?;
-        let monitor = match &self.monitor_sink {
+        let monitor = match self.monitor_stream()? {
             Some(sink) => Some(spawn(sink, path, start, take)?),
             None => None,
         };

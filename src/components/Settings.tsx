@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, pickFolder } from "../api";
-import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings, TileSizes } from "../types";
+import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings, TileSizeKind, TileSizes } from "../types";
 import { HotkeyField } from "./HotkeyField";
 
 type Props = {
@@ -11,7 +11,7 @@ type Props = {
   onRefresh: () => void;
   onError: (message: string) => void;
   tileSizes: TileSizes;
-  onTileSizeChanged: (kind: "pad" | "quick", size: number) => void;
+  onTileSizeChanged: (kind: TileSizeKind, size: number) => void;
 };
 
 export function Settings({
@@ -83,26 +83,10 @@ export function Settings({
 
       <section className="settings-section">
         <h2>For you</h2>
-        <select
-          className="select-wide"
-          value={output.monitorSelected ?? ""}
-          onChange={async (e) => {
-            const name = e.target.value || null;
-            try {
-              await api.setMonitorDevice(name);
-              onOutputChanged({ monitorSelected: name });
-            } catch (err) {
-              onError(String(err));
-            }
-          }}
-        >
-          <option value="">Off</option>
-          {output.devices.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+        <p className="hint">
+          Each sound also plays on your Windows default output, so you hear it.
+          {output.monitorActive ? "" : " Your default output is the main output, so nothing extra plays."}
+        </p>
         <label className="inline-field">
           <span>Your volume <output className="value">{Math.round(output.monitorVolume * 100)}%</output></span>
           <input
@@ -111,7 +95,7 @@ export function Settings({
             max={2}
             step={0.05}
             value={output.monitorVolume}
-            disabled={!output.monitorSelected}
+            disabled={!output.monitorActive}
             onChange={(e) => {
               const v = Number(e.target.value);
               onOutputChanged({ monitorVolume: v });
@@ -123,20 +107,34 @@ export function Settings({
 
       <section className="settings-section">
         <h2>Tile size</h2>
-        <p className="hint">Smallest width of a tile. Tiles reflow to fit the window.</p>
+        <p className="hint">Smallest width and height of a tile. Tiles reflow to fit the window.</p>
         <TileSlider
-          label="Soundboard"
+          label="Soundboard width"
           value={tileSizes.pad}
           min={96}
           max={240}
           onChange={(v) => onTileSizeChanged("pad", v)}
         />
         <TileSlider
-          label="Quick Panel"
+          label="Soundboard height"
+          value={tileSizes.padHeight}
+          min={64}
+          max={240}
+          onChange={(v) => onTileSizeChanged("padHeight", v)}
+        />
+        <TileSlider
+          label="Quick Panel width"
           value={tileSizes.quick}
           min={48}
           max={120}
           onChange={(v) => onTileSizeChanged("quick", v)}
+        />
+        <TileSlider
+          label="Quick Panel height"
+          value={tileSizes.quickHeight}
+          min={40}
+          max={140}
+          onChange={(v) => onTileSizeChanged("quickHeight", v)}
         />
       </section>
 

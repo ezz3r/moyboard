@@ -26,8 +26,8 @@ Setup: install VB-CABLE (or another virtual cable), then run
 - [ ] Two sounds at once overlap.
 - [ ] Stop all stops everything.
 - [ ] Master volume and per-sound volume change loudness.
-- [ ] Monitor set to headphones: sound plays on both outputs; monitor volume changes only the headphones.
-- [ ] Monitor = primary is rejected with an error.
+- [ ] "You": each sound also plays on the Windows default output; the "You" volume changes only that copy.
+- [ ] Windows default output = main output (e.g. cable is the default): "You" is greyed out and nothing extra plays.
 - [ ] Unplug the saved output device, restart: app starts, play uses default output, no crash.
 
 ## Hotkeys
@@ -77,7 +77,7 @@ Setup: install VB-CABLE (or another virtual cable), then run
 ## Multi-instance and pads (v3)
 - [ ] Pressing Play on a playing sound starts another copy; the pad shows `x2`, and the count drops as each copy ends.
 - [ ] The centre Stop appears while a sound plays and stops every copy of it; other sounds keep playing.
-- [ ] Play, Preview and Stop buttons on a pad are always visible; Stop appears only while the sound plays.
+- [ ] Play and Preview buttons on a pad appear on hover and on keyboard focus; Stop appears only while the sound plays.
 
 ## Tray and window (v3)
 - [ ] Closing the main window hides it; sounds and hotkeys keep working; the tray icon stays.

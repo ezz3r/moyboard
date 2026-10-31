@@ -1,4 +1,3 @@
-import { Headphones, Square } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { SoundEntry } from "../types";
 import { hotkeyLabel, stemOf } from "../names";
@@ -12,15 +11,13 @@ type Props = {
   previewing: boolean;
   onPlay: () => void;
   onPreview: () => void;
-  onStopPreview: () => void;
 };
 
 /**
  * One small tile in the Quick Panel grid. Left click plays on the main output, right click
- * previews on the headphones. The preview button appears on hover or focus. Stopping is
- * done with the panel's Stop button, not per tile.
+ * previews on the headphones. Stopping is done with the panel's Stop button, not per tile.
  */
-export function SoundTile({ entry, accent, instances, previewing, onPlay, onPreview, onStopPreview }: Props) {
+export function SoundTile({ entry, accent, instances, previewing, onPlay, onPreview }: Props) {
   const name = stemOf(entry.fileName);
   const missing = entry.missing;
   const playing = instances > 0;
@@ -62,20 +59,6 @@ export function SoundTile({ entry, accent, instances, previewing, onPlay, onPrev
         </span>
       )}
 
-      {!missing && (
-        <div className="tile-actions">
-          <button
-            type="button"
-            className="tile-btn"
-            aria-pressed={previewing}
-            onClick={previewing ? onStopPreview : onPreview}
-            aria-label={previewing ? `Stop preview of ${name}` : `Preview ${name} on headphones`}
-            title={previewing ? "Stop preview" : "Preview on headphones"}
-          >
-            {previewing ? <Square size={10} fill="currentColor" aria-hidden="true" /> : <Headphones size={12} aria-hidden="true" />}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

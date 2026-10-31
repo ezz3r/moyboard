@@ -16,7 +16,6 @@ const missing: Record<string, SoundMeta> = {
   "old-alarm.wav": { ...blank(), category: "Alerts", emoji: "🚨" },
 };
 let output: string | null = null;
-let monitor: string | null = null;
 let monitorVolume = 1;
 let preview: string | null = null;
 // Playback is simulated: a sound plays for 3 s, then ends on its own.
@@ -48,7 +47,7 @@ export function subscribePlayback(handler: (p: Playing[]) => void): () => void {
 let autoRescan = true;
 let closeToTray = true;
 let sidebarWidth = 300;
-let tileSizes = { pad: 128, quick: 56 };
+let tileSizes = { pad: 128, padHeight: 96, quick: 56, quickHeight: 56 };
 let autostart = false;
 let startMinimized = false;
 let quickHotkey: string | null = null;
@@ -126,12 +125,9 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       return undefined as T;
     }
     case "list_output_devices":
-      return { devices, selected: output, monitorSelected: monitor, monitorVolume, previewSelected: preview } as T;
+      return { devices, selected: output, monitorActive: true, monitorVolume, previewSelected: preview } as T;
     case "set_preview_device":
       preview = (args.name as string | null) ?? null;
-      return undefined as T;
-    case "set_monitor_device":
-      monitor = (args.name as string | null) ?? null;
       return undefined as T;
     case "set_monitor_volume":
       monitorVolume = args.volume as number;

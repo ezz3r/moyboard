@@ -24,6 +24,7 @@ export function QuickPanel() {
   const [error, setError] = useState<string | null>(null);
   const [folded, setFolded] = useState<Set<string>>(() => new Set());
   const [tileMin, setTileMin] = useState(56);
+  const [tileH, setTileH] = useState(56);
 
   const refresh = useCallback(async () => {
     try {
@@ -31,6 +32,7 @@ export function QuickPanel() {
       setSounds(list);
       setCategories(cats);
       setTileMin(sizes.quick);
+      setTileH(sizes.quickHeight);
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -150,7 +152,7 @@ export function QuickPanel() {
   const act = (run: () => Promise<void>) => void run().catch((e) => setError(String(e)));
 
   return (
-    <div className="quick" style={{ "--tile-min": `${tileMin}px` } as CSSProperties}>
+    <div className="quick" style={{ "--tile-min": `${tileMin}px`, "--tile-h": `${tileH}px` } as CSSProperties}>
       <header className="quick-head">
         <button
           type="button"
@@ -233,7 +235,6 @@ export function QuickPanel() {
                       previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
                       onPlay={() => act(() => api.playSound(s.fileName))}
                       onPreview={() => act(() => api.previewSound(s.fileName))}
-                      onStopPreview={() => act(() => api.stopSound(s.fileName, true))}
                     />
                     ))}
                   </div>
