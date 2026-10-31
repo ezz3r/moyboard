@@ -361,6 +361,32 @@ test("quick panel: arrows move between rows, Enter plays", async ({ page }) => {
   await expect(plays.nth(0)).toBeFocused();
 });
 
+test("sidebar: drag the handle to resize, double-click resets", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
+  const sidebar = page.locator(".sidebar");
+  const handle = page.getByRole("separator", { name: "Resize sidebar" });
+  const before = (await sidebar.boundingBox())!.width;
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 60, box.y + 100, { steps: 5 });
+  await page.mouse.up();
+  const dragged = (await sidebar.boundingBox())!.width;
+  expect(dragged).toBeGreaterThan(before + 50);
+  await handle.dblclick();
+  expect(Math.round((await sidebar.boundingBox())!.width)).toBe(300);
+});
+
+test("sidebar: keyboard resizes and stops at the minimum", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
+  const handle = page.getByRole("separator", { name: "Resize sidebar" });
+  await handle.focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(handle).toHaveAttribute("aria-valuenow", "316");
+  for (let i = 0; i < 20; i++) await page.keyboard.press("ArrowRight");
+  await expect(handle).toHaveAttribute("aria-valuenow", "280");
+});
+
 test("settings: quick panel mode can be switched to hold", async ({ page }) => {
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("radio", { name: /Toggle: press to show/ })).toBeChecked();

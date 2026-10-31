@@ -541,6 +541,22 @@ fn set_start_minimized(enabled: bool, store: tauri::State<Store>) -> Result<(), 
     store.update(|cfg| cfg.start_minimized = Some(enabled))
 }
 
+/// Sidebar width in CSS pixels. Stored as given; the UI clamps it to the window.
+pub const SIDEBAR_WIDTH_RANGE: std::ops::RangeInclusive<u32> = 200..=2000;
+
+#[tauri::command]
+fn get_sidebar_width(store: tauri::State<Store>) -> u32 {
+    store.get(|cfg| cfg.sidebar_width).unwrap_or(300)
+}
+
+#[tauri::command]
+fn set_sidebar_width(width: u32, store: tauri::State<Store>) -> Result<(), String> {
+    if !SIDEBAR_WIDTH_RANGE.contains(&width) {
+        return Err(format!("sidebar width {width} is out of range"));
+    }
+    store.update(|cfg| cfg.sidebar_width = Some(width))
+}
+
 #[tauri::command]
 fn set_close_to_tray(enabled: bool, store: tauri::State<Store>) -> Result<(), String> {
     store.update(|cfg| cfg.close_to_tray = Some(enabled))
@@ -954,6 +970,8 @@ pub fn run() {
             get_settings,
             set_auto_rescan,
             set_close_to_tray,
+            get_sidebar_width,
+            set_sidebar_width,
             get_autostart,
             set_autostart,
             set_start_minimized,

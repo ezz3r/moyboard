@@ -88,6 +88,8 @@ pub struct Config {
     pub quick_panel_mode: Option<String>,
     /// Start hidden in the tray when launched with Windows (`--minimized`). `None` means off.
     pub start_minimized: Option<bool>,
+    /// Width of the edit sidebar in CSS pixels. `None` means the default.
+    pub sidebar_width: Option<u32>,
     /// Last position and size of the Quick Panel. `None` means the default.
     pub quick_panel_geometry: Option<PanelGeometry>,
     pub sounds: BTreeMap<String, SoundMeta>,

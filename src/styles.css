@@ -121,11 +121,46 @@ select {
   min-height: 0;
 }
 
+/* Drag handle between the pad grid and the sidebar. A hairline, widened to a hit area. */
+.sidebar-handle {
+  position: relative;
+  flex: none;
+  width: 8px;
+  z-index: 1;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.sidebar-handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: var(--line);
+}
+
+.sidebar-handle:hover::before,
+.sidebar-handle:focus-visible::before {
+  width: 2px;
+  background: var(--signal);
+}
+
+.sidebar-handle:focus-visible {
+  outline: none;
+}
+
+body.is-resizing,
+body.is-resizing * {
+  user-select: none !important;
+  cursor: col-resize !important;
+}
+
 /* Always rendered: the selected sound's editor, or a placeholder. */
 .sidebar {
-  width: 300px;
+  width: var(--side-w, 300px);
   flex: none;
-  border-left: 1px solid var(--line);
   padding: 16px;
   overflow-y: auto;
 }
@@ -1042,6 +1077,10 @@ button.group-title:hover {
   .main {
     flex: 1 1 45%;
     min-height: 0;
+  }
+
+  .sidebar-handle {
+    display: none;
   }
 
   .sidebar {

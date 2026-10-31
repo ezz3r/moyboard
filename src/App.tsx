@@ -4,6 +4,7 @@ import { CategoryMenu, type CategoryOption } from "./components/CategoryMenu";
 import { CategoryPanel } from "./components/CategoryPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { Pad } from "./components/Pad";
+import { SIDEBAR_DEFAULT, SidebarHandle } from "./components/SidebarHandle";
 import { SoundPanel } from "./components/SoundPanel";
 import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry } from "./types";
@@ -38,6 +39,7 @@ export default function App() {
   const [playing, setPlaying] = useState<Playing[]>([]);
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "info" | "error" } | null>(null);
+  const [sideWidth, setSideWidth] = useState(SIDEBAR_DEFAULT);
 
   const notify = useCallback((text: string) => setToast({ text, tone: "error" }), []);
   const say = useCallback((text: string) => setToast({ text, tone: "info" }), []);
@@ -57,6 +59,7 @@ export default function App() {
       try {
         setLibraryDir(await api.getLibraryDir());
         setOutput(await api.listOutputDevices());
+        setSideWidth(await api.getSidebarWidth());
       } catch (e) {
         notify(String(e));
       }
@@ -401,7 +404,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="body">
+      <div className="body" style={{ "--side-w": `${sideWidth}px` } as CSSProperties}>
 
         <main className="main">
           {view === "settings" ? (
@@ -456,6 +459,12 @@ export default function App() {
             <div className="pads">{visible.map(renderPad)}</div>
           )}
         </main>
+
+        <SidebarHandle
+          width={sideWidth}
+          onChange={setSideWidth}
+          onCommit={(w) => api.setSidebarWidth(w).catch((e) => notify(String(e)))}
+        />
 
         <aside className="sidebar" aria-label="Selected item">
           {selectedSound ? (

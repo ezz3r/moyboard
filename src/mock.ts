@@ -47,6 +47,7 @@ export function subscribePlayback(handler: (p: Playing[]) => void): () => void {
 }
 let autoRescan = true;
 let closeToTray = true;
+let sidebarWidth = 300;
 let autostart = false;
 let startMinimized = false;
 let quickHotkey: string | null = null;
@@ -162,6 +163,11 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       return undefined as T;
     case "set_start_minimized":
       startMinimized = args.enabled as boolean;
+      return undefined as T;
+    case "get_sidebar_width":
+      return sidebarWidth as T;
+    case "set_sidebar_width":
+      sidebarWidth = args.width as number;
       return undefined as T;
     case "set_close_to_tray":
       closeToTray = args.enabled as boolean;
