@@ -443,6 +443,20 @@ button.group-title:hover {
   gap: 4px;
 }
 
+/* Controls appear on hover or keyboard focus. Hidden, not removed, so they stay in the tab order. */
+.pad-controls {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease, visibility 0s linear 120ms;
+}
+
+.pad:hover .pad-controls,
+.pad:focus-within .pad-controls {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
 .pad-btn {
   display: inline-grid;
   place-items: center;

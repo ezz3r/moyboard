@@ -49,6 +49,7 @@ test("clicking the pad body selects it and does not play", async ({ page }) => {
 
 test("play again starts another instance; the center stop ends all of them", async ({ page }) => {
   const airhorn = pad(page, "airhorn");
+  await airhorn.hover();
   await airhorn.getByRole("button", { name: "Play airhorn" }).click();
   await expect(airhorn.getByRole("button", { name: "Stop all airhorn" })).toBeVisible();
   await expect(airhorn).not.toContainText("x2");
@@ -61,7 +62,20 @@ test("play again starts another instance; the center stop ends all of them", asy
   await expect(airhorn).not.toHaveClass(/is-playing/);
 });
 
+test("pad controls show on hover or keyboard focus only", async ({ page }) => {
+  const rimshot = pad(page, "rimshot");
+  const play = rimshot.getByRole("button", { name: "Play rimshot" });
+  await expect(play).toBeHidden();
+  await rimshot.hover();
+  await expect(play).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(play).toBeHidden();
+  await rimshot.getByRole("button", { name: "Select rimshot" }).focus();
+  await expect(play).toBeVisible();
+});
+
 test("preview button is separate and turns into a stop button", async ({ page }) => {
+  await pad(page, "rimshot").hover();
   await pad(page, "rimshot").getByRole("button", { name: "Preview rimshot on headphones" }).click();
   await expect(pad(page, "rimshot").getByRole("button", { name: "Stop preview of rimshot" })).toBeVisible();
   await expect(pad(page, "rimshot").getByRole("button", { name: "Play rimshot" })).toBeVisible();
