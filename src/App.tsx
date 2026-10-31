@@ -343,7 +343,7 @@ export default function App() {
         </label>
 
         <label className="top-field volume">
-          <span>Master</span>
+          <span>Others</span>
           <input
             type="range"
             min={0}
@@ -355,12 +355,13 @@ export default function App() {
               setMaster(v);
               void api.setMasterVolume(v).catch((err) => notify(String(err)));
             }}
+            aria-label="Volume for others (main output)"
             aria-valuetext={`${Math.round(master * 100)} percent`}
           />
         </label>
 
-        <label className="top-field volume" title={output.monitorSelected ? "Your own volume: the monitor output (what you hear)" : "Pick a monitor output in Settings to hear sounds here"}>
-          <span>Own</span>
+        <label className="top-field volume" title={output.monitorSelected ? "Your volume: what you hear on the monitor output" : "Pick a monitor output under For you in Settings"}>
+          <span>You</span>
           <input
             type="range"
             min={0}
@@ -373,7 +374,7 @@ export default function App() {
               setOutput((o) => ({ ...o, monitorVolume: v }));
               void api.setMonitorVolume(v).catch((err) => notify(String(err)));
             }}
-            aria-label="Own volume (monitor output)"
+            aria-label="Volume for you (monitor output)"
             aria-valuetext={`${Math.round(output.monitorVolume * 100)} percent`}
           />
         </label>

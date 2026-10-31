@@ -49,7 +49,7 @@ export function Settings({
       </section>
 
       <section className="settings-section">
-        <h2>Output device</h2>
+        <h2>For others</h2>
         <p className="hint">Pick the virtual cable that Discord or your game listens to.</p>
         <select
           className="select-wide"
@@ -75,8 +75,7 @@ export function Settings({
       </section>
 
       <section className="settings-section">
-        <h2>Monitor output</h2>
-        <p className="hint">Plays each sound here too, for example your headphones. Must differ from the output above.</p>
+        <h2>For you</h2>
         <select
           className="select-wide"
           value={output.monitorSelected ?? ""}
@@ -98,7 +97,7 @@ export function Settings({
           ))}
         </select>
         <label className="inline-field">
-          <span>Monitor volume <output className="value">{Math.round(output.monitorVolume * 100)}%</output></span>
+          <span>Your volume <output className="value">{Math.round(output.monitorVolume * 100)}%</output></span>
           <input
             type="range"
             min={0}
