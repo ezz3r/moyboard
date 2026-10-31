@@ -35,18 +35,23 @@ Constraints that shape every decision:
 
 ```
 src/                     React frontend
-  App.tsx                main view: top bar, category rail, pad grid, drop handling
+  App.tsx                top bar (search, icon buttons), category rail, pad grid (All view grouped), sidebar, drop handling
+  shell.ts               context menu and browser-shortcut guards
   api.ts                 typed wrapper around Tauri invoke(); routes to mock.ts outside Tauri (dev only)
   mock.ts                in-memory backend for browser preview and Playwright (dev only, not in prod bundle)
   types.ts               types mirroring the Rust serde output (camelCase)
   names.ts               stemOf / extOf helpers for file names
-  emojis.ts              built-in icon set
+  colors.ts              preset colour swatches
   components/
-    Pad.tsx              one sound tile
-    EditSound.tsx        edit sheet: name (renames file), icon, category, volume, hotkey, trim entry
+    Pad.tsx              one sound tile: select body, play/stop, headphone preview
+    SoundPanel.tsx       sidebar editor for a sound: name (renames file), volume, icon, category, colour, hotkey, trim, delete
+    CategoryPanel.tsx    sidebar editor for a category: name, colour, delete
+    EmojiField.tsx       icon button and popover; EmojiPicker.tsx (lazy, emoji-mart) is loaded on first open
     HotkeyField.tsx      press-to-record hotkey input
-    TrimEditor.tsx       waveform, markers, region preview, save trim / export WAV
-    Settings.tsx         library folder, output and monitor devices, folder watching, categories
+    TrimEditor.tsx       waveform, markers, region preview, save trim / export WAV (inline in the sidebar)
+    ConfirmDialog.tsx    modal yes/no (delete)
+    Swatches.tsx         colour preset row
+    Settings.tsx         library folder, output, monitor and preview devices, folder watching
 src-tauri/
   src/lib.rs             Tauri commands, app setup, state wiring
   src/audio.rs           Engine: output streams, per-sound players, monitor, waveform, WAV export
@@ -150,7 +155,7 @@ Prerequisites (WSL): rustup with the `x86_64-pc-windows-msvc` target, `cargo-xwi
 1. `npm run build` passes (tsc is strict; `noUnusedLocals` is on).
 2. `cargo test --manifest-path src-tauri/crates/moyboard-core/Cargo.toml` passes.
 3. `cargo xwin check --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --tests` passes with no warnings.
-4. `npm run test:e2e` passes (15 tests at time of writing).
+4. `npm run test:e2e` passes (31 tests at time of writing).
 5. For UI changes: look at the result (Playwright screenshot or `npm run dev`) at desktop width and at 420 px.
 6. For Windows-specific behavior (audio routing, global hotkeys, OS drag-and-drop, watcher, folder picker):
    say clearly that it was not run, and add or update the relevant item in `docs/MANUAL-TESTS.md`.
