@@ -585,7 +585,7 @@ button.group-title:hover {
 /* Icon as the tile background: behind the buttons and the name, faint, not clickable. */
 .pad-glyph {
   position: absolute;
-  inset: 0;
+  inset: 0 0 24px 0;
   z-index: 0;
   display: grid;
   place-items: center;
@@ -601,6 +601,7 @@ button.group-title:hover {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
+  text-align: center;
   font-size: calc(var(--pad-min, 128px) * 0.1);
   font-weight: 600;
   line-height: 1.3;
@@ -1559,13 +1560,25 @@ button.group-title:hover {
 }
 
 /* Tile text scales with --tile-min (56 px tile: 14 px emoji, 10 px name). */
+/* Icon is the background, in the upper part; the name sits centred under it, in front. */
 .tile-glyph {
-  font-size: calc(var(--tile-min, 56px) * 0.25);
+  position: absolute;
+  inset: 0 0 calc(var(--tile-min, 56px) * 0.5) 0;
+  z-index: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.5);
   line-height: 1;
+  opacity: 0.28;
+  pointer-events: none;
 }
 
 .tile-name {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
   width: 100%;
+  text-align: center;
   font-size: calc(var(--tile-min, 56px) * 0.18);
   font-weight: 600;
   line-height: 1.2;
