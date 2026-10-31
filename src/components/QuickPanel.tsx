@@ -3,7 +3,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { api, isTauri, onLibraryChanged, onPlayback } from "../api";
 import { stemOf } from "../names";
 import { CategoryMenu, type CategoryOption } from "./CategoryMenu";
-import { SoundRow } from "./SoundRow";
+import { SoundTile } from "./SoundTile";
 import type { CategoryMeta, Playing, SoundEntry } from "../types";
 import { ChevronDown, Search, X } from "lucide-react";
 
@@ -12,7 +12,7 @@ const NONE = "uncategorized";
 
 /**
  * The Quick Panel window: a dense list of sounds grouped by category. Click a row to play it.
- * No sidebar and no editing. Up/Down move between rows, Enter plays, Esc hides.
+ * No sidebar and no editing. Up/Down move between tiles, Enter plays, Esc hides.
  */
 export function QuickPanel() {
   const [sounds, setSounds] = useState<SoundEntry[]>([]);
@@ -81,8 +81,8 @@ export function QuickPanel() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") return void hide();
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-      // Up/Down walk the play buttons in order; folded groups are not rendered, so they are skipped.
-      const rows = [...document.querySelectorAll<HTMLButtonElement>(".quick .row-play:not(:disabled)")];
+      // Up/Down walk the tiles in reading order; folded groups are not rendered, so they are skipped.
+      const rows = [...document.querySelectorAll<HTMLButtonElement>(".quick .tile-play:not(:disabled)")];
       if (rows.length === 0) return;
       e.preventDefault();
       const at = rows.indexOf(document.activeElement as HTMLButtonElement);
@@ -208,9 +208,10 @@ export function QuickPanel() {
                   <span className="quick-group-name">{g.name}</span>
                   <span className="quick-group-count">{g.entries.length}</span>
                 </button>
-                {!isFolded &&
-                  g.entries.map((s) => (
-                    <SoundRow
+                {!isFolded && (
+                  <div className="quick-grid">
+                    {g.entries.map((s) => (
+                    <SoundTile
                       key={s.fileName}
                       entry={s}
                       accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
@@ -221,7 +222,9 @@ export function QuickPanel() {
                       onPreview={() => act(() => api.previewSound(s.fileName))}
                       onStopPreview={() => act(() => api.stopSound(s.fileName, true))}
                     />
-                  ))}
+                    ))}
+                  </div>
+                )}
               </section>
             );
           })

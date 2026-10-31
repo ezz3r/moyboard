@@ -325,16 +325,16 @@ test("right-click does not open a menu (default prevented)", async ({ page }) =>
 test("quick panel: sounds with search, and no sidebar or editing", async ({ page }) => {
   await page.goto("/?view=quick");
   await expect(page.locator(".quick")).toBeVisible();
-  await expect(page.locator(".quick .row")).toHaveCount(9);
+  await expect(page.locator(".quick .tile")).toHaveCount(9);
   await expect(page.getByRole("complementary", { name: "Selected item" })).toHaveCount(0);
   await page.getByRole("searchbox", { name: "Search sounds" }).fill("airhorn");
-  await expect(page.locator(".quick .row")).toHaveCount(1);
-  await expect(page.locator(".quick .row")).toContainText("airhorn");
+  await expect(page.locator(".quick .tile")).toHaveCount(1);
+  await expect(page.locator(".quick .tile")).toContainText("airhorn");
 });
 
 test("quick panel: play from the panel starts another instance", async ({ page }) => {
   await page.goto("/?view=quick");
-  const airhorn = page.locator(".quick .row", { hasText: "airhorn" });
+  const airhorn = page.locator(".quick .tile", { hasText: "airhorn" });
   await airhorn.hover();
   await airhorn.getByRole("button", { name: "Play airhorn" }).click();
   await expect(airhorn.getByRole("button", { name: "Stop all airhorn" })).toBeVisible();
@@ -344,13 +344,13 @@ test("quick panel: rows are grouped and folding hides them", async ({ page }) =>
   await page.goto("/?view=quick");
   await expect(page.locator(".quick-group-head", { hasText: "Memes" })).toBeVisible();
   await page.locator(".quick-group-head", { hasText: "Memes" }).click();
-  await expect(page.locator(".quick .row", { hasText: "airhorn" })).toHaveCount(0);
+  await expect(page.locator(".quick .tile", { hasText: "airhorn" })).toHaveCount(0);
   await expect(page.locator(".quick-group-head", { hasText: "Memes" })).toHaveAttribute("aria-expanded", "false");
 });
 
 test("quick panel: arrows move between rows, Enter plays", async ({ page }) => {
   await page.goto("/?view=quick");
-  const plays = page.locator(".quick .row-play:not(:disabled)");
+  const plays = page.locator(".quick .tile-play:not(:disabled)");
   await page.getByRole("searchbox", { name: "Search sounds" }).press("ArrowDown");
   await expect(plays.nth(0)).toBeFocused();
   await page.keyboard.press("ArrowDown");
@@ -408,7 +408,7 @@ test("settings: start with Windows and minimized start can be switched", async (
 test("quick panel: no horizontal scroll at 360 px", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 420 });
   await page.goto("/?view=quick");
-  await expect(page.locator(".quick .row").first()).toBeVisible();
+  await expect(page.locator(".quick .tile").first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
