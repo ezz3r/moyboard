@@ -101,3 +101,35 @@ Overall rating: **Needs work**. The base is sound (focus rings, dialog defaults,
 | alarm on ground | 5.37 | pass (text) |
 | alarm on surface | 4.88 | pass (text) |
 | line `#2c3631` on ground | 1.46 | **fail** (non-text, C2) |
+
+## After the redesign
+
+Screenshots: `docs/screens/after/` (same matrix as `docs/screens/before/`). Light and dark now differ. Status per finding:
+
+| ID | Finding | Status |
+| --- | --- | --- |
+| C1 | Text below 10 pt (9 px badges, 11 px chip) | Fixed. Tile badges 11 px; pad names never below 11 px. |
+| C2 | Control borders 1.46:1 | Fixed for inputs, selects, buttons, search, key chips (`--control-line`, 3.9:1 light / 5.2:1 dark). Pad and tile cards keep `--line`: they are tiles identified by fill and name, accepted. |
+| H1 | No light mode | Fixed. Light default, dark via `prefers-color-scheme` or `data-theme`. |
+| H2 | 420 px truncation and crowding | Fixed. System font fits "System default"; output picker takes its own row at 560 px and below. |
+| H3 | Pad buttons hover-only | Partly fixed. Always visible on coarse pointers; hover and focus reveal kept for mouse and keyboard. |
+| H4 | Red overloaded | Fixed for Stop (neutral in top bar and Quick Panel). Red stays for Delete, File missing, Forget. |
+| M1 | Group toggle 26 px | Fixed (28 px). |
+| M2 | Quick Panel empty state, no next step | Fixed ("Add sounds in the main window."). |
+| M3 | Quick Panel hint size | Already 12 px. Accepted. |
+
+Decisions taken (from `docs/ui-design-plan.md`):
+- Accent amber to blue. The "live" meaning moves to the Live ring: a steady category-coloured ring on a playing pad. Not animated, because playback events carry no duration and adding one would change IPC.
+- One soft shadow (`--elevation`) on menus, dialogs and the emoji popover. CLAUDE.md updated.
+- Materials (blur) not applied. The top bar, sidebar and Quick Panel header sit beside the content, not over it, so there is nothing to blur. Revisit only if a layout puts content under them.
+- The category colour variable is `--cat`. `--accent` is the global accent. The rename collided once and was fixed before commit.
+
+Known and accepted:
+- Emoji render as empty boxes in WSL (no emoji font). Check on the Windows build.
+- Empty main board (no sounds) not captured: the mock always has sounds. Check manually.
+- Toasts not captured in the matrix. Their colours use the same tokens.
+- Light and dark switching on Windows (system setting change while running) not verified; only Playwright colour-scheme emulation.
+- Pad name text fade (`mask-image` gradient) kept. It fades text, not a visible colour gradient.
+- Quick Panel behaviour on Windows (focus, instant show/hide, blur-free) not run here. See `docs/MANUAL-TESTS.md`.
+
+Contrast: final token values match the table in `docs/ui-design-plan.md` (all pass 4.5:1 text, 3:1 controls).

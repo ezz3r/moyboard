@@ -164,7 +164,7 @@ Prerequisites (WSL): rustup with the `x86_64-pc-windows-msvc` target, `cargo-xwi
 1. `npm run build` passes (tsc is strict; `noUnusedLocals` is on).
 2. `cargo test --manifest-path src-tauri/crates/moyboard-core/Cargo.toml` passes.
 3. `cargo xwin check --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --tests` passes with no warnings.
-4. `npm run test:e2e` passes (40 tests at time of writing).
+4. `npm run test:e2e` passes (49 tests at time of writing).
 5. For UI changes: look at the result (Playwright screenshot or `npm run dev`) at desktop width and at 420 px.
 6. For Windows-specific behavior (audio routing, global hotkeys, OS drag-and-drop, watcher, folder picker):
    say clearly that it was not run, and add or update the relevant item in `docs/MANUAL-TESTS.md`.

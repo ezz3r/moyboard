@@ -160,6 +160,15 @@ select {
   max-width: 34vw;
 }
 
+/* Narrow windows: the output picker takes its own full-width row. */
+@media (max-width: 560px) {
+  .device,
+  .device select {
+    width: 100%;
+    max-width: none;
+  }
+}
+
 .volume {
   display: flex;
   align-items: center;
