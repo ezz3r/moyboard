@@ -47,6 +47,8 @@ export function subscribePlayback(handler: (p: Playing[]) => void): () => void {
 }
 let autoRescan = true;
 let closeToTray = true;
+let quickHotkey: string | null = null;
+let quickMode: "hold" | "toggle" = "toggle";
 let library = dir;
 
 function blank(): SoundMeta {
@@ -134,6 +136,19 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       return { autoRescan, closeToTray } as T;
     case "set_auto_rescan":
       autoRescan = args.enabled as boolean;
+      return undefined as T;
+    case "get_quick_panel_settings":
+      return { hotkey: quickHotkey, mode: quickMode } as T;
+    case "set_quick_panel_settings": {
+      const hotkey = (args.hotkey as string | null) || null;
+      const clash = hotkey && Object.values(files).find((m) => m.hotkey === hotkey);
+      if (clash) throw new Error(`${hotkey} already uses this hotkey`);
+      quickHotkey = hotkey;
+      quickMode = args.mode as "hold" | "toggle";
+      return undefined as T;
+    }
+    case "show_quick_panel":
+    case "hide_quick_panel":
       return undefined as T;
     case "set_close_to_tray":
       closeToTray = args.enabled as boolean;

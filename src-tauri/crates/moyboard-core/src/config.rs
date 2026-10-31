@@ -61,6 +61,10 @@ pub struct Config {
     pub auto_rescan: Option<bool>,
     /// Closing the main window hides it to the tray. `None` means on.
     pub close_to_tray: Option<bool>,
+    /// Global hotkey that opens the Quick Panel. `None` means no hotkey.
+    pub quick_panel_hotkey: Option<String>,
+    /// `"hold"` (shown while the key is down) or `"toggle"`. `None` means toggle.
+    pub quick_panel_mode: Option<String>,
     pub sounds: BTreeMap<String, SoundMeta>,
     pub categories: BTreeMap<String, CategoryMeta>,
 }

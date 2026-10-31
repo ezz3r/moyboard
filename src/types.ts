@@ -42,6 +42,12 @@ export type Playing = {
   previewing: boolean;
 };
 
+export type QuickPanelSettings = {
+  /** Global hotkey in the backend's format, or null for none. */
+  hotkey: string | null;
+  mode: "hold" | "toggle";
+};
+
 export type AppSettings = {
   autoRescan: boolean;
   closeToTray: boolean;

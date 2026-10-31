@@ -13,14 +13,16 @@ type Props = {
   value: string;
   options: CategoryOption[];
   onChange: (key: string) => void;
-  onNew: () => void;
-  /** Opens the category editor for the current value. Disabled when the value is not a category. */
-  onEdit: () => void;
-  editable: boolean;
+  /** Omit to hide the entry. */
+  onNew?: () => void;
+  /** Opens the category editor for the current value. Omit to hide the button. */
+  onEdit?: () => void;
+  /** False disables the edit button (the value is All or Uncategorized). */
+  editable?: boolean;
 };
 
 /** Top-bar category switcher: a listbox popover with colour dots, plus the edit and new actions. */
-export function CategoryMenu({ value, options, onChange, onNew, onEdit, editable }: Props) {
+export function CategoryMenu({ value, options, onChange, onNew, onEdit, editable = true }: Props) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -69,19 +71,21 @@ export function CategoryMenu({ value, options, onChange, onNew, onEdit, editable
         <ChevronDown size={16} aria-hidden="true" />
       </button>
 
-      <button
-        type="button"
-        className="btn-icon"
-        aria-label="Edit category"
-        title={editable ? "Edit this category" : "Pick a category to edit it"}
-        disabled={!editable}
-        onClick={() => {
-          setOpen(false);
-          onEdit();
-        }}
-      >
-        <Pencil size={16} aria-hidden="true" />
-      </button>
+      {onEdit && (
+        <button
+          type="button"
+          className="btn-icon"
+          aria-label="Edit category"
+          title={editable ? "Edit this category" : "Pick a category to edit it"}
+          disabled={!editable}
+          onClick={() => {
+            setOpen(false);
+            onEdit();
+          }}
+        >
+          <Pencil size={16} aria-hidden="true" />
+        </button>
+      )}
 
       {open && (
         <div id={listId} className="cat-pop" role="listbox" aria-label="Categories" onKeyDown={onListKey}>
@@ -109,17 +113,19 @@ export function CategoryMenu({ value, options, onChange, onNew, onEdit, editable
               </button>
             );
           })}
-          <button
-            type="button"
-            className="cat-option cat-new"
-            onClick={() => {
-              setOpen(false);
-              onNew();
-            }}
-          >
-            <Plus size={14} aria-hidden="true" />
-            New category
-          </button>
+          {onNew && (
+            <button
+              type="button"
+              className="cat-option cat-new"
+              onClick={() => {
+                setOpen(false);
+                onNew();
+              }}
+            >
+              <Plus size={14} aria-hidden="true" />
+              New category
+            </button>
+          )}
         </div>
       )}
     </div>

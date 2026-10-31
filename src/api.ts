@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppSettings,
   CategoryMeta,
+  QuickPanelSettings,
   ImportReport,
   OutputState,
   Playing,
@@ -56,9 +58,23 @@ export const api = {
   getSettings: () => call<AppSettings>("get_settings"),
   setAutoRescan: (enabled: boolean) => call<void>("set_auto_rescan", { enabled }),
   setCloseToTray: (enabled: boolean) => call<void>("set_close_to_tray", { enabled }),
+  getQuickPanelSettings: () => call<QuickPanelSettings>("get_quick_panel_settings"),
+  setQuickPanelSettings: (hotkey: string | null, mode: "hold" | "toggle") =>
+    call<void>("set_quick_panel_settings", { hotkey, mode }),
+  showQuickPanel: () => call<void>("show_quick_panel"),
+  hideQuickPanel: () => call<void>("hide_quick_panel"),
   stopAll: () => call<void>("stop_all"),
   setMasterVolume: (volume: number) => call<void>("set_master_volume", { volume }),
 };
+
+/**
+ * True inside the Quick Panel window. In the browser preview the same page is opened
+ * with `?view=quick`, so it can be tested without Tauri.
+ */
+export function isQuickPanelWindow(): boolean {
+  if (isTauri) return getCurrentWebviewWindow().label === "quick-panel";
+  return new URLSearchParams(window.location.search).get("view") === "quick";
+}
 
 export async function pickFolder(): Promise<string | null> {
   if (!isTauri) return window.prompt("Library folder path") || null;

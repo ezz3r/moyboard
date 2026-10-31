@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, pickFolder } from "../api";
-import type { AppSettings, OutputState } from "../types";
+import type { AppSettings, OutputState, QuickPanelSettings } from "../types";
+import { HotkeyField } from "./HotkeyField";
 
 type Props = {
   libraryDir: string;
@@ -135,6 +136,8 @@ export function Settings({ libraryDir, output, onLibraryChanged, onOutputChanged
 
       <CloseToTray onError={onError} />
 
+      <QuickPanelSection onError={onError} />
+
     </div>
   );
 }
@@ -200,6 +203,70 @@ function CloseToTray({ onError }: { onError: (m: string) => void }) {
         <span>Keep running in the tray when the window is closed</span>
       </label>
       <p className="hint">With this off, closing the window quits moyboard. Use the tray menu to quit otherwise.</p>
+    </section>
+  );
+}
+
+/** Hotkey and mode for the Quick Panel. Hold shows it while the key is down; Toggle flips it per press. */
+function QuickPanelSection({ onError }: { onError: (m: string) => void }) {
+  const [cfg, setCfg] = useState<QuickPanelSettings | null>(null);
+  useEffect(() => {
+    api
+      .getQuickPanelSettings()
+      .then(setCfg)
+      .catch((e) => onError(String(e)));
+  }, [onError]);
+
+  // Saves at once. A refused hotkey (taken by a sound, or by another app) reverts and shows why.
+  const save = async (next: QuickPanelSettings) => {
+    const prev = cfg;
+    setCfg(next);
+    try {
+      await api.setQuickPanelSettings(next.hotkey, next.mode);
+    } catch (e) {
+      setCfg(prev);
+      onError(String(e));
+    }
+  };
+
+  return (
+    <section className="settings-section">
+      <h2>Quick Panel</h2>
+      <p className="hint">
+        A small board of sounds over other windows, opened by a hotkey. It works over windowed and borderless games,
+        not exclusive fullscreen.
+      </p>
+      {cfg && (
+        <>
+          <div className="inline-field">
+            <span>Hotkey</span>
+            <span className="hotkey-row">
+              <HotkeyField value={cfg.hotkey} onChange={(h) => void save({ ...cfg, hotkey: h })} />
+            </span>
+          </div>
+          <fieldset className="radio-row">
+            <legend>Mode</legend>
+            <label className="inline-field">
+              <input
+                type="radio"
+                name="quick-mode"
+                checked={cfg.mode === "hold"}
+                onChange={() => void save({ ...cfg, mode: "hold" })}
+              />
+              <span>Hold: shown while the hotkey is down</span>
+            </label>
+            <label className="inline-field">
+              <input
+                type="radio"
+                name="quick-mode"
+                checked={cfg.mode === "toggle"}
+                onChange={() => void save({ ...cfg, mode: "toggle" })}
+              />
+              <span>Toggle: press to show, press again or Esc to hide</span>
+            </label>
+          </fieldset>
+        </>
+      )}
     </section>
   );
 }

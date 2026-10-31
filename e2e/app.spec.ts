@@ -321,3 +321,28 @@ test("right-click does not open a menu (default prevented)", async ({ page }) =>
   });
   expect(prevented).toBe(true);
 });
+
+test("quick panel: sounds with search, and no sidebar or editing", async ({ page }) => {
+  await page.goto("/?view=quick");
+  await expect(page.locator(".quick")).toBeVisible();
+  await expect(page.locator(".quick .pad")).toHaveCount(9);
+  await expect(page.getByRole("complementary", { name: "Selected item" })).toHaveCount(0);
+  await page.getByRole("searchbox", { name: "Search sounds" }).fill("airhorn");
+  await expect(page.locator(".quick .pad")).toHaveCount(1);
+  await expect(page.locator(".quick .pad")).toContainText("airhorn");
+});
+
+test("quick panel: play from the panel starts another instance", async ({ page }) => {
+  await page.goto("/?view=quick");
+  const airhorn = page.locator(".quick .pad", { hasText: "airhorn" });
+  await airhorn.hover();
+  await airhorn.getByRole("button", { name: "Play airhorn" }).click();
+  await expect(airhorn.getByRole("button", { name: "Stop all airhorn" })).toBeVisible();
+});
+
+test("settings: quick panel mode can be switched to hold", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByRole("radio", { name: /Toggle: press to show/ })).toBeChecked();
+  await page.getByRole("radio", { name: /Hold: shown/ }).check();
+  await expect(page.getByRole("radio", { name: /Hold: shown/ })).toBeChecked();
+});

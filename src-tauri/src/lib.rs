@@ -15,7 +15,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use watch::Watch;
 
 type AudioState = Mutex<Engine>;
@@ -128,6 +128,41 @@ pub fn publish(app: &AppHandle) {
     let _ = app.emit("playback", now);
 }
 
+/// Tells every window the library or its metadata changed, so the Quick Panel refreshes too.
+fn notify_changed(app: &AppHandle) {
+    let _ = app.emit(watch::EVENT, ());
+}
+
+const QUICK_LABEL: &str = "quick-panel";
+
+fn quick_window(app: &AppHandle) -> Option<WebviewWindow> {
+    app.get_webview_window(QUICK_LABEL)
+}
+
+pub fn show_quick(app: &AppHandle) {
+    if let Some(w) = quick_window(app) {
+        let _ = w.show();
+    }
+}
+
+pub fn hide_quick(app: &AppHandle) {
+    if let Some(w) = quick_window(app) {
+        let _ = w.hide();
+    }
+}
+
+pub fn toggle_quick(app: &AppHandle) {
+    match quick_window(app) {
+        Some(w) if w.is_visible().unwrap_or(false) => {
+            let _ = w.hide();
+        }
+        Some(w) => {
+            let _ = w.show();
+        }
+        None => {}
+    }
+}
+
 /// Starts, stops, or moves the folder watcher to match the current settings.
 fn restart_watch(app: &AppHandle) -> Result<(), String> {
     let watch = app.state::<Watch>();
@@ -181,7 +216,7 @@ fn rescan(store: tauri::State<Store>) -> Result<Vec<SoundEntry>, String> {
 /// Copies dropped files into the library folder. Each file is handled on its own,
 /// so one bad file does not stop the rest.
 #[tauri::command]
-fn import_files(paths: Vec<String>, store: tauri::State<Store>) -> Result<ImportReport, String> {
+fn import_files(paths: Vec<String>, app: AppHandle, store: tauri::State<Store>) -> Result<ImportReport, String> {
     let dir = current_dir(&store)?;
     let mut report = ImportReport { imported: Vec::new(), errors: Vec::new() };
     for p in paths {
@@ -190,6 +225,7 @@ fn import_files(paths: Vec<String>, store: tauri::State<Store>) -> Result<Import
             Err(e) => report.errors.push(e),
         }
     }
+    notify_changed(&app);
     Ok(report)
 }
 
@@ -221,6 +257,7 @@ fn rename_sound(
         }
     })?;
     hotkeys::sync(&app)?;
+    notify_changed(&app);
     Ok(new_name)
 }
 
@@ -228,7 +265,9 @@ fn rename_sound(
 #[tauri::command]
 fn forget_sound(file_name: String, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
     store.update(|cfg| cfg.sounds.remove(&file_name))?;
-    hotkeys::sync(&app)
+    hotkeys::sync(&app)?;
+    notify_changed(&app);
+    Ok(())
 }
 
 /// Moves the sound file to the Recycle Bin, then drops its metadata and hotkey.
@@ -245,7 +284,9 @@ fn delete_sound(file_name: String, app: AppHandle, store: tauri::State<Store>) -
         trash::delete(&path).map_err(|e| format!("move {file_name} to the Recycle Bin: {e}"))?;
     }
     store.update(|cfg| cfg.sounds.remove(&file_name))?;
-    hotkeys::sync(&app)
+    hotkeys::sync(&app)?;
+    notify_changed(&app);
+    Ok(())
 }
 
 /// Saves metadata, then re-registers hotkeys. If a hotkey cannot be registered
@@ -279,6 +320,7 @@ fn set_sound_meta(
         hotkeys::sync(&app)?;
         return Err(format!("{e} (hotkey not saved)"));
     }
+    notify_changed(&app);
     Ok(())
 }
 
@@ -289,9 +331,9 @@ fn list_categories(store: tauri::State<Store>) -> BTreeMap<String, CategoryMeta>
 
 /// Creates a category with a fresh id. Returns the id.
 #[tauri::command]
-fn new_category(name: String, store: tauri::State<Store>) -> Result<String, String> {
+fn new_category(name: String, app: AppHandle, store: tauri::State<Store>) -> Result<String, String> {
     let name = clean_category_name(&name)?;
-    store.update(|cfg| -> Result<String, String> {
+    let id = store.update(|cfg| -> Result<String, String> {
         ensure_unique_name(cfg, &name, None)?;
         let id = loop {
             let nanos = std::time::SystemTime::now()
@@ -305,7 +347,9 @@ fn new_category(name: String, store: tauri::State<Store>) -> Result<String, Stri
         };
         cfg.categories.insert(id.clone(), CategoryMeta { name, color: None });
         Ok(id)
-    })?
+    })??;
+    notify_changed(&app);
+    Ok(id)
 }
 
 /// Renames or recolours a category. Sounds keep pointing at the same id.
@@ -315,6 +359,7 @@ fn set_category(
     id: String,
     name: String,
     color: Option<String>,
+    app: AppHandle,
     store: tauri::State<Store>,
 ) -> Result<(), String> {
     let name = clean_category_name(&name)?;
@@ -325,7 +370,9 @@ fn set_category(
         ensure_unique_name(cfg, &name, Some(&id))?;
         cfg.categories.insert(id, CategoryMeta { name, color });
         Ok(())
-    })?
+    })??;
+    notify_changed(&app);
+    Ok(())
 }
 
 /// Removes a category. Its sounds move to Uncategorized (they stay in the library).
@@ -339,7 +386,9 @@ fn delete_category(id: String, app: AppHandle, store: tauri::State<Store>) -> Re
             }
         }
     })?;
-    hotkeys::sync(&app)
+    hotkeys::sync(&app)?;
+    notify_changed(&app);
+    Ok(())
 }
 
 /// Two categories may not share a name, ignoring case. `own` is the id being edited.
@@ -438,13 +487,14 @@ fn toggle_main(app: &AppHandle) {
     }
 }
 
-/// Tray menu. Quick Panel is wired in with the panel itself.
+/// Tray icon and menu.
 fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open moyboard", true, None::<&str>)?;
+    let panel = MenuItem::with_id(app, "panel", "Quick Panel", true, None::<&str>)?;
     let stop = MenuItem::with_id(app, "stop", "Stop all sounds", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(app, &[&open, &sep, &stop, &quit])?;
+    let menu = Menu::with_items(app, &[&open, &panel, &sep, &stop, &quit])?;
     let icon = app.default_window_icon().cloned();
 
     let mut tray = TrayIconBuilder::new()
@@ -453,6 +503,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => show_main(app),
+            "panel" => toggle_quick(app),
             "stop" => {
                 if let Ok(mut engine) = lock(&app.state::<AudioState>()) {
                     engine.stop_all();
@@ -554,6 +605,7 @@ fn export_trim(
     file_name: String,
     trim_start: Option<f64>,
     trim_end: Option<f64>,
+    app: AppHandle,
     store: tauri::State<Store>,
 ) -> Result<String, String> {
     let src = sound_path(&store, &file_name)?;
@@ -588,7 +640,75 @@ fn export_trim(
             },
         )
     })?;
+    notify_changed(&app);
     Ok(name)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuickPanelSettings {
+    hotkey: Option<String>,
+    /// `"hold"` or `"toggle"`.
+    mode: String,
+}
+
+#[tauri::command]
+fn get_quick_panel_settings(store: tauri::State<Store>) -> QuickPanelSettings {
+    store.get(|cfg| QuickPanelSettings {
+        hotkey: cfg.quick_panel_hotkey.clone(),
+        mode: cfg.quick_panel_mode.clone().unwrap_or_else(|| "toggle".to_string()),
+    })
+}
+
+/// Saves the Quick Panel hotkey and mode. A hotkey already used by a sound is refused,
+/// and a hotkey that cannot be registered is rolled back, as for sound hotkeys.
+#[tauri::command]
+fn set_quick_panel_settings(
+    hotkey: Option<String>,
+    mode: String,
+    app: AppHandle,
+    store: tauri::State<Store>,
+) -> Result<(), String> {
+    if mode != "hold" && mode != "toggle" {
+        return Err(format!("unknown Quick Panel mode: {mode}"));
+    }
+    let hotkey = hotkey.filter(|h| !h.is_empty());
+    if let Some(h) = &hotkey {
+        let id = hotkeys::parse(h)?.id();
+        let clash = store.get(|cfg| {
+            cfg.sounds
+                .iter()
+                .find(|(_, m)| m.hotkey.as_deref().and_then(|x| hotkeys::parse(x).ok()).map(|s| s.id()) == Some(id))
+                .map(|(file, _)| file.clone())
+        });
+        if let Some(file) = clash {
+            return Err(format!("{file} already uses this hotkey"));
+        }
+    }
+    let previous = store.get(|cfg| (cfg.quick_panel_hotkey.clone(), cfg.quick_panel_mode.clone()));
+    store.update(|cfg| {
+        cfg.quick_panel_hotkey = hotkey;
+        cfg.quick_panel_mode = Some(mode);
+    })?;
+    if let Err(e) = hotkeys::sync(&app) {
+        store.update(|cfg| {
+            cfg.quick_panel_hotkey = previous.0;
+            cfg.quick_panel_mode = previous.1;
+        })?;
+        hotkeys::sync(&app)?;
+        return Err(format!("{e} (hotkey not saved)"));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn show_quick_panel(app: AppHandle) {
+    show_quick(&app);
+}
+
+#[tauri::command]
+fn hide_quick_panel(app: AppHandle) {
+    hide_quick(&app);
 }
 
 #[tauri::command]
@@ -653,6 +773,25 @@ pub fn run() {
             if let Err(e) = build_tray(app.handle()) {
                 eprintln!("moyboard: tray icon: {e}");
             }
+            // Hidden until its hotkey (or the tray) shows it. Shown without taking focus.
+            let panel = WebviewWindowBuilder::new(app, QUICK_LABEL, WebviewUrl::App("index.html".into()))
+                .title("moyboard Quick Panel")
+                .inner_size(360.0, 420.0)
+                .min_inner_size(240.0, 180.0)
+                .decorations(false)
+                .always_on_top(true)
+                .skip_taskbar(true)
+                .resizable(true)
+                .focusable(false)
+                .visible(false)
+                .build()?;
+            let handle = app.handle().clone();
+            panel.on_window_event(move |event| {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    hide_quick(&handle);
+                }
+            });
             if let Some(main) = app.get_webview_window("main") {
                 let handle = app.handle().clone();
                 main.on_window_event(move |event| {
@@ -698,6 +837,10 @@ pub fn run() {
             get_settings,
             set_auto_rescan,
             set_close_to_tray,
+            get_quick_panel_settings,
+            set_quick_panel_settings,
+            show_quick_panel,
+            hide_quick_panel,
             play_sound,
             stop_sound,
             preview_sound,
