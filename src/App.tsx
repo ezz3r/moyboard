@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, onFileDrop, onLibraryChanged } from "./api";
 import { EditSound } from "./components/EditSound";
 import { TrimEditor } from "./components/TrimEditor";
 import { Pad } from "./components/Pad";
-import { Settings } from "./components/Settings";
+import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type OutputState, type SoundEntry } from "./types";
+import { RefreshCw, Settings, Square } from "lucide-react";
 
 const ALL = "all";
 const NONE = "uncategorized";
@@ -194,24 +195,23 @@ export default function App() {
         </label>
 
         <div className="top-actions">
-          <button type="button" className="btn btn-quiet" onClick={() => void refresh()}>
-            Rescan
-          </button>
-          <button
-            type="button"
-            className="btn btn-quiet"
-            aria-pressed={view === "settings"}
+          <IconButton label="Rescan" onClick={() => void refresh()}>
+            <RefreshCw size={18} aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            label={view === "settings" ? "Back to pads" : "Settings"}
+            pressed={view === "settings"}
             onClick={() => setView(view === "settings" ? "pads" : "settings")}
           >
-            {view === "settings" ? "Back to pads" : "Settings"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-quiet"
+            <Settings size={18} aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            label="Stop all"
+            tone="danger"
             onClick={() => void api.stopAll().catch((err) => notify(String(err)))}
           >
-            Stop all
-          </button>
+            <Square size={16} fill="currentColor" aria-hidden="true" />
+          </IconButton>
         </div>
       </header>
 
@@ -240,7 +240,7 @@ export default function App() {
 
         <main className="main">
           {view === "settings" ? (
-            <Settings
+            <SettingsView
               libraryDir={libraryDir}
               output={output}
               categories={categories}
@@ -328,4 +328,31 @@ function Empty({ filter }: { filter: string }) {
         ? "Every sound has a category."
         : `Nothing in ${filter} yet. Set this category on a sound to see it here.`;
   return <p className="empty">{text}</p>;
+}
+
+function IconButton({
+  label,
+  onClick,
+  children,
+  pressed,
+  tone,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+  pressed?: boolean;
+  tone?: "danger";
+}) {
+  return (
+    <button
+      type="button"
+      className={`btn-icon${tone === "danger" ? " is-danger" : ""}`}
+      aria-label={label}
+      title={label}
+      aria-pressed={pressed}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
 }

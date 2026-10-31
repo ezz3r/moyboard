@@ -739,3 +739,33 @@ select {
     animation: none !important;
   }
 }
+
+/* ---------- Icon buttons (header) ---------- */
+
+.btn-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.btn-icon:hover,
+.btn-icon[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.btn-icon.is-danger {
+  color: var(--alarm);
+}
+
+.btn-icon.is-danger:hover {
+  border-color: var(--alarm);
+  background: transparent;
+}
