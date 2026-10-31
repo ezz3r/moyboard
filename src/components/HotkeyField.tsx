@@ -36,7 +36,8 @@ export function HotkeyField({ value, onChange, id }: Props) {
           onChange(null);
           return setRecording(false);
         }
-        if (MODIFIER_CODES.has(e.code)) return;
+        // Modifier-only presses wait for a key. Unidentified keys have no layout-independent code.
+        if (MODIFIER_CODES.has(e.code) || !e.code || e.code === "Unidentified") return;
         const parts: string[] = [];
         if (e.ctrlKey) parts.push("Ctrl");
         if (e.altKey) parts.push("Alt");

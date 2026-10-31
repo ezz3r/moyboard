@@ -55,9 +55,12 @@ pub fn sync(app: &AppHandle) -> Result<(), String> {
     // Registered after the sounds, so a clash with a sound is the one reported.
     let quick = store.get(|cfg| cfg.quick_panel_hotkey.clone().filter(|h| !h.is_empty()));
     if let Some(hotkey) = quick {
-        match parse(&hotkey).and_then(|s| gs.register(s).map(|()| s).map_err(|e| format!("quick panel hotkey {hotkey}: {e}"))) {
+        match parse(&hotkey).and_then(|s| gs.register(s).map(|()| s).map_err(|e| format!("Hotkey {hotkey} is already in use or invalid ({e})"))) {
             Ok(s) => *app.state::<QuickKey>().0.lock().unwrap() = Some(s.id()),
-            Err(e) => errors.push(e),
+            Err(e) => {
+                eprintln!("moyboard: {e}");
+                errors.push(e)
+            }
         }
     }
     if errors.is_empty() {
@@ -88,8 +91,17 @@ pub fn on_event(app: &AppHandle, shortcut: &Shortcut, event: tauri_plugin_global
 /// Hold: shown while the key is down. Toggle: each press flips it.
 fn quick_panel_event(app: &AppHandle, state: ShortcutState) {
     let hold = app.state::<Store>().get(|cfg| cfg.quick_panel_mode.as_deref() == Some("hold"));
+    // Diagnostics for the Windows hotkey bug (see docs/MANUAL-TESTS.md). Debug builds only.
+    if cfg!(debug_assertions) {
+        eprintln!("moyboard: quick panel key {state:?} (hold: {hold})");
+    }
     match (state, hold) {
-        (ShortcutState::Pressed, true) => crate::show_quick(app),
+        // Auto-repeat is blocked by the OS (MOD_NOREPEAT), but a repeated Pressed must not re-show.
+        (ShortcutState::Pressed, true) => {
+            if !crate::quick_visible(app) {
+                crate::show_quick(app)
+            }
+        }
         (ShortcutState::Released, true) => crate::hide_quick(app),
         (ShortcutState::Pressed, false) => crate::toggle_quick(app),
         _ => {}

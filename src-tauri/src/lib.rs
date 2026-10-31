@@ -181,6 +181,10 @@ fn apply_quick_geometry(app: &AppHandle, w: &WebviewWindow) {
     let _ = w.set_position(tauri::PhysicalPosition::new(g.x, g.y));
 }
 
+pub fn quick_visible(app: &AppHandle) -> bool {
+    quick_window(app).is_some_and(|w| w.is_visible().unwrap_or(false))
+}
+
 pub fn hide_quick(app: &AppHandle) {
     if let Some(w) = quick_window(app) {
         let _ = w.hide();
