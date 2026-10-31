@@ -11,16 +11,16 @@ type Props = {
   instances: number;
   previewing: boolean;
   onPlay: () => void;
-  onStop: () => void;
   onPreview: () => void;
   onStopPreview: () => void;
 };
 
 /**
- * One small tile in the Quick Panel grid. The tile itself plays; preview and stop
- * appear on hover or focus. Stop shows only while the sound plays.
+ * One small tile in the Quick Panel grid. Left click plays on the main output, right click
+ * previews on the headphones. The preview button appears on hover or focus. Stopping is
+ * done with the panel's Stop button, not per tile.
  */
-export function SoundTile({ entry, accent, instances, previewing, onPlay, onStop, onPreview, onStopPreview }: Props) {
+export function SoundTile({ entry, accent, instances, previewing, onPlay, onPreview, onStopPreview }: Props) {
   const name = stemOf(entry.fileName);
   const missing = entry.missing;
   const playing = instances > 0;
@@ -34,9 +34,13 @@ export function SoundTile({ entry, accent, instances, previewing, onPlay, onStop
         type="button"
         className="tile-play"
         onClick={onPlay}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (!missing) onPreview();
+        }}
         disabled={missing}
         aria-label={missing ? `${name}, file missing` : `Play ${name}`}
-        title={name}
+        title={`${name}\nLeft click: play · Right click: preview`}
       >
         <span className="tile-glyph" aria-hidden="true">
           {missing ? "!" : (entry.meta.emoji ?? "♪")}
@@ -60,17 +64,6 @@ export function SoundTile({ entry, accent, instances, previewing, onPlay, onStop
 
       {!missing && (
         <div className="tile-actions">
-          {playing && (
-            <button
-              type="button"
-              className="tile-btn"
-              onClick={onStop}
-              aria-label={`Stop all ${instances > 1 ? `${instances} instances of ` : ""}${name}`}
-              title="Stop all instances"
-            >
-              <Square size={10} fill="currentColor" aria-hidden="true" />
-            </button>
-          )}
           <button
             type="button"
             className="tile-btn"

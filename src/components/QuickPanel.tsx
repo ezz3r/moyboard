@@ -5,14 +5,15 @@ import { stemOf } from "../names";
 import { CategoryMenu, type CategoryOption } from "./CategoryMenu";
 import { SoundTile } from "./SoundTile";
 import type { CategoryMeta, Playing, SoundEntry } from "../types";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, Square, X } from "lucide-react";
 
 const ALL = "all";
 const NONE = "uncategorized";
 
 /**
- * The Quick Panel window: a dense list of sounds grouped by category. Click a row to play it.
- * No sidebar and no editing. Up/Down move between tiles, Enter plays, Esc hides.
+ * The Quick Panel window: a dense grid of sounds grouped by category. Left click plays on the
+ * main output, right click previews on the headphones. No sidebar and no editing.
+ * Up/Down move between tiles, Enter plays, Esc hides.
  */
 export function QuickPanel() {
   const [sounds, setSounds] = useState<SoundEntry[]>([]);
@@ -172,11 +173,22 @@ export function QuickPanel() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+        <button
+          type="button"
+          className="btn-icon is-danger"
+          aria-label="Stop all sounds"
+          title="Stop all sounds (main and preview)"
+          onClick={() => act(() => api.stopAll())}
+        >
+          <Square size={16} fill="currentColor" aria-hidden="true" />
+        </button>
         <CategoryMenu value={filter} options={options} onChange={setFilter} />
         <button type="button" className="btn-icon" aria-label="Hide Quick Panel" title="Hide (Esc)" onClick={() => void hide()}>
           <X size={16} aria-hidden="true" />
         </button>
       </header>
+
+      <p className="quick-hint">Left click: play · Right click: preview</p>
 
       {error && (
         <p className="quick-error" role="alert">
@@ -220,7 +232,6 @@ export function QuickPanel() {
                       instances={playing.filter((p) => p.fileName === s.fileName && !p.previewing).length}
                       previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
                       onPlay={() => act(() => api.playSound(s.fileName))}
-                      onStop={() => act(() => api.stopSound(s.fileName, false))}
                       onPreview={() => act(() => api.previewSound(s.fileName))}
                       onStopPreview={() => act(() => api.stopSound(s.fileName, true))}
                     />

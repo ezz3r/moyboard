@@ -360,7 +360,22 @@ test("quick panel: play from the panel starts another instance", async ({ page }
   const airhorn = page.locator(".quick .tile", { hasText: "airhorn" });
   await airhorn.hover();
   await airhorn.getByRole("button", { name: "Play airhorn" }).click();
-  await expect(airhorn.getByRole("button", { name: "Stop all airhorn" })).toBeVisible();
+  await expect(airhorn.locator(".tile-eq")).toBeVisible();
+  await expect(airhorn.getByRole("button", { name: "Stop all airhorn" })).toHaveCount(0);
+});
+
+test("quick panel: right click previews, and the Stop button stops everything", async ({ page }) => {
+  await page.goto("/?view=quick");
+  const airhorn = page.locator(".quick .tile", { hasText: "airhorn" });
+  await airhorn.hover();
+  await airhorn.getByRole("button", { name: "Play airhorn" }).click({ button: "right" });
+  await expect(airhorn.getByRole("button", { name: "Stop preview of airhorn" })).toBeVisible();
+  await expect(airhorn.locator(".tile-eq")).toHaveCount(0);
+  await airhorn.getByRole("button", { name: "Play airhorn" }).click();
+  await expect(airhorn.locator(".tile-eq")).toBeVisible();
+  await page.getByRole("button", { name: "Stop all sounds" }).click();
+  await expect(airhorn.locator(".tile-eq")).toHaveCount(0);
+  await expect(airhorn.getByRole("button", { name: "Stop preview of airhorn" })).toHaveCount(0);
 });
 
 test("quick panel: rows are grouped and folding hides them", async ({ page }) => {

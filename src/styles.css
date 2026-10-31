@@ -1381,7 +1381,7 @@ button.group-title:hover {
 
 .quick-search {
   flex: 1;
-  min-width: 0;
+  min-width: 96px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1405,6 +1405,13 @@ button.group-title:hover {
 
 .quick-search:focus-within {
   border-color: var(--signal);
+}
+
+.quick-hint {
+  margin: 0;
+  padding: 4px 8px 0;
+  color: var(--ink-2);
+  font-size: 12px;
 }
 
 .quick-error {
@@ -1626,8 +1633,9 @@ button.group-title:hover {
 /* Preview and stop: shown on hover or focus, so the grid stays quiet. */
 .tile-actions {
   position: absolute;
-  left: 3px;
-  bottom: 3px;
+  left: 50%;
+  top: 3px;
+  transform: translateX(-50%);
   display: flex;
   gap: 2px;
   opacity: 0;
