@@ -1212,6 +1212,13 @@ button.group-title:hover {
 
 /* ---------- Quick Panel window ---------- */
 
+/* The panel shows and hides at once: no fades, transitions or animations in this window. */
+.quick,
+.quick * {
+  transition: none !important;
+  animation: none !important;
+}
+
 .quick {
   height: 100vh;
   display: flex;

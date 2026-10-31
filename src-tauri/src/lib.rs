@@ -144,6 +144,26 @@ fn notify_changed(app: &AppHandle) {
 
 const QUICK_LABEL: &str = "quick-panel";
 
+/// Turns off the Windows fade when the Quick Panel is shown or hidden.
+/// shortcut: if DWM ignores this on some builds, the fade stays; documented in MANUAL-TESTS.
+#[cfg(windows)]
+fn disable_os_transitions(w: &WebviewWindow) {
+    use windows::core::BOOL;
+    use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_TRANSITIONS_FORCEDISABLED};
+    if let Ok(hwnd) = w.hwnd() {
+        let on = BOOL::from(true);
+        // SAFETY: the attribute is a BOOL and the buffer is its size; hwnd is our own window.
+        let _ = unsafe {
+            DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_TRANSITIONS_FORCEDISABLED,
+                &on as *const BOOL as *const _,
+                std::mem::size_of::<BOOL>() as u32,
+            )
+        };
+    }
+}
+
 fn quick_window(app: &AppHandle) -> Option<WebviewWindow> {
     app.get_webview_window(QUICK_LABEL)
 }
@@ -880,6 +900,8 @@ pub fn run() {
                 .focusable(false)
                 .visible(false)
                 .build()?;
+            #[cfg(windows)]
+            disable_os_transitions(&panel);
             let handle = app.handle().clone();
             panel.on_window_event(move |event| {
                 if let WindowEvent::CloseRequested { api, .. } = event {

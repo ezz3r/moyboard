@@ -32,6 +32,10 @@ tauri-plugin-autostart = "2"
 notify = "8.2.1"
 trash = "5.2.9"
 
+[target.'cfg(windows)'.dependencies]
+# Only for DwmSetWindowAttribute: turns off the OS show/hide fade of the Quick Panel.
+windows = { version = "0.62", features = ["Win32_Graphics_Dwm"] }
+
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
