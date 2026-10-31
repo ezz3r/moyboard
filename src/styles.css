@@ -451,8 +451,8 @@ body.is-resizing * {
 .group-toggle {
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   background: none;
   border: 0;
@@ -1678,7 +1678,7 @@ button.group-title:hover {
   border-radius: var(--radius);
   background: var(--ground);
   color: var(--ink-2);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
   white-space: nowrap;
   overflow: hidden;
@@ -1694,7 +1694,7 @@ button.group-title:hover {
   border-radius: var(--radius);
   background: var(--accent-ink);
   color: var(--accent);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 650;
   pointer-events: none;
 }

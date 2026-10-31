@@ -177,7 +177,7 @@ export function QuickPanel() {
         </div>
         <button
           type="button"
-          className="btn-icon is-danger"
+          className="btn-icon"
           aria-label="Stop all sounds"
           title="Stop all sounds (main and preview)"
           onClick={() => act(() => api.stopAll())}
@@ -200,7 +200,7 @@ export function QuickPanel() {
 
       <div className="quick-body">
         {visible.length === 0 ? (
-          <p className="empty">{sounds.length === 0 ? "No sounds yet." : "No sounds found."}</p>
+          <p className="empty">{sounds.length === 0 ? "No sounds yet. Add sounds in the main window." : "No sounds found."}</p>
         ) : (
           groups.map((g) => {
             const isFolded = folded.has(g.key);
