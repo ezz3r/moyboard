@@ -351,6 +351,7 @@ test("quick panel: rows are grouped and folding hides them", async ({ page }) =>
 test("quick panel: arrows move between rows, Enter plays", async ({ page }) => {
   await page.goto("/?view=quick");
   const plays = page.locator(".quick .tile-play:not(:disabled)");
+  await expect(plays.first()).toBeVisible();
   await page.getByRole("searchbox", { name: "Search sounds" }).press("ArrowDown");
   await expect(plays.nth(0)).toBeFocused();
   await page.keyboard.press("ArrowDown");

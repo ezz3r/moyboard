@@ -357,6 +357,25 @@ export default function App() {
           />
         </label>
 
+        <label className="top-field volume" title={output.monitorSelected ? "Your own volume: the monitor output (what you hear)" : "Pick a monitor output in Settings to hear sounds here"}>
+          <span>Own</span>
+          <input
+            type="range"
+            min={0}
+            max={2}
+            step={0.01}
+            value={output.monitorVolume}
+            disabled={!output.monitorSelected}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setOutput((o) => ({ ...o, monitorVolume: v }));
+              void api.setMonitorVolume(v).catch((err) => notify(String(err)));
+            }}
+            aria-label="Own volume (monitor output)"
+            aria-valuetext={`${Math.round(output.monitorVolume * 100)} percent`}
+          />
+        </label>
+
         <div className="top-search" role="search">
           <Search size={16} aria-hidden="true" />
           <input
