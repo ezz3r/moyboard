@@ -28,6 +28,7 @@ rodio = { version = "0.23.0", features = ["symphonia-all"] }
 tauri-plugin-dialog = "2.8.4"
 tauri-plugin-global-shortcut = "2.4.1"
 notify = "8.2.1"
+trash = "5.2.9"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

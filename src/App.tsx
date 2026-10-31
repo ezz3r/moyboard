@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { api, onFileDrop, onLibraryChanged, onPlayback } from "./api";
 import { CategoryPanel } from "./components/CategoryPanel";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { Pad } from "./components/Pad";
 import { SoundPanel } from "./components/SoundPanel";
 import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry } from "./types";
-import { ChevronDown, Plus, RefreshCw, Settings, Square } from "lucide-react";
+import { stemOf } from "./names";
+import { ChevronDown, Plus, RefreshCw, Search, Settings, Square, X } from "lucide-react";
 
 const ALL = "all";
 const NONE = "uncategorized";
@@ -28,6 +30,10 @@ export default function App() {
   const [view, setView] = useState<"pads" | "settings">("pads");
   const [filter, setFilter] = useState(ALL);
   const [selection, setSelection] = useState<Selection>(null);
+  const [query, setQuery] = useState("");
+  const [term, setTerm] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [playing, setPlaying] = useState<Playing[]>([]);
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "info" | "error" } | null>(null);
@@ -74,32 +80,70 @@ export default function App() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [sounds, categories]);
 
+  // Search matches the sound's name, or its category's name (then the whole category shows).
+  const needle = term.trim().toLowerCase();
+  const matches = (s: SoundEntry) =>
+    !needle ||
+    stemOf(s.fileName).toLowerCase().includes(needle) ||
+    (!!s.meta.category && nameOf(s.meta.category).toLowerCase().includes(needle));
+
   const visible = useMemo(() => {
-    if (filter === ALL) return sounds;
-    if (filter === NONE) return sounds.filter((s) => !s.meta.category);
-    return sounds.filter((s) => s.meta.category === filter);
-  }, [sounds, filter]);
+    const base =
+      filter === ALL
+        ? sounds
+        : filter === NONE
+          ? sounds.filter((s) => !s.meta.category)
+          : sounds.filter((s) => s.meta.category === filter);
+    return base.filter(matches);
+  }, [sounds, filter, needle, categories]);
 
   // The All view: one section per category, then Uncategorized (only if it has sounds).
+  // While searching, sections with no hits are hidden.
   const groups = useMemo(
-    () => [
-      ...catList.map((c) => ({
-        key: c.id,
-        name: c.name,
-        color: categories[c.id]?.color ?? null,
-        selectable: true,
-        entries: sounds.filter((s) => s.meta.category === c.id),
-      })),
-      {
-        key: NONE,
-        name: "Uncategorized",
-        color: null,
-        selectable: false,
-        entries: sounds.filter((s) => !s.meta.category),
-      },
-    ].filter((g) => g.selectable || g.entries.length > 0),
-    [catList, categories, sounds],
+    () =>
+      [
+        ...catList.map((c) => ({
+          key: c.id,
+          name: c.name,
+          color: categories[c.id]?.color ?? null,
+          selectable: true,
+          entries: sounds.filter((s) => s.meta.category === c.id && matches(s)),
+        })),
+        {
+          key: NONE,
+          name: "Uncategorized",
+          color: null,
+          selectable: false,
+          entries: sounds.filter((s) => !s.meta.category && matches(s)),
+        },
+      ].filter((g) => (needle ? g.entries.length > 0 : g.selectable || g.entries.length > 0)),
+    [catList, categories, sounds, needle],
   );
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setTerm(query), 150);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  // Ctrl+F focuses search. Delete removes the selected sound, unless a text field has focus.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+        return;
+      }
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName));
+      if (e.key === "Delete" && !typing && selection?.type === "sound" && !pendingDelete) {
+        e.preventDefault();
+        setPendingDelete(selection.id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selection, pendingDelete]);
 
   const countFor = (key: string) =>
     key === ALL
@@ -193,6 +237,18 @@ export default function App() {
     void run().catch((e) => notify(String(e)));
   }
 
+  async function deleteSound(fileName: string) {
+    setPendingDelete(null);
+    try {
+      await api.deleteSound(fileName);
+      if (selection?.type === "sound" && selection.id === fileName) setSelection(null);
+      say(`Moved ${stemOf(fileName)} to the Recycle Bin.`);
+      await refresh();
+    } catch (e) {
+      notify(String(e));
+    }
+  }
+
   async function forget(fileName: string) {
     try {
       await api.forgetSound(fileName);
@@ -268,6 +324,32 @@ export default function App() {
           />
         </label>
 
+        <div className="top-search" role="search">
+          <Search size={16} aria-hidden="true" />
+          <input
+            ref={searchRef}
+            type="search"
+            value={query}
+            placeholder="Search"
+            aria-label="Search sounds and categories"
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setQuery("")}
+          />
+          {query && (
+            <button
+              type="button"
+              className="search-clear"
+              aria-label="Clear search"
+              onClick={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
         <div className="top-actions">
           <IconButton label="Rescan" onClick={() => void refresh()}>
             <RefreshCw size={18} aria-hidden="true" />
@@ -327,6 +409,8 @@ export default function App() {
               onRefresh={() => void refresh()}
               onError={notify}
             />
+          ) : needle && (filter === ALL ? !sounds.some(matches) : visible.length === 0) ? (
+            <p className="empty">No sounds found.</p>
           ) : filter === ALL ? (
             sounds.length === 0 ? (
               <Empty filter={filter} name="" />
@@ -385,6 +469,7 @@ export default function App() {
                 say(`Saved as ${newName}`);
                 void refresh();
               }}
+              onDelete={() => setPendingDelete(selectedSound.fileName)}
               onError={notify}
             />
           ) : selectedCategory !== null ? (
@@ -411,6 +496,16 @@ export default function App() {
         <div className="drop" aria-hidden="true">
           <p>Drop to copy into moyboard</p>
         </div>
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`Delete ${stemOf(pendingDelete)}?`}
+          body="The file moves to the Recycle Bin. Its icon, category, colour, hotkey and trim are removed."
+          confirmLabel="Delete"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => void deleteSound(pendingDelete)}
+        />
       )}
 
       {toast && (

@@ -194,3 +194,60 @@ test("no horizontal scroll at phone width", async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("search filters sounds by name", async ({ page }) => {
+  await page.getByRole("searchbox", { name: "Search sounds and categories" }).fill("horn");
+  await expect(page.locator(".pad")).toHaveCount(1);
+  await expect(pad(page, "airhorn")).toBeVisible();
+});
+
+test("search also matches the category name, and hides empty sections", async ({ page }) => {
+  await page.getByRole("searchbox", { name: "Search sounds and categories" }).fill("memes");
+  await expect(page.locator(".pad")).toHaveCount(3);
+  await expect(page.locator(".group-title")).toHaveText(["Memes"]);
+});
+
+test("search with no hits says so, and Escape clears it", async ({ page }) => {
+  const box = page.getByRole("searchbox", { name: "Search sounds and categories" });
+  await box.fill("zzz");
+  await expect(page.getByText("No sounds found.")).toBeVisible();
+  await box.press("Escape");
+  await expect(box).toHaveValue("");
+  await expect(page.locator(".pad")).toHaveCount(9);
+});
+
+test("Ctrl+F focuses the search field", async ({ page }) => {
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("Control+f");
+  await expect(page.getByRole("searchbox", { name: "Search sounds and categories" })).toBeFocused();
+});
+
+test("delete: confirm, then the sound leaves the pads and the selection", async ({ page }) => {
+  await openEdit(page, "airhorn");
+  await sidebar(page).getByRole("button", { name: "Delete sound" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("Delete airhorn?");
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(pad(page, "airhorn")).toHaveCount(0);
+  await expect(railCount(page, "All")).toHaveText("8");
+  await expect(sidebar(page)).toContainText("Select a sound or a category to edit it.");
+});
+
+test("Delete key asks first; Cancel keeps the sound", async ({ page }) => {
+  await openEdit(page, "frog");
+  await page.keyboard.press("Delete");
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(pad(page, "frog")).toBeVisible();
+});
+
+test("Escape closes the delete dialog", async ({ page }) => {
+  await openEdit(page, "frog");
+  await sidebar(page).getByRole("button", { name: "Delete sound" }).click();
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+});
+

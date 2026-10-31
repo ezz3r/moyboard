@@ -37,6 +37,7 @@ export const api = {
   setSoundMeta: (fileName: string, meta: SoundMeta) => call<void>("set_sound_meta", { fileName, meta }),
   renameSound: (fileName: string, newName: string) => call<string>("rename_sound", { fileName, newName }),
   forgetSound: (fileName: string) => call<void>("forget_sound", { fileName }),
+  deleteSound: (fileName: string) => call<void>("delete_sound", { fileName }),
   listOutputDevices: () => call<OutputState>("list_output_devices"),
   setOutputDevice: (name: string | null) => call<void>("set_output_device", { name }),
   playSound: (fileName: string) => call<void>("play_sound", { fileName }),

@@ -98,6 +98,10 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
     case "forget_sound":
       delete missing[name!];
       return undefined as T;
+    case "delete_sound":
+      delete files[name!];
+      setPlaying(playing.filter((p) => p.fileName !== name));
+      return undefined as T;
     case "list_categories":
       return categories as T;
     case "new_category": {

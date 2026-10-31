@@ -15,6 +15,7 @@ type Props = {
   onChanged: () => void;
   onRenamed: (newName: string) => void;
   onExported: (newName: string) => void;
+  onDelete: () => void;
   onError: (message: string) => void;
 };
 
@@ -23,7 +24,7 @@ type Props = {
  * so the panel can stay open while the user clicks around the pads.
  * Mounted with `key={fileName}`, so local drafts reset per sound.
  */
-export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, onExported, onError }: Props) {
+export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, onExported, onDelete, onError }: Props) {
   const ext = extOf(entry.fileName);
   const [stem, setStem] = useState(stemOf(entry.fileName));
   const [volume, setVolume] = useState(entry.meta.volume ?? 1);
@@ -155,6 +156,13 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
         onSaved={onChanged}
         onExported={onExported}
       />
+
+      <div className="panel-foot">
+        <button type="button" className="btn btn-danger" onClick={onDelete}>
+          Delete sound
+        </button>
+        <p className="hint">Moves the file to the Recycle Bin. Shortcut: Delete key with the pad selected.</p>
+      </div>
     </div>
   );
 }

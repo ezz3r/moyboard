@@ -228,6 +228,23 @@ fn forget_sound(file_name: String, app: AppHandle, store: tauri::State<Store>) -
     hotkeys::sync(&app)
 }
 
+/// Moves the sound file to the Recycle Bin, then drops its metadata and hotkey.
+/// Stops it first if it is playing. A file that is already gone only loses its metadata.
+#[tauri::command]
+fn delete_sound(file_name: String, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
+    library::check_file_name(&file_name)?;
+    let audio = app.state::<AudioState>();
+    lock(&audio)?.stop_file(&file_name, None);
+    publish(&app);
+
+    let path = current_dir(&store)?.join(&file_name);
+    if path.is_file() {
+        trash::delete(&path).map_err(|e| format!("move {file_name} to the Recycle Bin: {e}"))?;
+    }
+    store.update(|cfg| cfg.sounds.remove(&file_name))?;
+    hotkeys::sync(&app)
+}
+
 /// Saves metadata, then re-registers hotkeys. If a hotkey cannot be registered
 /// (already taken by another app, for example), the previous metadata is restored
 /// and the error is returned.
@@ -582,6 +599,7 @@ pub fn run() {
             set_sound_meta,
             rename_sound,
             forget_sound,
+            delete_sound,
             list_categories,
             new_category,
             set_category,
