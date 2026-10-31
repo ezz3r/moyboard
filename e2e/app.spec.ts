@@ -251,3 +251,18 @@ test("Escape closes the delete dialog", async ({ page }) => {
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
 });
 
+
+test("header icon buttons have names and tooltips", async ({ page }) => {
+  for (const name of ["Rescan", "Settings", "Stop all"]) {
+    await expect(page.getByRole("button", { name, exact: true })).toHaveAttribute("title", name);
+  }
+});
+
+test("right-click does not open a menu (default prevented)", async ({ page }) => {
+  const prevented = await page.evaluate(() => {
+    const ev = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    document.body.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  });
+  expect(prevented).toBe(true);
+});

@@ -47,7 +47,37 @@ Setup: install VB-CABLE (or another virtual cable), then run
 - [ ] Rename renames the file in Explorer.
 - [ ] Rename to an existing name shows an error; no file is overwritten.
 - [ ] Case-only rename (`Airhorn` → `airhorn`) works.
-- [ ] Settings → rename category updates every sound.
+- [ ] Sidebar → category name: renaming updates the rail and every pad in it; sounds keep their category.
+- [ ] Deleting a category moves its sounds to Uncategorized; the files stay in Explorer.
+- [ ] Emoji picker opens offline; searching "fire" finds 🔥 and shows the emoji with the system font.
+
+## Pads, preview and sidebar (v2)
+- [ ] Clicking a pad body selects it and does not play.
+- [ ] Play button turns into Stop while the sound plays; Stop stops only that sound.
+- [ ] Headphone button plays only on the Settings → Preview output device; the virtual cable hears nothing.
+- [ ] Headphone Stop stops the preview but leaves the same sound playing on the main output.
+- [ ] Preview output set to the same device as the main output: preview is refused with an error.
+- [ ] A sound that ends on its own flips its Stop button back to Play without a click.
+- [ ] Hotkey starts a playing sound; the same hotkey stops it.
+- [ ] Trim "Play region" plays on the preview device, not on the cable.
+
+## Delete (v2)
+- [ ] Delete sound → confirm → file appears in the Recycle Bin, not permanently gone.
+- [ ] Delete key with a pad selected opens the confirmation; Escape cancels.
+- [ ] After delete, Rescan and folder watching do not bring the pad back.
+- [ ] Deleting a playing sound stops it.
+- [ ] Deleting a sound whose hotkey was set: the hotkey no longer fires.
+- [ ] A locked file (open in another program) shows an error; metadata is kept.
+
+## Colours and icons (v2)
+- [ ] Category colour shows as a stripe on every pad in that category; a sound colour overrides it.
+- [ ] Clearing a sound colour returns it to the category colour.
+
+## Windows-only items not run in WSL
+The v2 playback routing (preview device, Stop per sound, playback events),
+global hotkey toggling, Recycle Bin delete and the Windows installer were not
+run on a Windows machine when this list was written. Check every item above
+before a release.
 
 ## Robustness
 - [ ] Corrupt `%APPDATA%\com.moyboard.app\moyboard.json`: app shows an error at startup and does not overwrite the file.
