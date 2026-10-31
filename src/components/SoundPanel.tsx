@@ -81,81 +81,87 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
 
   return (
     <div className="panel">
-      <label className="field">
-        <span>Name</span>
-        <span className="name-row">
+      <div className="panel-group">
+        <label className="field">
+          <span>Name</span>
+          <span className="name-row">
+            <input
+              value={stem}
+              onChange={(e) => setStem(e.target.value)}
+              onBlur={() => void rename()}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            />
+            <span className="ext">{ext}</span>
+          </span>
+        </label>
+
+        <label className="field">
+          <span>
+            Volume <output className="value">{Math.round(volume * 100)}%</output>
+          </span>
           <input
-            value={stem}
-            onChange={(e) => setStem(e.target.value)}
-            onBlur={() => void rename()}
-            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
           />
-          <span className="ext">{ext}</span>
-        </span>
-      </label>
+        </label>
+      </div>
+      <div className="panel-group">
+        <EmojiField value={entry.meta.emoji} onChange={(e) => void save({ emoji: e })} />
 
-      <label className="field">
-        <span>
-          Volume <output className="value">{Math.round(volume * 100)}%</output>
-        </span>
-        <input
-          type="range"
-          min={0}
-          max={2}
-          step={0.05}
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-        />
-      </label>
+        <label className="field">
+          <span>Category</span>
+          <select
+            className="select-wide"
+            aria-label="Category"
+            value={entry.meta.category ?? ""}
+            onChange={(e) => void save({ category: e.target.value || null })}
+          >
+            <option value="">Uncategorized</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <EmojiField value={entry.meta.emoji} onChange={(e) => void save({ emoji: e })} />
+        <div className="field">
+          <span>Colour</span>
+          <Swatches
+            label="Pad colour"
+            value={entry.meta.color ?? null}
+            inheritLabel="Use category colour"
+            onChange={(c) => void save({ color: c })}
+          />
+        </div>
 
-      <label className="field">
-        <span>Category</span>
-        <select
-          className="select-wide"
-          aria-label="Category"
-          value={entry.meta.category ?? ""}
-          onChange={(e) => void save({ category: e.target.value || null })}
-        >
-          <option value="">Uncategorized</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="field">
-        <span>Colour</span>
-        <Swatches
-          label="Pad colour"
-          value={entry.meta.color ?? null}
-          inheritLabel="Use category colour"
-          onChange={(c) => void save({ color: c })}
+      </div>
+      <div className="panel-group">
+        <div className="field">
+          <span>Hotkey</span>
+          <span className="hotkey-row">
+            <HotkeyField value={hotkey ?? null} onChange={(h) => void save({ hotkey: h })} />
+            {hotkey && (
+              <button type="button" className="btn btn-quiet" onClick={() => void save({ hotkey: null })}>
+                Clear
+              </button>
+            )}
+          </span>
+          {clash && <p className="warn">{stemOf(clash.fileName)} already uses this hotkey.</p>}
+        </div>
+      </div>
+      <div className="panel-group">
+        <TrimEditor
+          key={entry.fileName}
+          entry={entry}
+          onSaved={onChanged}
+          onExported={onExported}
         />
       </div>
-
-      <div className="field">
-        <span>Hotkey</span>
-        <span className="hotkey-row">
-          <HotkeyField value={hotkey ?? null} onChange={(h) => void save({ hotkey: h })} />
-          {hotkey && (
-            <button type="button" className="btn btn-quiet" onClick={() => void save({ hotkey: null })}>
-              Clear
-            </button>
-          )}
-        </span>
-        {clash && <p className="warn">{stemOf(clash.fileName)} already uses this hotkey.</p>}
-      </div>
-
-      <TrimEditor
-        key={entry.fileName}
-        entry={entry}
-        onSaved={onChanged}
-        onExported={onExported}
-      />
 
       <div className="panel-foot">
         <button type="button" className="btn btn-danger" onClick={onDelete}>
