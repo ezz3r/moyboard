@@ -75,16 +75,23 @@ test("play again starts another instance; the center stop ends all of them", asy
   await expect(airhorn).not.toHaveClass(/is-playing/);
 });
 
-test("pad controls show on hover or keyboard focus only", async ({ page }) => {
+test("pad buttons are always visible and large enough to hit", async ({ page }) => {
   const rimshot = pad(page, "rimshot");
-  const play = rimshot.getByRole("button", { name: "Play rimshot" });
-  await expect(play).toBeHidden();
-  await rimshot.hover();
-  await expect(play).toBeVisible();
   await page.mouse.move(0, 0);
-  await expect(play).toBeHidden();
-  await rimshot.getByRole("button", { name: "Select rimshot" }).focus();
-  await expect(play).toBeVisible();
+  for (const name of ["Play rimshot", "Preview rimshot on headphones"]) {
+    const button = rimshot.getByRole("button", { name });
+    await expect(button).toBeVisible();
+    const box = await button.boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(32);
+  }
+});
+
+test("pad: icon and name sit side by side on one row", async ({ page }) => {
+  const frog = pad(page, "frog");
+  const glyph = await frog.locator(".pad-glyph").boundingBox();
+  const name = await frog.locator(".pad-name").boundingBox();
+  expect(glyph!.x + glyph!.width).toBeLessThanOrEqual(name!.x);
+  expect(Math.abs(glyph!.y + glyph!.height / 2 - (name!.y + name!.height / 2))).toBeLessThan(10);
 });
 
 test("preview button is separate and turns into a stop button", async ({ page }) => {

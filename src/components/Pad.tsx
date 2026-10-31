@@ -20,8 +20,8 @@ type Props = {
 };
 
 /**
- * One sound tile. The body selects the sound for the sidebar; it never plays.
- * The button row sits on top of the body, so the buttons are siblings, not children, of the select button.
+ * One sound tile. The button row is the main content and is always visible. The info row
+ * (icon and name) selects the sound for the sidebar; it never plays.
  */
 export function Pad({
   entry,
@@ -51,6 +51,44 @@ export function Pad({
 
   return (
     <div className={classes} style={accent ? ({ "--accent": accent } as CSSProperties) : undefined}>
+      {missing ? null : (
+        <div className="pad-row">
+          <button
+            type="button"
+            className="pad-btn pad-stop"
+            onClick={onStop}
+            disabled={!playing}
+            aria-label={`Stop all ${instances > 1 ? `${instances} instances of ` : ""}${name}`}
+            title="Stop all instances"
+          >
+            <Square size={14} fill="currentColor" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="pad-btn pad-play"
+            onClick={onPlay}
+            aria-label={`Play ${name}`}
+            title="Play another instance"
+          >
+            <Play size={20} fill="currentColor" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="pad-btn"
+            aria-pressed={previewing}
+            onClick={previewing ? onStopPreview : onPreview}
+            aria-label={previewing ? `Stop preview of ${name}` : `Preview ${name} on headphones`}
+            title={previewing ? "Stop preview" : "Preview on headphones"}
+          >
+            {previewing ? (
+              <Square size={14} fill="currentColor" aria-hidden="true" />
+            ) : (
+              <Headphones size={18} aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      )}
+
       <button
         type="button"
         className="pad-select"
@@ -61,11 +99,19 @@ export function Pad({
         aria-label={missing ? `${name}, file missing` : `Select ${name}`}
       >
         <span className="pad-glyph" aria-hidden="true">
-          {missing ? "!" : entry.meta.emoji ?? "♪"}
+          {missing ? "!" : (entry.meta.emoji ?? "♪")}
         </span>
         <span className="pad-name">{name}</span>
-        {missing && <span className="pad-note">File missing</span>}
       </button>
+
+      {missing && (
+        <div className="pad-missing-foot">
+          <span className="pad-note">File missing</span>
+          <button type="button" className="pad-forget" onClick={onForget}>
+            Forget
+          </button>
+        </div>
+      )}
 
       {(playing || previewing) && !missing && (
         <div className="pad-status">
@@ -88,48 +134,6 @@ export function Pad({
         <span className="pad-key" title={`Hotkey ${hotkeyLabel(entry.meta.hotkey)}`}>
           {hotkeyLabel(entry.meta.hotkey)}
         </span>
-      )}
-
-      {missing ? (
-        <button type="button" className="pad-forget" onClick={onForget}>
-          Forget
-        </button>
-      ) : (
-        <div className="pad-row">
-          <button
-            type="button"
-            className="pad-btn pad-stop"
-            onClick={onStop}
-            disabled={!playing}
-            aria-label={`Stop all ${instances > 1 ? `${instances} instances of ` : ""}${name}`}
-            title="Stop all instances"
-          >
-            <Square size={14} fill="currentColor" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className="pad-btn"
-            onClick={onPlay}
-            aria-label={`Play ${name}`}
-            title="Play another instance"
-          >
-            <Play size={16} fill="currentColor" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className="pad-btn"
-            aria-pressed={previewing}
-            onClick={previewing ? onStopPreview : onPreview}
-            aria-label={previewing ? `Stop preview of ${name}` : `Preview ${name} on headphones`}
-            title={previewing ? "Stop preview" : "Preview on headphones"}
-          >
-            {previewing ? (
-              <Square size={14} fill="currentColor" aria-hidden="true" />
-            ) : (
-              <Headphones size={16} aria-hidden="true" />
-            )}
-          </button>
-        </div>
       )}
     </div>
   );

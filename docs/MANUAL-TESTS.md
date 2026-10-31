@@ -77,7 +77,7 @@ Setup: install VB-CABLE (or another virtual cable), then run
 ## Multi-instance and pads (v3)
 - [ ] Pressing Play on a playing sound starts another copy; the pad shows `x2`, and the count drops as each copy ends.
 - [ ] The centre Stop appears while a sound plays and stops every copy of it; other sounds keep playing.
-- [ ] Play, Preview and Stop buttons on a pad appear on hover and when the tile has keyboard focus.
+- [ ] Play, Preview and Stop buttons on a pad are always visible; Stop appears only while the sound plays.
 
 ## Tray and window (v3)
 - [ ] Closing the main window hides it; sounds and hotkeys keep working; the tray icon stays.
@@ -130,7 +130,7 @@ Run on the Windows build. Debug builds print `moyboard: quick panel key Pressed/
 - [ ] Double-click the handle: back to 300 px.
 - [ ] Restart the app: the sidebar width is restored.
 - [ ] Trim waveform redraws at the new width.
-- [ ] Pad hover controls (Play, Preview) do not move the name or the hotkey badge.
+- [ ] Pressing Play on an idle pad does not move the Play button (Stop slot stays reserved).
 
 ## Device identity and preview (v5)
 - [ ] Main = virtual cable, preview = headphones: Preview plays only on headphones, with no error.
