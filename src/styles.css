@@ -110,6 +110,11 @@ select {
   color: var(--ink-2);
 }
 
+/* Master and Own share the top bar; a fixed track keeps the search and buttons on screen. */
+.volume input[type="range"] {
+  width: 96px;
+}
+
 .top-actions {
   display: flex;
   gap: 4px;
