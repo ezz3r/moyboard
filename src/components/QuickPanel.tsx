@@ -3,17 +3,16 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { api, isTauri, onLibraryChanged, onPlayback } from "../api";
 import { stemOf } from "../names";
 import { CategoryMenu, type CategoryOption } from "./CategoryMenu";
-import { Pad } from "./Pad";
+import { SoundRow } from "./SoundRow";
 import type { CategoryMeta, Playing, SoundEntry } from "../types";
-import { Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 
 const ALL = "all";
 const NONE = "uncategorized";
-const noop = () => {};
 
 /**
- * The Quick Panel window: a small board of sounds with the same pads as the main window.
- * It has no sidebar and no editing. Esc hides it.
+ * The Quick Panel window: a dense list of sounds grouped by category. Click a row to play it.
+ * No sidebar and no editing. Up/Down move between rows, Enter plays, Esc hides.
  */
 export function QuickPanel() {
   const [sounds, setSounds] = useState<SoundEntry[]>([]);
@@ -22,6 +21,7 @@ export function QuickPanel() {
   const [filter, setFilter] = useState(ALL);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [folded, setFolded] = useState<Set<string>>(() => new Set());
 
   const refresh = useCallback(async () => {
     try {
@@ -79,7 +79,16 @@ export function QuickPanel() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") void hide();
+      if (e.key === "Escape") return void hide();
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      // Up/Down walk the play buttons in order; folded groups are not rendered, so they are skipped.
+      const rows = [...document.querySelectorAll<HTMLButtonElement>(".quick .row-play:not(:disabled)")];
+      if (rows.length === 0) return;
+      e.preventDefault();
+      const at = rows.indexOf(document.activeElement as HTMLButtonElement);
+      const next =
+        at === -1 ? (e.key === "ArrowDown" ? 0 : rows.length - 1) : Math.min(rows.length - 1, Math.max(0, at + (e.key === "ArrowDown" ? 1 : -1)));
+      rows[next].focus();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -114,6 +123,26 @@ export function QuickPanel() {
       (!!s.meta.category && (categories[s.meta.category]?.name ?? "").toLowerCase().includes(needle));
     return inCategory && hit;
   });
+
+  // Sections in the order of the category menu: named categories, then Uncategorized last.
+  const groups = useMemo(() => {
+    const map = new Map<string, { key: string; name: string; color: string | null; entries: SoundEntry[] }>();
+    for (const s of visible) {
+      const key = s.meta.category ?? NONE;
+      let g = map.get(key);
+      if (!g) {
+        g = {
+          key,
+          name: key === NONE ? "Uncategorized" : (categories[key]?.name ?? key),
+          color: key === NONE ? null : (categories[key]?.color ?? null),
+          entries: [],
+        };
+        map.set(key, g);
+      }
+      g.entries.push(s);
+    }
+    return [...map.values()].sort((a, b) => (a.key === NONE ? 1 : b.key === NONE ? -1 : a.name.localeCompare(b.name)));
+  }, [visible, categories]);
 
   const act = (run: () => Promise<void>) => void run().catch((e) => setError(String(e)));
 
@@ -157,27 +186,45 @@ export function QuickPanel() {
         {visible.length === 0 ? (
           <p className="empty">{sounds.length === 0 ? "No sounds yet." : "No sounds found."}</p>
         ) : (
-          <div className="pads quick-pads">
-            {visible.map((s) => (
-              <Pad
-                key={s.fileName}
-                entry={s}
-                accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
-                selected={false}
-                instances={playing.filter((p) => p.fileName === s.fileName && !p.previewing).length}
-                previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
-                onSelect={noop}
-                onPlay={() => act(() => api.playSound(s.fileName))}
-                onStop={() => act(() => api.stopSound(s.fileName, false))}
-                onPreview={() => act(() => api.previewSound(s.fileName))}
-                onStopPreview={() => act(() => api.stopSound(s.fileName, true))}
-                onForget={() => act(async () => {
-                  await api.forgetSound(s.fileName);
-                  await refresh();
-                })}
-              />
-            ))}
-          </div>
+          groups.map((g) => {
+            const isFolded = folded.has(g.key);
+            return (
+              <section key={g.key} className="quick-group">
+                <button
+                  type="button"
+                  className="quick-group-head"
+                  aria-expanded={!isFolded}
+                  onClick={() =>
+                    setFolded((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(g.key)) next.delete(g.key);
+                      else next.add(g.key);
+                      return next;
+                    })
+                  }
+                >
+                  <ChevronDown size={14} aria-hidden="true" className={isFolded ? "is-folded" : undefined} />
+                  {g.color && <span className="quick-group-dot" style={{ background: g.color }} aria-hidden="true" />}
+                  <span className="quick-group-name">{g.name}</span>
+                  <span className="quick-group-count">{g.entries.length}</span>
+                </button>
+                {!isFolded &&
+                  g.entries.map((s) => (
+                    <SoundRow
+                      key={s.fileName}
+                      entry={s}
+                      accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
+                      instances={playing.filter((p) => p.fileName === s.fileName && !p.previewing).length}
+                      previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
+                      onPlay={() => act(() => api.playSound(s.fileName))}
+                      onStop={() => act(() => api.stopSound(s.fileName, false))}
+                      onPreview={() => act(() => api.previewSound(s.fileName))}
+                      onStopPreview={() => act(() => api.stopSound(s.fileName, true))}
+                    />
+                  ))}
+              </section>
+            );
+          })
         )}
       </div>
 
