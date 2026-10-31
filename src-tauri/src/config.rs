@@ -22,6 +22,11 @@ pub struct Config {
     pub library_dir: Option<PathBuf>,
     /// `None` means system default output.
     pub output_device: Option<String>,
+    /// `None` means monitoring is off.
+    pub monitor_device: Option<String>,
+    pub monitor_volume: Option<f32>,
+    /// `None` means on.
+    pub auto_rescan: Option<bool>,
     pub sounds: BTreeMap<String, SoundMeta>,
 }
 

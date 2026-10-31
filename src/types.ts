@@ -28,6 +28,12 @@ export type OutputDevice = {
 export type OutputState = {
   devices: OutputDevice[];
   selected: string | null;
+  monitorSelected: string | null;
+  monitorVolume: number;
+};
+
+export type AppSettings = {
+  autoRescan: boolean;
 };
 
 export const emptyMeta: SoundMeta = {

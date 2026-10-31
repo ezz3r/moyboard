@@ -15,22 +15,36 @@ pub struct DeviceInfo {
 }
 
 struct Voice {
-    player: Player,
+    main: Player,
+    monitor: Option<Player>,
     /// Per-sound volume, before master volume is applied.
     volume: f32,
 }
 
-/// Owns the output stream and the sounds currently playing.
-/// Each sound gets its own `Player`, so sounds overlap.
+/// Output stream(s) and the sounds currently playing.
+/// Each sound gets its own `Player` per output, so sounds overlap.
 pub struct Engine {
     sink: Option<MixerDeviceSink>,
+    /// Name of the chosen primary device; `None` means system default.
+    primary_name: Option<String>,
+    monitor_sink: Option<MixerDeviceSink>,
+    monitor_name: Option<String>,
+    monitor_gain: f32,
     voices: Vec<Voice>,
     master: f32,
 }
 
 impl Engine {
     pub fn new() -> Self {
-        Self { sink: None, voices: Vec::new(), master: 1.0 }
+        Self {
+            sink: None,
+            primary_name: None,
+            monitor_sink: None,
+            monitor_name: None,
+            monitor_gain: 1.0,
+            voices: Vec::new(),
+            master: 1.0,
+        }
     }
 
     pub fn list_devices() -> Result<Vec<DeviceInfo>, String> {
@@ -44,47 +58,104 @@ impl Engine {
 
     /// `None` selects the system default output. Stops current playback.
     pub fn set_device(&mut self, name: Option<&str>) -> Result<(), String> {
+        let chosen = name.map(str::to_string).or_else(default_device_name);
+        if chosen.is_some() && chosen == self.monitor_name {
+            return Err("primary and monitor output must differ".to_string());
+        }
         let sink = open(name)?;
         self.voices.clear();
         self.sink = Some(sink);
+        self.primary_name = name.map(str::to_string);
         Ok(())
+    }
+
+    /// `None` turns monitoring off. Monitor must differ from the primary output.
+    pub fn set_monitor(&mut self, name: Option<&str>) -> Result<(), String> {
+        match name {
+            None => {
+                self.monitor_sink = None;
+                self.monitor_name = None;
+                for v in &mut self.voices {
+                    v.monitor = None;
+                }
+                Ok(())
+            }
+            Some(wanted) => {
+                let primary = self.primary_name.clone().or_else(default_device_name);
+                if primary.as_deref() == Some(wanted) {
+                    return Err("monitor and primary output must differ".to_string());
+                }
+                let sink = open(Some(wanted))?;
+                self.monitor_sink = Some(sink);
+                self.monitor_name = Some(wanted.to_string());
+                Ok(())
+            }
+        }
+    }
+
+    pub fn set_monitor_gain(&mut self, gain: f32) {
+        self.monitor_gain = gain.clamp(0.0, 2.0);
+        self.apply_volumes();
     }
 
     pub fn play(&mut self, path: &Path, meta: &SoundMeta) -> Result<(), String> {
         let (start, take) = trim_window(meta.trim_start, meta.trim_end)?;
-        let file = File::open(path).map_err(|e| format!("open {}: {e}", path.display()))?;
-        let decoder = Decoder::try_from(file).map_err(|e| format!("decode {}: {e}", path.display()))?;
+        let volume = meta.volume.unwrap_or(1.0).clamp(0.0, 2.0);
 
         if self.sink.is_none() {
             self.sink = Some(open(None)?);
         }
-        let mixer = self.sink.as_ref().map(|s| s.mixer()).ok_or("no output stream")?;
-        let player = Player::connect_new(mixer);
+        let main_sink = self.sink.as_ref().ok_or("no output stream")?;
+        let main = spawn(main_sink, path, start, take)?;
+        let monitor = match &self.monitor_sink {
+            Some(sink) => Some(spawn(sink, path, start, take)?),
+            None => None,
+        };
 
-        let volume = meta.volume.unwrap_or(1.0).clamp(0.0, 2.0);
-        player.set_volume(volume * self.master);
-        match take {
-            Some(take) => player.append(decoder.skip_duration(start).take_duration(take)),
-            None => player.append(decoder.skip_duration(start)),
-        }
-
-        self.voices.retain(|v| !v.player.empty());
-        self.voices.push(Voice { player, volume });
+        self.voices.retain(|v| !v.main.empty());
+        self.voices.push(Voice { main, monitor, volume });
+        self.apply_volumes();
         Ok(())
     }
 
     pub fn stop_all(&mut self) {
         for voice in self.voices.drain(..) {
-            voice.player.stop();
+            voice.main.stop();
+            if let Some(m) = voice.monitor {
+                m.stop();
+            }
         }
     }
 
     pub fn set_master(&mut self, master: f32) {
         self.master = master.clamp(0.0, 2.0);
-        for voice in &self.voices {
-            voice.player.set_volume(voice.volume * self.master);
+        self.apply_volumes();
+    }
+
+    fn apply_volumes(&self) {
+        for v in &self.voices {
+            v.main.set_volume(v.volume * self.master);
+            if let Some(m) = &v.monitor {
+                m.set_volume(v.volume * self.master * self.monitor_gain);
+            }
         }
     }
+}
+
+/// Decodes `path` from the trim start and plays it on `sink`.
+fn spawn(sink: &MixerDeviceSink, path: &Path, start: Duration, take: Option<Duration>) -> Result<Player, String> {
+    let decoder = open_decoder(path)?;
+    let player = Player::connect_new(sink.mixer());
+    match take {
+        Some(take) => player.append(decoder.skip_duration(start).take_duration(take)),
+        None => player.append(decoder.skip_duration(start)),
+    }
+    Ok(player)
+}
+
+/// Name of the system default output, if any.
+pub fn default_device_name() -> Option<String> {
+    cpal::default_host().default_output_device().map(|d| device_name(&d))
 }
 
 fn device_name(device: &cpal::Device) -> String {

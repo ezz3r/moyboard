@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { ImportReport, OutputState, SoundEntry, SoundMeta, Waveform } from "./types";
+import type { AppSettings, ImportReport, OutputState, SoundEntry, SoundMeta, Waveform } from "./types";
 
 export const isTauri = "__TAURI_INTERNALS__" in window;
 
@@ -30,6 +31,10 @@ export const api = {
   waveform: (fileName: string) => call<Waveform>("waveform", { fileName }),
   exportTrim: (fileName: string, trimStart: number | null, trimEnd: number | null) =>
     call<string>("export_trim", { fileName, trimStart, trimEnd }),
+  setMonitorDevice: (name: string | null) => call<void>("set_monitor_device", { name }),
+  setMonitorVolume: (volume: number) => call<void>("set_monitor_volume", { volume }),
+  getSettings: () => call<AppSettings>("get_settings"),
+  setAutoRescan: (enabled: boolean) => call<void>("set_auto_rescan", { enabled }),
   stopAll: () => call<void>("stop_all"),
   setMasterVolume: (volume: number) => call<void>("set_master_volume", { volume }),
 };
@@ -50,4 +55,10 @@ export async function onFileDrop(handler: (ev: DropEvent) => void): Promise<() =
     if (p.type === "drop") handler({ type: "drop", paths: p.paths });
     else if (p.type === "enter" || p.type === "leave") handler({ type: p.type });
   });
+}
+
+/** Calls back when the library folder changes on disk. Returns an unsubscribe function. */
+export async function onLibraryChanged(handler: () => void): Promise<() => void> {
+  if (!isTauri) return () => {};
+  return listen("library-changed", () => handler());
 }

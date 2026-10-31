@@ -1,14 +1,18 @@
 mod audio;
 mod config;
+mod hotkeys;
 mod library;
+mod watch;
 
 use audio::{DeviceInfo, Engine};
 use config::{Config, SoundMeta, Store};
+use hotkeys::Hotkeys;
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
+use watch::Watch;
 
 type AudioState = Mutex<Engine>;
 
@@ -22,6 +26,15 @@ pub struct OutputState {
     devices: Vec<DeviceInfo>,
     /// Saved choice; `None` means system default.
     selected: Option<String>,
+    /// `None` means monitoring is off.
+    monitor_selected: Option<String>,
+    monitor_volume: f32,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppSettings {
+    auto_rescan: bool,
 }
 
 #[derive(Serialize)]
@@ -53,16 +66,47 @@ fn current_dir(store: &Store) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+/// Path of a sound in the library. Rejects bad names and missing files.
+fn sound_path(store: &Store, file_name: &str) -> Result<PathBuf, String> {
+    library::check_file_name(file_name)?;
+    let path = current_dir(store)?.join(file_name);
+    if !path.is_file() {
+        return Err(format!("file missing: {file_name}"));
+    }
+    Ok(path)
+}
+
+/// Plays a sound with its saved metadata. Used by the hotkey handler.
+pub fn play_file(app: &AppHandle, file_name: &str) -> Result<(), String> {
+    let store = app.state::<Store>();
+    let path = sound_path(&store, file_name)?;
+    let meta = store.get(|cfg| cfg.sounds.get(file_name).cloned()).unwrap_or_default();
+    lock(&app.state::<AudioState>())?.play(&path, &meta)
+}
+
+/// Starts, stops, or moves the folder watcher to match the current settings.
+fn restart_watch(app: &AppHandle) -> Result<(), String> {
+    let watch = app.state::<Watch>();
+    watch.stop();
+    let store = app.state::<Store>();
+    if !store.get(|cfg| cfg.auto_rescan.unwrap_or(true)) {
+        return Ok(());
+    }
+    let dir = current_dir(&store)?;
+    watch.start(app, &dir)
+}
+
 #[tauri::command]
 fn get_library_dir(store: tauri::State<Store>) -> Result<String, String> {
     current_dir(&store).map(|d| d.display().to_string())
 }
 
 #[tauri::command]
-fn set_library_dir(path: String, store: tauri::State<Store>) -> Result<String, String> {
+fn set_library_dir(path: String, app: AppHandle, store: tauri::State<Store>) -> Result<String, String> {
     let dir = PathBuf::from(&path);
     library::ensure_dir(&dir)?;
     store.update(|cfg| cfg.library_dir = Some(dir.clone()))?;
+    restart_watch(&app)?;
     Ok(dir.display().to_string())
 }
 
@@ -107,7 +151,12 @@ fn import_files(paths: Vec<String>, store: tauri::State<Store>) -> Result<Import
 
 /// Renames the file on disk and moves its metadata to the new name.
 #[tauri::command]
-fn rename_sound(file_name: String, new_name: String, store: tauri::State<Store>) -> Result<String, String> {
+fn rename_sound(
+    file_name: String,
+    new_name: String,
+    app: AppHandle,
+    store: tauri::State<Store>,
+) -> Result<String, String> {
     library::check_file_name(&file_name)?;
     library::check_file_name(&new_name)?;
     if !library::is_supported(Path::new(&new_name)) {
@@ -127,28 +176,57 @@ fn rename_sound(file_name: String, new_name: String, store: tauri::State<Store>)
             cfg.sounds.insert(new_name.clone(), meta);
         }
     })?;
+    hotkeys::sync(&app)?;
     Ok(new_name)
 }
 
 /// Drops the metadata of a sound whose file is gone.
 #[tauri::command]
-fn forget_sound(file_name: String, store: tauri::State<Store>) -> Result<(), String> {
+fn forget_sound(file_name: String, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
     store.update(|cfg| cfg.sounds.remove(&file_name))?;
-    Ok(())
+    hotkeys::sync(&app)
 }
 
+/// Saves metadata, then re-registers hotkeys. If a hotkey cannot be registered
+/// (already taken by another app, for example), the previous metadata is restored
+/// and the error is returned.
 #[tauri::command]
-fn set_sound_meta(file_name: String, meta: SoundMeta, store: tauri::State<Store>) -> Result<(), String> {
+fn set_sound_meta(
+    file_name: String,
+    meta: SoundMeta,
+    app: AppHandle,
+    store: tauri::State<Store>,
+) -> Result<(), String> {
     library::check_file_name(&file_name)?;
-    store.update(|cfg| cfg.sounds.insert(file_name, meta))?;
+    if let Some(h) = meta.hotkey.as_deref().filter(|h| !h.is_empty()) {
+        hotkeys::parse(h)?;
+    }
+    let previous = store.get(|cfg| cfg.sounds.get(&file_name).cloned());
+    store.update(|cfg| cfg.sounds.insert(file_name.clone(), meta))?;
+    if let Err(e) = hotkeys::sync(&app) {
+        store.update(|cfg| match previous {
+            Some(m) => {
+                cfg.sounds.insert(file_name.clone(), m);
+            }
+            None => {
+                cfg.sounds.remove(&file_name);
+            }
+        })?;
+        hotkeys::sync(&app)?;
+        return Err(format!("{e} (hotkey not saved)"));
+    }
     Ok(())
 }
 
 #[tauri::command]
 fn list_output_devices(store: tauri::State<Store>) -> Result<OutputState, String> {
+    let (selected, monitor_selected, monitor_volume) =
+        store.get(|cfg| (cfg.output_device.clone(), cfg.monitor_device.clone(), cfg.monitor_volume));
     Ok(OutputState {
         devices: Engine::list_devices()?,
-        selected: store.get(|cfg| cfg.output_device.clone()),
+        selected,
+        monitor_selected,
+        monitor_volume: monitor_volume.unwrap_or(1.0),
     })
 }
 
@@ -163,21 +241,36 @@ fn set_output_device(
     store.update(|cfg| cfg.output_device = name)
 }
 
-/// Path of a sound in the library. Rejects bad names and missing files.
-fn sound_path(store: &Store, file_name: &str) -> Result<PathBuf, String> {
-    library::check_file_name(file_name)?;
-    let path = current_dir(store)?.join(file_name);
-    if !path.is_file() {
-        return Err(format!("file missing: {file_name}"));
-    }
-    Ok(path)
+#[tauri::command]
+fn set_monitor_device(
+    name: Option<String>,
+    store: tauri::State<Store>,
+    engine: tauri::State<AudioState>,
+) -> Result<(), String> {
+    lock(&engine)?.set_monitor(name.as_deref())?;
+    store.update(|cfg| cfg.monitor_device = name)
 }
 
 #[tauri::command]
-fn play_sound(file_name: String, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
-    let path = sound_path(&store, &file_name)?;
-    let meta = store.get(|cfg| cfg.sounds.get(&file_name).cloned()).unwrap_or_default();
-    lock(&engine)?.play(&path, &meta)
+fn set_monitor_volume(volume: f32, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
+    lock(&engine)?.set_monitor_gain(volume);
+    store.update(|cfg| cfg.monitor_volume = Some(volume.clamp(0.0, 2.0)))
+}
+
+#[tauri::command]
+fn get_settings(store: tauri::State<Store>) -> AppSettings {
+    AppSettings { auto_rescan: store.get(|cfg| cfg.auto_rescan.unwrap_or(true)) }
+}
+
+#[tauri::command]
+fn set_auto_rescan(enabled: bool, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
+    store.update(|cfg| cfg.auto_rescan = Some(enabled))?;
+    restart_watch(&app)
+}
+
+#[tauri::command]
+fn play_sound(file_name: String, app: AppHandle) -> Result<(), String> {
+    play_file(&app, &file_name)
 }
 
 /// Plays a region using trim values from the editor, which are not saved yet.
@@ -273,20 +366,41 @@ fn set_master_volume(volume: f32, engine: tauri::State<AudioState>) -> Result<()
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(hotkeys::on_event)
+                .build(),
+        )
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             let store = Store::load(dir.join("moyboard.json"))
                 .map_err(Box::<dyn std::error::Error>::from)?;
 
             let mut engine = Engine::new();
-            if let Some(name) = store.get(|cfg| cfg.output_device.clone()) {
-                // A saved device that is gone (unplugged, renamed) falls back to default on play.
-                if let Err(e) = engine.set_device(Some(&name)) {
-                    eprintln!("moyboard: saved output device unavailable: {e}");
+            // Saved devices that are gone (unplugged, renamed) are skipped; play falls back to default.
+            let (out, mon, mon_gain) =
+                store.get(|cfg| (cfg.output_device.clone(), cfg.monitor_device.clone(), cfg.monitor_volume));
+            if let Err(e) = engine.set_device(out.as_deref()) {
+                eprintln!("moyboard: saved output device unavailable: {e}");
+            }
+            if let Some(name) = mon {
+                if let Err(e) = engine.set_monitor(Some(&name)) {
+                    eprintln!("moyboard: saved monitor device unavailable: {e}");
                 }
             }
+            engine.set_monitor_gain(mon_gain.unwrap_or(1.0));
+
             app.manage(store);
             app.manage(Mutex::new(engine));
+            app.manage(Hotkeys::default());
+            app.manage(Watch::default());
+
+            if let Err(e) = hotkeys::sync(app.handle()) {
+                eprintln!("moyboard: hotkeys: {e}");
+            }
+            if let Err(e) = restart_watch(app.handle()) {
+                eprintln!("moyboard: folder watch: {e}");
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -299,6 +413,10 @@ pub fn run() {
             forget_sound,
             list_output_devices,
             set_output_device,
+            set_monitor_device,
+            set_monitor_volume,
+            get_settings,
+            set_auto_rescan,
             play_sound,
             preview_sound,
             waveform,

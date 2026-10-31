@@ -632,6 +632,46 @@ select {
   text-align: right;
 }
 
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+}
+
+.inline-field input[type="range"] {
+  accent-color: var(--signal);
+  width: 240px;
+}
+
+.inline-field input[type="checkbox"] {
+  accent-color: var(--signal);
+  width: 16px;
+  height: 16px;
+}
+
+.hotkey-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hotkey {
+  min-width: 180px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.hotkey.is-recording {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+
 /* ---------- Toast ---------- */
 
 .toast.toast-info {

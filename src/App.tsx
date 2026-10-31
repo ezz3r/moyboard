@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, onFileDrop } from "./api";
+import { api, onFileDrop, onLibraryChanged } from "./api";
 import { EditSound } from "./components/EditSound";
 import { TrimEditor } from "./components/TrimEditor";
 import { Pad } from "./components/Pad";
@@ -12,7 +12,12 @@ const NONE = "uncategorized";
 export default function App() {
   const [sounds, setSounds] = useState<SoundEntry[]>([]);
   const [libraryDir, setLibraryDir] = useState("");
-  const [output, setOutput] = useState<OutputState>({ devices: [], selected: null });
+  const [output, setOutput] = useState<OutputState>({
+    devices: [],
+    selected: null,
+    monitorSelected: null,
+    monitorVolume: 1,
+  });
   const [master, setMaster] = useState(1);
   const [view, setView] = useState<"pads" | "settings">("pads");
   const [filter, setFilter] = useState(ALL);
@@ -87,6 +92,19 @@ export default function App() {
     },
     [filter, notify, refresh],
   );
+
+  useEffect(() => {
+    let alive = true;
+    let unlisten: (() => void) | undefined;
+    void onLibraryChanged(() => void refresh()).then((off) => {
+      if (alive) unlisten = off;
+      else off();
+    });
+    return () => {
+      alive = false;
+      unlisten?.();
+    };
+  }, [refresh]);
 
   useEffect(() => {
     let alive = true;
@@ -228,7 +246,7 @@ export default function App() {
               categories={categories}
               sounds={sounds}
               onLibraryChanged={setLibraryDir}
-              onOutputChanged={(name) => setOutput((o) => ({ ...o, selected: name }))}
+              onOutputChanged={(patch) => setOutput((o) => ({ ...o, ...patch }))}
               onCategoriesChanged={() => void refresh()}
               onError={notify}
             />

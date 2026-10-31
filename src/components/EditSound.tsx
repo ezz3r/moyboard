@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { api } from "../api";
 import { EMOJIS } from "../emojis";
+import { HotkeyField } from "./HotkeyField";
 import { extOf, stemOf } from "../names";
 import type { SoundEntry } from "../types";
 
@@ -18,6 +19,7 @@ export function EditSound({ entry, categories, onClose, onSaved, onTrim }: Props
   const [emoji, setEmoji] = useState(entry.meta.emoji ?? "");
   const [category, setCategory] = useState(entry.meta.category ?? "");
   const [volume, setVolume] = useState(entry.meta.volume ?? 1);
+  const [hotkey, setHotkey] = useState(entry.meta.hotkey);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const titleId = useId();
@@ -42,6 +44,7 @@ export function EditSound({ entry, categories, onClose, onSaved, onTrim }: Props
         emoji: emoji || null,
         category: category.trim() || null,
         volume,
+        hotkey,
       });
       onSaved();
     } catch (e) {
@@ -127,6 +130,18 @@ export function EditSound({ entry, categories, onClose, onSaved, onTrim }: Props
             onChange={(e) => setVolume(Number(e.target.value))}
           />
         </label>
+
+        <div className="field">
+          <span>Hotkey</span>
+          <span className="hotkey-row">
+            <HotkeyField value={hotkey} onChange={setHotkey} />
+            {hotkey && (
+              <button type="button" className="btn btn-quiet" onClick={() => setHotkey(null)}>
+                Clear
+              </button>
+            )}
+          </span>
+        </div>
 
         {error && <p className="error" role="alert">{error}</p>}
 

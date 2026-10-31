@@ -16,6 +16,9 @@ const missing: Record<string, SoundMeta> = {
   "old-alarm.wav": { ...blank(), category: "Alerts", emoji: "🚨" },
 };
 let output: string | null = null;
+let monitor: string | null = null;
+let monitorVolume = 1;
+let autoRescan = true;
 let library = dir;
 
 function blank(): SoundMeta {
@@ -63,7 +66,18 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       delete missing[name!];
       return undefined as T;
     case "list_output_devices":
-      return { devices, selected: output } as T;
+      return { devices, selected: output, monitorSelected: monitor, monitorVolume } as T;
+    case "set_monitor_device":
+      monitor = (args.name as string | null) ?? null;
+      return undefined as T;
+    case "set_monitor_volume":
+      monitorVolume = args.volume as number;
+      return undefined as T;
+    case "get_settings":
+      return { autoRescan } as T;
+    case "set_auto_rescan":
+      autoRescan = args.enabled as boolean;
+      return undefined as T;
     case "set_output_device":
       output = (args.name as string | null) ?? null;
       return undefined as T;
