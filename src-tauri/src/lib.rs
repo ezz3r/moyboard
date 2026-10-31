@@ -847,6 +847,7 @@ pub fn run() {
             app.manage(store);
             app.manage(Mutex::new(engine));
             app.manage(Hotkeys::default());
+            app.manage(hotkeys::QuickKey::default());
             app.manage(Watch::default());
             app.manage(LastPlayback::default());
 
