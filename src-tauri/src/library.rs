@@ -82,21 +82,27 @@ pub fn import_file(src: &Path, dir: &Path) -> Result<String, String> {
         return Ok(file_name);
     }
 
+    let (name, mut out) = create_unique(dir, &file_name)?;
+    let dest = dir.join(&name);
+    let copied = File::open(src).and_then(|mut inp| io::copy(&mut inp, &mut out));
+    if let Err(e) = copied {
+        drop(out);
+        let _ = fs::remove_file(&dest);
+        return Err(format!("copy {}: {e}", src.display()));
+    }
+    Ok(name)
+}
+
+/// Creates `dir/file_name`, or `name (1).ext`, `name (2).ext`, ... if taken.
+/// Returns the chosen name and the new file, opened for writing.
+pub fn create_unique(dir: &Path, file_name: &str) -> Result<(String, File), String> {
     let mut n = 0;
     loop {
-        let name = numbered(&file_name, n);
-        let dest = dir.join(&name);
-        match OpenOptions::new().write(true).create_new(true).open(&dest) {
-            Ok(mut out) => {
-                let copied = File::open(src).and_then(|mut inp| io::copy(&mut inp, &mut out));
-                if let Err(e) = copied {
-                    let _ = fs::remove_file(&dest);
-                    return Err(format!("copy {}: {e}", src.display()));
-                }
-                return Ok(name);
-            }
+        let name = numbered(file_name, n);
+        match OpenOptions::new().write(true).create_new(true).open(dir.join(&name)) {
+            Ok(file) => return Ok((name, file)),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => n += 1,
-            Err(e) => return Err(format!("create {}: {e}", dest.display())),
+            Err(e) => return Err(format!("create {name}: {e}")),
         }
     }
 }

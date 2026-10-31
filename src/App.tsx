@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, onFileDrop } from "./api";
 import { EditSound } from "./components/EditSound";
+import { TrimEditor } from "./components/TrimEditor";
 import { Pad } from "./components/Pad";
 import { Settings } from "./components/Settings";
 import { emptyMeta, type OutputState, type SoundEntry } from "./types";
@@ -16,11 +17,13 @@ export default function App() {
   const [view, setView] = useState<"pads" | "settings">("pads");
   const [filter, setFilter] = useState(ALL);
   const [editing, setEditing] = useState<string | null>(null);
+  const [trimming, setTrimming] = useState<string | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; tone: "info" | "error" } | null>(null);
 
-  const notify = useCallback((message: string) => setError(message), []);
+  const notify = useCallback((text: string) => setToast({ text, tone: "error" }), []);
+  const say = useCallback((text: string) => setToast({ text, tone: "info" }), []);
 
   const refresh = useCallback(async () => {
     try {
@@ -43,10 +46,10 @@ export default function App() {
   }, [notify, refresh]);
 
   useEffect(() => {
-    if (!error) return;
-    const t = window.setTimeout(() => setError(null), 5000);
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 5000);
     return () => window.clearTimeout(t);
-  }, [error]);
+  }, [toast]);
 
   const categories = useMemo(
     () => [...new Set(sounds.map((s) => s.meta.category).filter((c): c is string => !!c))].sort(),
@@ -125,6 +128,7 @@ export default function App() {
   }
 
   const editingEntry = sounds.find((s) => s.fileName === editing) ?? null;
+  const trimmingEntry = sounds.find((s) => s.fileName === trimming) ?? null;
 
   return (
     <div className="app">
@@ -262,12 +266,36 @@ export default function App() {
             setEditing(null);
             void refresh();
           }}
+          onTrim={() => {
+            setTrimming(editing);
+            setEditing(null);
+          }}
         />
       )}
 
-      {error && (
-        <div className="toast" role="status" onClick={() => setError(null)}>
-          {error}
+      {trimmingEntry && (
+        <TrimEditor
+          entry={trimmingEntry}
+          onClose={() => setTrimming(null)}
+          onSaved={() => {
+            setTrimming(null);
+            void refresh();
+          }}
+          onExported={(newName) => {
+            setTrimming(null);
+            say(`Saved as ${newName}`);
+            void refresh();
+          }}
+        />
+      )}
+
+      {toast && (
+        <div
+          className={`toast toast-${toast.tone}`}
+          role={toast.tone === "error" ? "alert" : "status"}
+          onClick={() => setToast(null)}
+        >
+          {toast.text}
         </div>
       )}
     </div>

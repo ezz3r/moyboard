@@ -3,6 +3,7 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Player, Source};
 use serde::Serialize;
 use std::fs::File;
+use std::io::{self, Seek, SeekFrom, Write};
 use std::path::Path;
 use std::time::Duration;
 
@@ -121,6 +122,95 @@ pub fn trim_window(start: Option<f64>, end: Option<f64>) -> Result<(Duration, Op
             Ok((Duration::from_secs_f64(start), Some(Duration::from_secs_f64(end - start))))
         }
     }
+}
+
+
+/// Peak envelope resolution. 100 per second is smooth at editor widths and small in memory.
+pub const PEAKS_PER_SEC: usize = 100;
+
+pub struct Waveform {
+    /// Max absolute amplitude (0..=1) per 1/PEAKS_PER_SEC second, across all channels.
+    pub peaks: Vec<f32>,
+    pub duration_secs: f64,
+}
+
+fn open_decoder(path: &Path) -> Result<Decoder<io::BufReader<File>>, String> {
+    let file = File::open(path).map_err(|e| format!("open {}: {e}", path.display()))?;
+    Decoder::try_from(file).map_err(|e| format!("decode {}: {e}", path.display()))
+}
+
+/// Streams the file once, so memory stays flat for long sounds.
+pub fn waveform(path: &Path) -> Result<Waveform, String> {
+    let decoder = open_decoder(path)?;
+    let per_sec = decoder.sample_rate().get() as usize * decoder.channels().get() as usize;
+    let window = (per_sec / PEAKS_PER_SEC).max(1);
+
+    let mut peaks = Vec::new();
+    let (mut max, mut n, mut total) = (0f32, 0usize, 0usize);
+    for s in decoder {
+        max = max.max(s.abs());
+        n += 1;
+        total += 1;
+        if n == window {
+            peaks.push(max);
+            max = 0.0;
+            n = 0;
+        }
+    }
+    if n > 0 {
+        peaks.push(max);
+    }
+    Ok(Waveform { peaks, duration_secs: total as f64 / per_sec as f64 })
+}
+
+/// Writes the region `start..start+take` of `src` as 16-bit PCM WAV into `out`.
+/// `out` must be empty and positioned at 0.
+pub fn write_trim_wav<W: Write + Seek>(
+    src: &Path,
+    out: &mut W,
+    start: Duration,
+    take: Option<Duration>,
+) -> Result<(), String> {
+    let decoder = open_decoder(src)?;
+    let rate = decoder.sample_rate().get();
+    let channels = decoder.channels().get();
+    let per_sec = rate as f64 * channels as f64;
+    let skip = (start.as_secs_f64() * per_sec).round() as usize;
+    let limit = take.map_or(usize::MAX, |t| (t.as_secs_f64() * per_sec).round() as usize);
+
+    let io_err = |e: io::Error| format!("write wav: {e}");
+    out.write_all(&wav_header(channels, rate, 0)).map_err(io_err)?;
+    let mut data_bytes: u64 = 0;
+    for s in decoder.skip(skip).take(limit) {
+        let v = (s.clamp(-1.0, 1.0) * 32767.0).round() as i16;
+        out.write_all(&v.to_le_bytes()).map_err(io_err)?;
+        data_bytes += 2;
+    }
+    if data_bytes > u32::MAX as u64 - 36 {
+        return Err("clip too long for a WAV file".to_string());
+    }
+    let data_len = data_bytes as u32;
+    out.seek(SeekFrom::Start(0)).map_err(io_err)?;
+    out.write_all(&wav_header(channels, rate, data_len)).map_err(io_err)?;
+    out.flush().map_err(io_err)
+}
+
+fn wav_header(channels: u16, rate: u32, data_len: u32) -> [u8; 44] {
+    let mut h = [0u8; 44];
+    h[0..4].copy_from_slice(b"RIFF");
+    h[4..8].copy_from_slice(&(36 + data_len).to_le_bytes());
+    h[8..12].copy_from_slice(b"WAVE");
+    h[12..16].copy_from_slice(b"fmt ");
+    h[16..20].copy_from_slice(&16u32.to_le_bytes());
+    h[20..22].copy_from_slice(&1u16.to_le_bytes()); // PCM
+    h[22..24].copy_from_slice(&channels.to_le_bytes());
+    h[24..28].copy_from_slice(&rate.to_le_bytes());
+    h[28..32].copy_from_slice(&(rate * channels as u32 * 2).to_le_bytes());
+    h[32..34].copy_from_slice(&(channels * 2).to_le_bytes());
+    h[34..36].copy_from_slice(&16u16.to_le_bytes());
+    h[36..40].copy_from_slice(b"data");
+    h[40..44].copy_from_slice(&data_len.to_le_bytes());
+    h
 }
 
 #[cfg(test)]

@@ -70,6 +70,27 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
     case "play_sound":
       if (!files[name!]) throw new Error(`file missing: ${name}`);
       return undefined as T;
+    case "waveform": {
+      if (!files[name!]) throw new Error(`file missing: ${name}`);
+      const perSec = 100;
+      const duration = 4.2;
+      const n = Math.round(duration * perSec);
+      const peaks = Array.from({ length: n }, (_, i) => {
+        const t = i / n;
+        const env = Math.exp(-3 * t) * (0.8 + 0.2 * Math.sin(i * 0.7));
+        return Math.min(1, Math.abs(env) * (0.6 + 0.4 * Math.abs(Math.sin(i * 0.31))));
+      });
+      return { peaks, peaksPerSec: perSec, durationSecs: duration } as T;
+    }
+    case "preview_sound":
+      if (!files[name!]) throw new Error(`file missing: ${name}`);
+      return undefined as T;
+    case "export_trim": {
+      const stem = name!.replace(/\.[^.]+$/, "");
+      const out = `${stem} (trimmed).wav`;
+      files[out] = { ...blank(), category: files[name!].category, emoji: files[name!].emoji };
+      return out as T;
+    }
     case "stop_all":
     case "set_master_volume":
       return undefined as T;

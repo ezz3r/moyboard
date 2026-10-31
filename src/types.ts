@@ -38,3 +38,9 @@ export const emptyMeta: SoundMeta = {
   trimStart: null,
   trimEnd: null,
 };
+
+export type Waveform = {
+  peaks: number[];
+  peaksPerSec: number;
+  durationSecs: number;
+};

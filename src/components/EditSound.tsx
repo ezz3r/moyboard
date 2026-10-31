@@ -9,9 +9,10 @@ type Props = {
   categories: string[];
   onClose: () => void;
   onSaved: () => void;
+  onTrim: () => void;
 };
 
-export function EditSound({ entry, categories, onClose, onSaved }: Props) {
+export function EditSound({ entry, categories, onClose, onSaved, onTrim }: Props) {
   const ext = extOf(entry.fileName);
   const [stem, setStem] = useState(stemOf(entry.fileName));
   const [emoji, setEmoji] = useState(entry.meta.emoji ?? "");
@@ -129,13 +130,18 @@ export function EditSound({ entry, categories, onClose, onSaved }: Props) {
 
         {error && <p className="error" role="alert">{error}</p>}
 
-        <div className="sheet-actions">
-          <button type="button" className="btn" onClick={onClose} disabled={busy}>
-            Cancel
+        <div className="sheet-actions sheet-split">
+          <button type="button" className="btn btn-quiet" onClick={onTrim} disabled={busy}>
+            {entry.meta.trimStart != null || entry.meta.trimEnd != null ? "Trimmed. Edit trim" : "Trim"}
           </button>
-          <button type="submit" className="btn btn-primary" disabled={busy}>
-            Save
-          </button>
+          <div className="sheet-actions">
+            <button type="button" className="btn" onClick={onClose} disabled={busy}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={busy}>
+              Save
+            </button>
+          </div>
         </div>
       </form>
     </div>

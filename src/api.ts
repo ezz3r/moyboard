@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { ImportReport, OutputState, SoundEntry, SoundMeta } from "./types";
+import type { ImportReport, OutputState, SoundEntry, SoundMeta, Waveform } from "./types";
 
 export const isTauri = "__TAURI_INTERNALS__" in window;
 
@@ -25,6 +25,11 @@ export const api = {
   listOutputDevices: () => call<OutputState>("list_output_devices"),
   setOutputDevice: (name: string | null) => call<void>("set_output_device", { name }),
   playSound: (fileName: string) => call<void>("play_sound", { fileName }),
+  previewSound: (fileName: string, trimStart: number | null, trimEnd: number | null) =>
+    call<void>("preview_sound", { fileName, trimStart, trimEnd }),
+  waveform: (fileName: string) => call<Waveform>("waveform", { fileName }),
+  exportTrim: (fileName: string, trimStart: number | null, trimEnd: number | null) =>
+    call<string>("export_trim", { fileName, trimStart, trimEnd }),
   stopAll: () => call<void>("stop_all"),
   setMasterVolume: (volume: number) => call<void>("set_master_volume", { volume }),
 };

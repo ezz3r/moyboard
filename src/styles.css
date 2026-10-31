@@ -506,6 +506,59 @@ select {
   color: var(--alarm);
 }
 
+/* ---------- Trim editor ---------- */
+
+.sheet-wide {
+  width: min(680px, 100%);
+}
+
+.sheet-split {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.wave {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  background: var(--ground);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  touch-action: none;
+  cursor: col-resize;
+  user-select: none;
+}
+
+.wave canvas {
+  display: block;
+}
+
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  margin-left: -8px;
+  border-radius: var(--radius);
+  cursor: col-resize;
+}
+
+.trim-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.trim-fields input[type="number"] {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Settings ---------- */
 
 .settings {
@@ -580,6 +633,11 @@ select {
 }
 
 /* ---------- Toast ---------- */
+
+.toast.toast-info {
+  border-color: var(--line);
+  color: var(--ink-2);
+}
 
 .toast {
   position: absolute;

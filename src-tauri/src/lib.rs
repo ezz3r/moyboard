@@ -163,16 +163,98 @@ fn set_output_device(
     store.update(|cfg| cfg.output_device = name)
 }
 
-#[tauri::command]
-fn play_sound(file_name: String, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
-    library::check_file_name(&file_name)?;
-    let dir = current_dir(&store)?;
-    let path = dir.join(&file_name);
+/// Path of a sound in the library. Rejects bad names and missing files.
+fn sound_path(store: &Store, file_name: &str) -> Result<PathBuf, String> {
+    library::check_file_name(file_name)?;
+    let path = current_dir(store)?.join(file_name);
     if !path.is_file() {
         return Err(format!("file missing: {file_name}"));
     }
+    Ok(path)
+}
+
+#[tauri::command]
+fn play_sound(file_name: String, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
+    let path = sound_path(&store, &file_name)?;
     let meta = store.get(|cfg| cfg.sounds.get(&file_name).cloned()).unwrap_or_default();
     lock(&engine)?.play(&path, &meta)
+}
+
+/// Plays a region using trim values from the editor, which are not saved yet.
+#[tauri::command]
+fn preview_sound(
+    file_name: String,
+    trim_start: Option<f64>,
+    trim_end: Option<f64>,
+    store: tauri::State<Store>,
+    engine: tauri::State<AudioState>,
+) -> Result<(), String> {
+    let path = sound_path(&store, &file_name)?;
+    let mut meta = store.get(|cfg| cfg.sounds.get(&file_name).cloned()).unwrap_or_default();
+    meta.trim_start = trim_start;
+    meta.trim_end = trim_end;
+    lock(&engine)?.play(&path, &meta)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WaveformDto {
+    peaks: Vec<f32>,
+    peaks_per_sec: usize,
+    duration_secs: f64,
+}
+
+#[tauri::command]
+fn waveform(file_name: String, store: tauri::State<Store>) -> Result<WaveformDto, String> {
+    let path = sound_path(&store, &file_name)?;
+    let w = audio::waveform(&path)?;
+    Ok(WaveformDto {
+        peaks: w.peaks,
+        peaks_per_sec: audio::PEAKS_PER_SEC,
+        duration_secs: w.duration_secs,
+    })
+}
+
+/// Writes the trimmed region as a new WAV in the library. Category and icon carry over.
+#[tauri::command]
+fn export_trim(
+    file_name: String,
+    trim_start: Option<f64>,
+    trim_end: Option<f64>,
+    store: tauri::State<Store>,
+) -> Result<String, String> {
+    let src = sound_path(&store, &file_name)?;
+    let (start, take) = audio::trim_window(trim_start, trim_end)?;
+    let dir = current_dir(&store)?;
+    let stem = Path::new(&file_name)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("sound")
+        .to_string();
+    let (name, file) = library::create_unique(&dir, &format!("{stem} (trimmed).wav"))?;
+    let dest = dir.join(&name);
+
+    let mut out = std::io::BufWriter::new(file);
+    if let Err(e) = audio::write_trim_wav(&src, &mut out, start, take) {
+        drop(out);
+        let _ = fs::remove_file(&dest);
+        return Err(e);
+    }
+    drop(out);
+
+    let source = store.get(|cfg| cfg.sounds.get(&file_name).cloned()).unwrap_or_default();
+    store.update(|cfg| {
+        cfg.sounds.insert(
+            name.clone(),
+            SoundMeta {
+                category: source.category,
+                emoji: source.emoji,
+                volume: source.volume,
+                ..SoundMeta::default()
+            },
+        )
+    })?;
+    Ok(name)
 }
 
 #[tauri::command]
@@ -218,6 +300,9 @@ pub fn run() {
             list_output_devices,
             set_output_device,
             play_sound,
+            preview_sound,
+            waveform,
+            export_trim,
             stop_all,
             set_master_volume
         ])
