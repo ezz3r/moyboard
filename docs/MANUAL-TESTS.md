@@ -146,6 +146,16 @@ Run on the Windows build. Debug builds print `moyboard: quick panel key Pressed/
 - [ ] Stop button next to search stops main and preview sounds.
 - [ ] Hint line reads "Left click: play · Right click: preview".
 
+## Visual redesign (v6)
+- [ ] Switch Windows between light and dark: the app follows at once (no restart).
+- [ ] Emoji icons render with Segoe UI Emoji in the pad, the sidebar and the emoji picker.
+- [ ] Text uses Segoe UI Variable; nothing is cut off at 100% and 150% display scaling.
+- [ ] A playing pad shows the steady ring in its category colour; with no category, in the accent colour.
+- [ ] Quick Panel shows and hides instantly, with no fade, in both themes.
+- [ ] Quick Panel Stop is neutral; the Quick Panel tile badges are readable at 11 px.
+- [ ] Idle CPU and memory are unchanged from before the redesign (no blur or continuous animation).
+- [ ] Empty board (no sounds): the empty-state text is shown.
+
 ## Windows-only items not run in WSL
 The v2 playback routing (preview device, Stop per sound, playback events),
 global hotkey toggling, Recycle Bin delete and the Windows installer were not
