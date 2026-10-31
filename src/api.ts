@@ -55,6 +55,7 @@ export const api = {
   setMonitorVolume: (volume: number) => call<void>("set_monitor_volume", { volume }),
   getSettings: () => call<AppSettings>("get_settings"),
   setAutoRescan: (enabled: boolean) => call<void>("set_auto_rescan", { enabled }),
+  setCloseToTray: (enabled: boolean) => call<void>("set_close_to_tray", { enabled }),
   stopAll: () => call<void>("stop_all"),
   setMasterVolume: (volume: number) => call<void>("set_master_volume", { volume }),
 };

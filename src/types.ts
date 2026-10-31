@@ -44,6 +44,7 @@ export type Playing = {
 
 export type AppSettings = {
   autoRescan: boolean;
+  closeToTray: boolean;
 };
 
 export type CategoryMeta = {

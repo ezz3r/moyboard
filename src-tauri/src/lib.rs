@@ -13,7 +13,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 use watch::Watch;
 
 type AudioState = Mutex<Engine>;
@@ -43,6 +45,7 @@ pub struct OutputState {
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     auto_rescan: bool,
+    close_to_tray: bool,
 }
 
 #[derive(Serialize)]
@@ -406,7 +409,69 @@ fn set_monitor_volume(volume: f32, store: tauri::State<Store>, engine: tauri::St
 
 #[tauri::command]
 fn get_settings(store: tauri::State<Store>) -> AppSettings {
-    AppSettings { auto_rescan: store.get(|cfg| cfg.auto_rescan.unwrap_or(true)) }
+    AppSettings {
+        auto_rescan: store.get(|cfg| cfg.auto_rescan.unwrap_or(true)),
+        close_to_tray: store.get(|cfg| cfg.close_to_tray.unwrap_or(true)),
+    }
+}
+
+#[tauri::command]
+fn set_close_to_tray(enabled: bool, store: tauri::State<Store>) -> Result<(), String> {
+    store.update(|cfg| cfg.close_to_tray = Some(enabled))
+}
+
+/// Shows the main window, restoring it from minimized if needed.
+fn show_main(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.unminimize();
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+}
+
+fn toggle_main(app: &AppHandle) {
+    match app.get_webview_window("main") {
+        Some(w) if w.is_visible().unwrap_or(false) => {
+            let _ = w.hide();
+        }
+        _ => show_main(app),
+    }
+}
+
+/// Tray menu. Quick Panel is wired in with the panel itself.
+fn build_tray(app: &AppHandle) -> tauri::Result<()> {
+    let open = MenuItem::with_id(app, "open", "Open moyboard", true, None::<&str>)?;
+    let stop = MenuItem::with_id(app, "stop", "Stop all sounds", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let sep = PredefinedMenuItem::separator(app)?;
+    let menu = Menu::with_items(app, &[&open, &sep, &stop, &quit])?;
+    let icon = app.default_window_icon().cloned();
+
+    let mut tray = TrayIconBuilder::new()
+        .tooltip("moyboard")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "open" => show_main(app),
+            "stop" => {
+                if let Ok(mut engine) = lock(&app.state::<AudioState>()) {
+                    engine.stop_all();
+                }
+                publish(app);
+            }
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                toggle_main(tray.app_handle());
+            }
+        });
+    if let Some(icon) = icon {
+        tray = tray.icon(icon);
+    }
+    tray.build(app)?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -541,6 +606,8 @@ fn set_master_volume(volume: f32, engine: tauri::State<AudioState>) -> Result<()
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // First, so a second launch hands its arguments here and exits.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -583,6 +650,25 @@ pub fn run() {
                 publish(&handle);
             });
 
+            if let Err(e) = build_tray(app.handle()) {
+                eprintln!("moyboard: tray icon: {e}");
+            }
+            if let Some(main) = app.get_webview_window("main") {
+                let handle = app.handle().clone();
+                main.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        if handle.state::<Store>().get(|cfg| cfg.close_to_tray.unwrap_or(true)) {
+                            if let Some(w) = handle.get_webview_window("main") {
+                                let _ = w.hide();
+                            }
+                        } else {
+                            handle.exit(0);
+                        }
+                    }
+                });
+            }
+
             if let Err(e) = hotkeys::sync(app.handle()) {
                 eprintln!("moyboard: hotkeys: {e}");
             }
@@ -611,6 +697,7 @@ pub fn run() {
             set_preview_device,
             get_settings,
             set_auto_rescan,
+            set_close_to_tray,
             play_sound,
             stop_sound,
             preview_sound,

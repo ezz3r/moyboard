@@ -46,6 +46,7 @@ export function subscribePlayback(handler: (p: Playing[]) => void): () => void {
   };
 }
 let autoRescan = true;
+let closeToTray = true;
 let library = dir;
 
 function blank(): SoundMeta {
@@ -130,9 +131,12 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       monitorVolume = args.volume as number;
       return undefined as T;
     case "get_settings":
-      return { autoRescan } as T;
+      return { autoRescan, closeToTray } as T;
     case "set_auto_rescan":
       autoRescan = args.enabled as boolean;
+      return undefined as T;
+    case "set_close_to_tray":
+      closeToTray = args.enabled as boolean;
       return undefined as T;
     case "set_output_device":
       output = (args.name as string | null) ?? null;

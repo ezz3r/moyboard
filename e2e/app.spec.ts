@@ -230,6 +230,15 @@ test("all view: a section can be folded", async ({ page }) => {
   await expect(pad(page, "airhorn")).toBeVisible();
 });
 
+test("settings: closing to tray can be switched off", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  const box = page.getByRole("checkbox", { name: "Keep running in the tray when the window is closed" });
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await expect(box).not.toBeChecked();
+  await box.check();
+});
+
 test("settings: monitor volume is disabled while monitor is off", async ({ page }) => {
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.locator(".inline-field input[type=range]").first()).toBeDisabled();

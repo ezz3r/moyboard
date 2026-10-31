@@ -133,6 +133,8 @@ export function Settings({ libraryDir, output, onLibraryChanged, onOutputChanged
 
       <AutoRescan onError={onError} onChanged={onRefresh} />
 
+      <CloseToTray onError={onError} />
+
     </div>
   );
 }
@@ -152,7 +154,7 @@ function AutoRescan({ onError, onChanged }: { onError: (m: string) => void; onCh
           disabled={!settings}
           onChange={async (e) => {
             const enabled = e.target.checked;
-            setSettings({ autoRescan: enabled });
+            setSettings((prev) => (prev ? { ...prev, autoRescan: enabled } : prev));
             try {
               await api.setAutoRescan(enabled);
               onChanged();
@@ -163,6 +165,41 @@ function AutoRescan({ onError, onChanged }: { onError: (m: string) => void; onCh
         />
         <span>Refresh automatically when files change in the library folder</span>
       </label>
+    </section>
+  );
+}
+
+/** Closing the window hides it to the tray (default). Off means closing quits the app. */
+function CloseToTray({ onError }: { onError: (m: string) => void }) {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((s) => setEnabled(s.closeToTray))
+      .catch((e) => onError(String(e)));
+  }, [onError]);
+  return (
+    <section className="settings-section">
+      <h2>Window</h2>
+      <label className="inline-field">
+        <input
+          type="checkbox"
+          checked={enabled ?? false}
+          disabled={enabled === null}
+          onChange={async (e) => {
+            const next = e.target.checked;
+            setEnabled(next);
+            try {
+              await api.setCloseToTray(next);
+            } catch (err) {
+              setEnabled(!next);
+              onError(String(err));
+            }
+          }}
+        />
+        <span>Keep running in the tray when the window is closed</span>
+      </label>
+      <p className="hint">With this off, closing the window quits moyboard. Use the tray menu to quit otherwise.</p>
     </section>
   );
 }

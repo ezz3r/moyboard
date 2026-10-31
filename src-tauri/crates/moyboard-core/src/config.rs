@@ -59,6 +59,8 @@ pub struct Config {
     pub preview_device: Option<String>,
     /// `None` means on.
     pub auto_rescan: Option<bool>,
+    /// Closing the main window hides it to the tray. `None` means on.
+    pub close_to_tray: Option<bool>,
     pub sounds: BTreeMap<String, SoundMeta>,
     pub categories: BTreeMap<String, CategoryMeta>,
 }
