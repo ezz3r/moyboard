@@ -459,7 +459,7 @@ button.group-title:hover {
 
 .pad {
   position: relative;
-  aspect-ratio: 1.08 / 1;
+  min-height: calc(var(--pad-min, 128px) * 0.95);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -482,19 +482,20 @@ button.group-title:hover {
   background: var(--accent, transparent);
 }
 
-/* The whole tile selects the sound. Controls are siblings on top of it. */
+/* The whole tile selects the sound. The button row is a sibling on top of it. */
 .pad-select {
   all: unset;
   box-sizing: border-box;
-  position: absolute;
-  inset: 0;
-  padding: 10px 10px 42px 14px;
+  width: 100%;
+  min-height: inherit;
+  padding: calc(var(--pad-min, 128px) * 0.36) 10px calc(var(--pad-min, 128px) * 0.2);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  gap: 6px;
   cursor: pointer;
   border-radius: var(--radius);
-  overflow: hidden;
+  min-width: 0;
 }
 
 .pad-select:focus-visible {
@@ -512,13 +513,13 @@ button.group-title:hover {
   outline-offset: 2px;
 }
 
-/* Pad parts scale with --pad-min (128 px pad: 36 px emoji box, 20 px emoji, 13 px name). */
+/* Pad parts scale with --pad-min (128 px pad: 32 px icon box, 20 px emoji, 13 px name). */
 .pad-glyph {
   display: grid;
   place-items: center;
   flex: none;
-  width: calc(var(--pad-min, 128px) * 0.28);
-  height: calc(var(--pad-min, 128px) * 0.28);
+  width: calc(var(--pad-min, 128px) * 0.25);
+  height: calc(var(--pad-min, 128px) * 0.25);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--ground);
@@ -526,18 +527,17 @@ button.group-title:hover {
   line-height: 1;
 }
 
+/* One line. A long name fades out at the end instead of wrapping. The full name is in the tooltip. */
 .pad-name {
-  margin-top: auto;
-  width: 100%;
+  align-self: stretch;
+  overflow: hidden;
+  white-space: nowrap;
   font-size: calc(var(--pad-min, 128px) * 0.1);
   font-weight: 600;
-  line-height: 1.2;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  text-align: left;
+  line-height: 1.3;
+  text-align: center;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.2em), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 1.2em), transparent);
 }
 
 .pad-note {
@@ -545,53 +545,21 @@ button.group-title:hover {
   color: var(--alarm);
 }
 
-/* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
-.pad-key {
+/* Button row: Stop left, Play centre, Preview right. Its slots are always there, so Play never moves. */
+.pad-row {
   position: absolute;
-  left: 14px;
-  bottom: 8px;
-  max-width: 55%;
-  padding: 1px 5px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--ground);
-  color: var(--ink-2);
-  font-size: 11px;
-  line-height: 1.4;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-}
-
-.pad-controls {
-  position: absolute;
+  top: 6px;
+  left: 6px;
   right: 6px;
-  bottom: 6px;
   display: flex;
-  gap: 4px;
-}
-
-/* Controls appear on hover or keyboard focus. Hidden, not removed, so they stay in the tab order. */
-.pad-controls {
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 120ms ease, visibility 0s linear 120ms;
-}
-
-.pad:hover .pad-controls,
-.pad:focus-within .pad-controls {
-  opacity: 1;
-  visibility: visible;
-  transition-delay: 0s;
+  justify-content: space-between;
 }
 
 .pad-btn {
   display: inline-grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   background: var(--ground);
   border: 1px solid var(--line);
@@ -610,6 +578,56 @@ button.group-title:hover {
   border-color: var(--signal);
 }
 
+.pad-btn:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+/* Play and Preview appear on hover or keyboard focus. Hidden, not removed, so they stay in the tab order. */
+.pad-row .pad-btn {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease, visibility 0s linear 120ms;
+}
+
+.pad:hover .pad-row .pad-btn:not(.pad-stop),
+.pad:focus-within .pad-row .pad-btn:not(.pad-stop) {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* Stop shows only while an instance sounds. Its slot is reserved when idle. */
+.pad-stop {
+  color: var(--signal);
+  border-color: var(--signal);
+}
+
+.pad-stop:not(:disabled) {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
+.pad-key {
+  position: absolute;
+  left: 10px;
+  bottom: 6px;
+  max-width: 45%;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ground);
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
 /* Playing: amber edge and tint, an equalizer, and an instance count when several play. */
 .pad.is-playing {
   border-color: var(--signal);
@@ -621,18 +639,10 @@ button.group-title:hover {
   color: var(--signal);
 }
 
-.pad.is-playing .pad-btn {
-  background: var(--ground);
-}
-
-.pad.is-playing .pad-btn[aria-pressed="true"] {
-  color: var(--signal);
-}
-
-/* Top-right status: instance count and equalizer. */
+/* Bottom-right: instance count and equalizer. */
 .pad-status {
   position: absolute;
-  top: 8px;
+  bottom: 6px;
   right: 8px;
   display: flex;
   align-items: center;
@@ -675,30 +685,6 @@ button.group-title:hover {
   }
 }
 
-/* Stop all instances of this sound. Shown only while at least one is sounding. */
-.pad-stop {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid var(--signal);
-  border-radius: 50%;
-  background: var(--signal-ink);
-  color: var(--signal);
-  cursor: pointer;
-  animation: pad-in 120ms ease-out;
-}
-
-.pad-stop:focus-visible {
-  outline: 2px solid var(--signal);
-  outline-offset: 2px;
-}
-
 .pad-count {
   padding: 1px 6px;
   border-radius: var(--radius);
@@ -707,12 +693,6 @@ button.group-title:hover {
   font-size: 12px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
-}
-
-@keyframes pad-in {
-  from {
-    opacity: 0;
-  }
 }
 
 .pad.is-missing {
@@ -727,8 +707,8 @@ button.group-title:hover {
 
 .pad-forget {
   position: absolute;
-  right: 10px;
-  bottom: 8px;
+  top: 6px;
+  right: 6px;
   border: 0;
   background: transparent;
   color: var(--alarm);

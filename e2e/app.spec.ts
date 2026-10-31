@@ -94,6 +94,29 @@ test("preview button is separate and turns into a stop button", async ({ page })
   await expect(pad(page, "rimshot").getByRole("button", { name: "Play rimshot" })).toBeVisible();
 });
 
+test("pad: Stop slot is reserved, so Play does not move when a sound starts", async ({ page }) => {
+  const rimshot = pad(page, "rimshot");
+  await rimshot.hover();
+  const play = rimshot.getByRole("button", { name: "Play rimshot" });
+  const before = await play.boundingBox();
+  const stop = rimshot.getByRole("button", { name: "Stop all rimshot" });
+  await expect(stop).toBeHidden();
+  await play.click();
+  await expect(stop).toBeVisible();
+  expect(await play.boundingBox()).toEqual(before);
+});
+
+test("pad: a long name stays on one line, full name in the tooltip", async ({ page }) => {
+  const long = "this is a very long sound name that must not wrap onto a second line";
+  await openEdit(page, "rimshot");
+  await sidebar(page).getByRole("textbox", { name: "Name" }).fill(long);
+  await sidebar(page).getByRole("textbox", { name: "Name" }).press("Enter");
+  const tile = pad(page, long);
+  await expect(tile.locator(".pad-select")).toHaveAttribute("title", long);
+  const height = await tile.locator(".pad-name").evaluate((el) => el.getBoundingClientRect().height);
+  expect(height).toBeLessThan(24);
+});
+
 test("preview output setting is offered in settings", async ({ page }) => {
   await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("heading", { name: "Preview output" })).toBeVisible();

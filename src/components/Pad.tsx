@@ -21,7 +21,7 @@ type Props = {
 
 /**
  * One sound tile. The body selects the sound for the sidebar; it never plays.
- * The controls sit on top of the body, so they are siblings, not children, of the select button.
+ * The button row sits on top of the body, so the buttons are siblings, not children, of the select button.
  */
 export function Pad({
   entry,
@@ -56,19 +56,18 @@ export function Pad({
         className="pad-select"
         onClick={onSelect}
         disabled={missing}
+        title={missing ? `${name} (file missing)` : name}
         aria-current={selected ? "true" : undefined}
         aria-label={missing ? `${name}, file missing` : `Select ${name}`}
       >
         <span className="pad-glyph" aria-hidden="true">
           {missing ? "!" : entry.meta.emoji ?? "♪"}
         </span>
-        <span className="pad-name" title={name}>
-          {name}
-        </span>
+        <span className="pad-name">{name}</span>
         {missing && <span className="pad-note">File missing</span>}
       </button>
 
-      {(playing || previewing) && (
+      {(playing || previewing) && !missing && (
         <div className="pad-status">
           {instances > 1 && (
             <span className="pad-count" aria-label={`${instances} playing`}>
@@ -91,24 +90,22 @@ export function Pad({
         </span>
       )}
 
-      {playing && !missing && (
-        <button
-          type="button"
-          className="pad-stop"
-          onClick={onStop}
-          aria-label={`Stop all ${instances > 1 ? `${instances} instances of ` : ""}${name}`}
-          title="Stop all instances"
-        >
-          <Square size={18} fill="currentColor" aria-hidden="true" />
-        </button>
-      )}
-
       {missing ? (
         <button type="button" className="pad-forget" onClick={onForget}>
           Forget
         </button>
       ) : (
-        <div className="pad-controls">
+        <div className="pad-row">
+          <button
+            type="button"
+            className="pad-btn pad-stop"
+            onClick={onStop}
+            disabled={!playing}
+            aria-label={`Stop all ${instances > 1 ? `${instances} instances of ` : ""}${name}`}
+            title="Stop all instances"
+          >
+            <Square size={14} fill="currentColor" aria-hidden="true" />
+          </button>
           <button
             type="button"
             className="pad-btn"
