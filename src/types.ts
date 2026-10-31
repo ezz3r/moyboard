@@ -24,6 +24,9 @@ export type ImportReport = {
 };
 
 export type OutputDevice = {
+  /** Stable endpoint ID; stored and compared. */
+  id: string;
+  /** Display only. */
   name: string;
   isDefault: boolean;
 };

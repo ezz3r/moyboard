@@ -900,22 +900,34 @@ pub fn run() {
             let store = Store::load(dir.join("moyboard.json"))
                 .map_err(Box::<dyn std::error::Error>::from)?;
 
+            // Older configs store device names; convert them to IDs once and save the result.
+            let migrated = store.get(|cfg| {
+                let fix = |v: &Option<String>| v.as_deref().map(audio::migrate_device);
+                (fix(&cfg.output_device), fix(&cfg.monitor_device), fix(&cfg.preview_device))
+            });
+            let (out, mon, prev) = migrated;
+            store.update(|cfg| {
+                cfg.output_device = out.clone();
+                cfg.monitor_device = mon.clone();
+                cfg.preview_device = prev.clone();
+            })?;
+
             let mut engine = Engine::new();
-            // Saved devices that are gone (unplugged, renamed) are skipped; play falls back to default.
-            let (out, mon, mon_gain) =
-                store.get(|cfg| (cfg.output_device.clone(), cfg.monitor_device.clone(), cfg.monitor_volume));
+            let mon_gain = store.get(|cfg| cfg.monitor_volume);
+            // A saved main or preview device that is gone is kept, so play reports it instead of using the default.
             if let Err(e) = engine.set_device(out.as_deref()) {
                 eprintln!("moyboard: saved output device unavailable: {e}");
+                engine.keep_unavailable(out.as_deref(), None);
             }
-            if let Some(name) = mon {
-                if let Err(e) = engine.set_monitor(Some(&name)) {
+            if let Some(id) = &mon {
+                if let Err(e) = engine.set_monitor(Some(id)) {
                     eprintln!("moyboard: saved monitor device unavailable: {e}");
                 }
             }
             engine.set_monitor_gain(mon_gain.unwrap_or(1.0));
-            let preview = store.get(|cfg| cfg.preview_device.clone());
-            if let Err(e) = engine.set_preview(preview.as_deref()) {
+            if let Err(e) = engine.set_preview(prev.as_deref()) {
                 eprintln!("moyboard: saved preview device unavailable: {e}");
+                engine.keep_unavailable(None, prev.as_deref());
             }
 
             // The Run entry always passes --minimized; the setting decides whether it is honoured.

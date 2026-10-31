@@ -8,9 +8,15 @@ use std::io::{self, Seek, SeekFrom, Write};
 use std::path::Path;
 use std::time::Duration;
 
+/// Shown when a saved device ID no longer matches an output (unplugged, driver changed).
+pub const DEVICE_MISSING: &str = "Device not found, please select it again in Settings";
+
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceInfo {
+    /// Stable WASAPI endpoint ID (`wasapi:...`). This is what is stored and compared.
+    pub id: String,
+    /// Display only: names are not unique.
     pub name: String,
     pub is_default: bool,
 }
@@ -37,14 +43,14 @@ struct Voice {
 /// Each sound gets its own `Player` per output, so sounds overlap.
 pub struct Engine {
     sink: Option<MixerDeviceSink>,
-    /// Name of the chosen primary device; `None` means system default.
-    primary_name: Option<String>,
+    /// ID of the chosen primary device; `None` means system default.
+    primary_id: Option<String>,
     monitor_sink: Option<MixerDeviceSink>,
-    monitor_name: Option<String>,
+    monitor_id: Option<String>,
     monitor_gain: f32,
     preview_sink: Option<MixerDeviceSink>,
-    /// Name of the preview device; `None` means system default.
-    preview_name: Option<String>,
+    /// ID of the preview device; `None` means system default.
+    preview_id: Option<String>,
     voices: Vec<Voice>,
     master: f32,
 }
@@ -53,12 +59,12 @@ impl Engine {
     pub fn new() -> Self {
         Self {
             sink: None,
-            primary_name: None,
+            primary_id: None,
             monitor_sink: None,
-            monitor_name: None,
+            monitor_id: None,
             monitor_gain: 1.0,
             preview_sink: None,
-            preview_name: None,
+            preview_id: None,
             voices: Vec::new(),
             master: 1.0,
         }
@@ -66,59 +72,72 @@ impl Engine {
 
     pub fn list_devices() -> Result<Vec<DeviceInfo>, String> {
         let host = cpal::default_host();
-        let default = host.default_output_device().map(|d| d.id());
+        let default = default_device_id();
         let devices = host.output_devices().map_err(|e| e.to_string())?;
         Ok(devices
-            .map(|d| DeviceInfo { name: device_name(&d), is_default: Some(d.id()) == default })
+            .filter_map(|d| {
+                let id = device_id(&d)?;
+                Some(DeviceInfo { name: device_name(&d), is_default: Some(&id) == default.as_ref(), id })
+            })
             .collect())
     }
 
     /// `None` selects the system default output. Stops main playback, keeps previews.
-    pub fn set_device(&mut self, name: Option<&str>) -> Result<(), String> {
-        let chosen = name.map(str::to_string).or_else(default_device_name);
-        if chosen.is_some() && chosen == self.monitor_name {
+    pub fn set_device(&mut self, id: Option<&str>) -> Result<(), String> {
+        let chosen = id.map(str::to_string).or_else(default_device_id);
+        if chosen.is_some() && chosen == self.monitor_id {
             return Err("primary and monitor output must differ".to_string());
         }
-        let sink = open(name)?;
+        let sink = open(id)?;
         self.voices.retain(|v| v.preview);
         self.sink = Some(sink);
-        self.primary_name = name.map(str::to_string);
+        self.primary_id = id.map(str::to_string);
         Ok(())
     }
 
     /// `None` turns monitoring off. Monitor must differ from the primary output.
-    pub fn set_monitor(&mut self, name: Option<&str>) -> Result<(), String> {
-        match name {
+    pub fn set_monitor(&mut self, id: Option<&str>) -> Result<(), String> {
+        match id {
             None => {
                 self.monitor_sink = None;
-                self.monitor_name = None;
+                self.monitor_id = None;
                 for v in &mut self.voices {
                     v.monitor = None;
                 }
                 Ok(())
             }
             Some(wanted) => {
-                let primary = self.primary_name.clone().or_else(default_device_name);
-                if primary.as_deref() == Some(wanted) {
+                if resolved(&self.primary_id) == Some(wanted.to_string()) {
                     return Err("monitor and primary output must differ".to_string());
                 }
                 let sink = open(Some(wanted))?;
                 self.monitor_sink = Some(sink);
-                self.monitor_name = Some(wanted.to_string());
+                self.monitor_id = Some(wanted.to_string());
                 Ok(())
             }
         }
     }
 
     /// `None` means the system default output. The stream opens now only for a named
-    /// device, so a bad name is reported at once; the default opens on first preview.
-    pub fn set_preview(&mut self, name: Option<&str>) -> Result<(), String> {
-        self.preview_sink = match name {
-            Some(_) => Some(open(name)?),
+    /// device, so a bad ID is reported at once; the default opens on first preview.
+    pub fn set_preview(&mut self, id: Option<&str>) -> Result<(), String> {
+        self.preview_sink = match id {
+            Some(_) => Some(open(id)?),
             None => None,
         };
-        self.preview_name = name.map(str::to_string);
+        self.preview_id = id.map(str::to_string);
         Ok(())
+    }
+
+    /// Saved main or preview device that did not open at startup. Playing then reports it
+    /// missing instead of silently using the system default.
+    pub fn keep_unavailable(&mut self, primary: Option<&str>, preview: Option<&str>) {
+        if let Some(id) = primary {
+            self.primary_id = Some(id.to_string());
+        }
+        if let Some(id) = preview {
+            self.preview_id = Some(id.to_string());
+        }
     }
 
     pub fn set_monitor_gain(&mut self, gain: f32) {
@@ -132,7 +151,7 @@ impl Engine {
         let volume = meta.volume.unwrap_or(1.0).clamp(0.0, 2.0);
 
         if self.sink.is_none() {
-            self.sink = Some(open(None)?);
+            self.sink = Some(open(self.primary_id.as_deref())?);
         }
         let main_sink = self.sink.as_ref().ok_or("no output stream")?;
         let main = spawn(main_sink, path, start, take)?;
@@ -153,13 +172,13 @@ impl Engine {
         let (start, take) = trim_window(meta.trim_start, meta.trim_end)?;
         let volume = meta.volume.unwrap_or(1.0).clamp(0.0, 2.0);
 
-        let primary = self.primary_name.clone().or_else(default_device_name);
-        let preview = self.preview_name.clone().or_else(default_device_name);
+        let primary = resolved(&self.primary_id);
+        let preview = resolved(&self.preview_id);
         if preview.is_some() && preview == primary {
-            return Err("preview and main output are the same device. Pick a preview device in Settings".into());
+            return Err("Preview and main output use the same device. Choose a different preview device in Settings.".into());
         }
         if self.preview_sink.is_none() {
-            self.preview_sink = Some(open(None)?);
+            self.preview_sink = Some(open(self.preview_id.as_deref())?);
         }
         let sink = self.preview_sink.as_ref().ok_or("no preview stream")?;
         let player = spawn(sink, path, start, take)?;
@@ -239,23 +258,46 @@ fn spawn(sink: &MixerDeviceSink, path: &Path, start: Duration, take: Option<Dura
     Ok(player)
 }
 
-/// Name of the system default output, if any.
-pub fn default_device_name() -> Option<String> {
-    cpal::default_host().default_output_device().map(|d| device_name(&d))
+/// ID of the system default output, if any. Used to resolve "system default" before comparing.
+fn default_device_id() -> Option<String> {
+    cpal::default_host().default_output_device().and_then(|d| device_id(&d))
+}
+
+/// `None` (system default) resolves to the real default device ID, so two devices can be compared.
+fn resolved(id: &Option<String>) -> Option<String> {
+    id.clone().or_else(default_device_id)
+}
+
+fn device_id(device: &cpal::Device) -> Option<String> {
+    device.id().ok().map(|id| id.to_string())
 }
 
 fn device_name(device: &cpal::Device) -> String {
     device.description().map_or("unknown".to_string(), |d| d.name().to_string())
 }
 
-fn open(name: Option<&str>) -> Result<MixerDeviceSink, String> {
+/// Turns a saved output setting into an ID. Settings written by older versions hold a name:
+/// convert it when one device has that name. Anything else is returned unchanged.
+pub fn migrate_device(saved: &str) -> String {
+    if saved.parse::<cpal::DeviceId>().is_ok() {
+        return saved.to_string();
+    }
+    cpal::default_host()
+        .output_devices()
+        .ok()
+        .and_then(|mut devices| devices.find(|d| device_name(d) == saved))
+        .and_then(|d| device_id(&d))
+        .unwrap_or_else(|| saved.to_string())
+}
+
+fn open(id: Option<&str>) -> Result<MixerDeviceSink, String> {
     let host = cpal::default_host();
-    let device = match name {
-        Some(wanted) => host
-            .output_devices()
-            .map_err(|e| e.to_string())?
-            .find(|d| device_name(d) == wanted)
-            .ok_or_else(|| format!("output device not found: {wanted}"))?,
+    let device = match id {
+        Some(wanted) => wanted
+            .parse::<cpal::DeviceId>()
+            .ok()
+            .and_then(|parsed| host.device_by_id(&parsed))
+            .ok_or_else(|| DEVICE_MISSING.to_string())?,
         None => host.default_output_device().ok_or("no default output device")?,
     };
     DeviceSinkBuilder::from_device(device)

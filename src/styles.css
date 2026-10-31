@@ -956,6 +956,11 @@ button.group-title:hover {
   color: var(--ink-2);
 }
 
+.warning {
+  margin: 0;
+  color: var(--alarm);
+}
+
 .path {
   margin: 0;
   font-variant-numeric: tabular-nums;
@@ -1058,6 +1063,22 @@ button.group-title:hover {
   cursor: pointer;
   z-index: 20;
   white-space: pre-line;
+}
+
+.toast-action {
+  margin-left: 10px;
+  background: none;
+  border: 1px solid var(--signal);
+  border-radius: var(--radius);
+  color: var(--signal);
+  font: inherit;
+  padding: 1px 8px;
+  cursor: pointer;
+}
+
+.toast-action:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
 }
 
 /* ---------- Narrow windows ---------- */

@@ -66,9 +66,9 @@ const categories: Record<string, CategoryMeta> = {
 };
 
 const devices = [
-  { name: "Speakers (Realtek Audio)", isDefault: true },
-  { name: "CABLE Input (VB-Audio Virtual Cable)", isDefault: false },
-  { name: "Headphones (USB Audio)", isDefault: false },
+  { id: "wasapi:speakers", name: "Speakers (Realtek Audio)", isDefault: true },
+  { id: "wasapi:cable", name: "CABLE Input (VB-Audio Virtual Cable)", isDefault: false },
+  { id: "wasapi:headphones", name: "Headphones (USB Audio)", isDefault: false },
 ];
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));

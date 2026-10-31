@@ -38,11 +38,15 @@ export default function App() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [playing, setPlaying] = useState<Playing[]>([]);
   const [dragging, setDragging] = useState(false);
-  const [toast, setToast] = useState<{ text: string; tone: "info" | "error" } | null>(null);
+  const [toast, setToast] = useState<{ text: string; tone: "info" | "error"; settings?: boolean } | null>(null);
   const [sideWidth, setSideWidth] = useState(SIDEBAR_DEFAULT);
   const [tileSizes, setTileSizes] = useState<TileSizes>({ pad: 128, quick: 56 });
 
-  const notify = useCallback((text: string) => setToast({ text, tone: "error" }), []);
+  // Same-device errors get an "Open Settings" action; the message text is the marker.
+  const notify = useCallback(
+    (text: string) => setToast({ text, tone: "error", settings: text.startsWith("Preview and main output") }),
+    [],
+  );
   const say = useCallback((text: string) => setToast({ text, tone: "info" }), []);
 
   const refresh = useCallback(async () => {
@@ -335,7 +339,7 @@ export default function App() {
           >
             <option value="">System default output</option>
             {output.devices.map((d) => (
-              <option key={d.name} value={d.name}>
+              <option key={d.id} value={d.id}>
                 {d.name}
               </option>
             ))}
@@ -555,6 +559,19 @@ export default function App() {
           onClick={() => setToast(null)}
         >
           {toast.text}
+          {toast.settings && (
+            <button
+              type="button"
+              className="toast-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                setView("settings");
+                setToast(null);
+              }}
+            >
+              Open Settings
+            </button>
+          )}
         </div>
       )}
     </div>
