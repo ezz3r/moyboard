@@ -34,7 +34,7 @@ trash = "5.2.9"
 
 [target.'cfg(windows)'.dependencies]
 # Only for DwmSetWindowAttribute: turns off the OS show/hide fade of the Quick Panel.
-windows = { version = "0.62", features = ["Win32_Graphics_Dwm"] }
+windows = { version = "0.62", features = ["Win32_Graphics_Dwm", "Win32_UI_Input_KeyboardAndMouse"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

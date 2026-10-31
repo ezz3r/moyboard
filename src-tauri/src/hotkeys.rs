@@ -56,7 +56,10 @@ pub fn sync(app: &AppHandle) -> Result<(), String> {
     let quick = store.get(|cfg| cfg.quick_panel_hotkey.clone().filter(|h| !h.is_empty()));
     if let Some(hotkey) = quick {
         match parse(&hotkey).and_then(|s| gs.register(s).map(|()| s).map_err(|e| format!("Hotkey {hotkey} is already in use or invalid ({e})"))) {
-            Ok(s) => *app.state::<QuickKey>().0.lock().unwrap() = Some(s.id()),
+            Ok(s) => {
+                log_quick_key(&hotkey, &s);
+                *app.state::<QuickKey>().0.lock().unwrap() = Some(s.id());
+            }
             Err(e) => {
                 eprintln!("moyboard: {e}");
                 errors.push(e)
@@ -107,3 +110,20 @@ fn quick_panel_event(app: &AppHandle, state: ShortcutState) {
         _ => {}
     }
 }
+
+/// Debug only. Shows which virtual key the OS uses for the physical Backquote key on this
+/// layout, next to the key global-hotkey registers (VK_OEM_3, US layout).
+#[cfg(all(windows, debug_assertions))]
+fn log_quick_key(hotkey: &str, s: &Shortcut) {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{MapVirtualKeyW, MAPVK_VSC_TO_VK};
+    // Scan code 0x29 is the key left of "1" (Backquote on US, ^ on German).
+    let layout_vk = unsafe { MapVirtualKeyW(0x29, MAPVK_VSC_TO_VK) };
+    eprintln!(
+        "moyboard: quick key {hotkey} -> id {:#x}, registered VK_OEM_3 (0xC0); layout VK for scan 0x29 = {layout_vk:#x}; code {:?}",
+        s.id(),
+        s.key
+    );
+}
+
+#[cfg(not(all(windows, debug_assertions)))]
+fn log_quick_key(_hotkey: &str, _s: &Shortcut) {}
