@@ -483,6 +483,49 @@ button.group-title:hover {
   color: var(--signal);
 }
 
+/* Stop all instances of this sound. Shown only while at least one is sounding. */
+.pad-stop {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--signal-ink);
+  border-radius: 50%;
+  background: var(--signal-ink);
+  color: var(--signal);
+  cursor: pointer;
+  animation: pad-in 120ms ease-out;
+}
+
+.pad-stop:focus-visible {
+  outline: 2px solid var(--signal-ink);
+  outline-offset: 2px;
+}
+
+.pad-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 6px;
+  border-radius: var(--radius);
+  background: var(--signal-ink);
+  color: var(--signal);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes pad-in {
+  from {
+    opacity: 0;
+  }
+}
+
 .pad.is-missing {
   border-style: dashed;
   border-color: var(--alarm);

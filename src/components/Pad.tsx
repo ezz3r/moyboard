@@ -8,7 +8,8 @@ type Props = {
   /** Category or per-sound colour, `#rrggbb`. Drawn as a stripe on the top edge. */
   accent: string | null;
   selected: boolean;
-  playing: boolean;
+  /** Number of main-output instances still sounding. Play always starts one more. */
+  instances: number;
   previewing: boolean;
   onSelect: () => void;
   onPlay: () => void;
@@ -26,7 +27,7 @@ export function Pad({
   entry,
   accent,
   selected,
-  playing,
+  instances,
   previewing,
   onSelect,
   onPlay,
@@ -37,6 +38,7 @@ export function Pad({
 }: Props) {
   const name = stemOf(entry.fileName);
   const missing = entry.missing;
+  const playing = instances > 0;
   const classes = [
     "pad",
     selected && "is-selected",
@@ -64,6 +66,24 @@ export function Pad({
         {missing && <span className="pad-note">File missing</span>}
       </button>
 
+      {instances > 1 && (
+        <span className="pad-count" aria-label={`${instances} playing`}>
+          x{instances}
+        </span>
+      )}
+
+      {playing && !missing && (
+        <button
+          type="button"
+          className="pad-stop"
+          onClick={onStop}
+          aria-label={`Stop all ${instances > 1 ? `${instances} instances of ` : ""}${name}`}
+          title="Stop all instances"
+        >
+          <Square size={18} fill="currentColor" aria-hidden="true" />
+        </button>
+      )}
+
       {missing ? (
         <button type="button" className="pad-forget" onClick={onForget}>
           Forget
@@ -73,11 +93,11 @@ export function Pad({
           <button
             type="button"
             className="pad-btn"
-            onClick={playing ? onStop : onPlay}
-            aria-label={playing ? `Stop ${name}` : `Play ${name}`}
-            title={playing ? "Stop" : "Play to main output"}
+            onClick={onPlay}
+            aria-label={`Play ${name}`}
+            title="Play another instance"
           >
-            {playing ? <Square size={14} fill="currentColor" aria-hidden="true" /> : <Play size={16} fill="currentColor" aria-hidden="true" />}
+            <Play size={16} fill="currentColor" aria-hidden="true" />
           </button>
           <button
             type="button"

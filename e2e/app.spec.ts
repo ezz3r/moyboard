@@ -47,11 +47,18 @@ test("clicking the pad body selects it and does not play", async ({ page }) => {
   await expect(pad(page, "airhorn")).not.toHaveClass(/is-playing/);
 });
 
-test("play button turns into stop while the sound plays", async ({ page }) => {
-  await pad(page, "airhorn").getByRole("button", { name: "Play airhorn" }).click();
-  await expect(pad(page, "airhorn").getByRole("button", { name: "Stop airhorn" })).toBeVisible();
-  // The mock ends the sound after 3 s; the button flips back on its own.
-  await expect(pad(page, "airhorn").getByRole("button", { name: "Play airhorn" })).toBeVisible({ timeout: 6000 });
+test("play again starts another instance; the center stop ends all of them", async ({ page }) => {
+  const airhorn = pad(page, "airhorn");
+  await airhorn.getByRole("button", { name: "Play airhorn" }).click();
+  await expect(airhorn.getByRole("button", { name: "Stop all airhorn" })).toBeVisible();
+  await expect(airhorn).not.toContainText("x2");
+  await airhorn.getByRole("button", { name: "Play airhorn" }).click();
+  await expect(airhorn).toContainText("x2");
+  await expect(airhorn.getByRole("button", { name: "Stop all 2 instances of airhorn" })).toBeVisible();
+  await airhorn.getByRole("button", { name: "Stop all 2 instances of airhorn" }).click();
+  await expect(airhorn.getByRole("button", { name: /Stop all/ })).toHaveCount(0);
+  await expect(airhorn).not.toContainText("x2");
+  await expect(airhorn).not.toHaveClass(/is-playing/);
 });
 
 test("preview button is separate and turns into a stop button", async ({ page }) => {

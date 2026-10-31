@@ -268,7 +268,7 @@ export default function App() {
       entry={s}
       accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
       selected={selection?.type === "sound" && selection.id === s.fileName}
-      playing={playing.some((p) => p.fileName === s.fileName && !p.previewing)}
+      instances={playing.filter((p) => p.fileName === s.fileName && !p.previewing).length}
       previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
       onSelect={() => setSelection({ type: "sound", id: s.fileName })}
       onPlay={() => act(() => api.playSound(s.fileName))}
