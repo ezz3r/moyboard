@@ -31,6 +31,7 @@ pub fn sync(app: &AppHandle) -> Result<(), String> {
 
     let gs = app.global_shortcut();
     gs.unregister_all().map_err(|e| e.to_string())?;
+    crate::quick_key::set(None);
     let map = app.state::<Hotkeys>();
     let mut table = map.0.lock().unwrap();
     table.clear();
@@ -55,11 +56,14 @@ pub fn sync(app: &AppHandle) -> Result<(), String> {
     // Registered after the sounds, so a clash with a sound is the one reported.
     let quick = store.get(|cfg| cfg.quick_panel_hotkey.clone().filter(|h| !h.is_empty()));
     if let Some(hotkey) = quick {
+        // Keys the hook knows are matched by scan code (layout-independent); the rest use RegisterHotKey.
+        if let Some(spec) = crate::quick_key::spec(&hotkey) {
+            crate::quick_key::set(Some(spec));
+            log_hook_key(&hotkey, &spec);
+            return if errors.is_empty() { Ok(()) } else { Err(errors.join("; ")) };
+        }
         match parse(&hotkey).and_then(|s| gs.register(s).map(|()| s).map_err(|e| format!("Hotkey {hotkey} is already in use or invalid ({e})"))) {
-            Ok(s) => {
-                log_quick_key(&hotkey, &s);
-                *app.state::<QuickKey>().0.lock().unwrap() = Some(s.id());
-            }
+            Ok(s) => *app.state::<QuickKey>().0.lock().unwrap() = Some(s.id()),
             Err(e) => {
                 eprintln!("moyboard: {e}");
                 errors.push(e)
@@ -92,7 +96,7 @@ pub fn on_event(app: &AppHandle, shortcut: &Shortcut, event: tauri_plugin_global
 }
 
 /// Hold: shown while the key is down. Toggle: each press flips it.
-fn quick_panel_event(app: &AppHandle, state: ShortcutState) {
+pub fn quick_panel_event(app: &AppHandle, state: ShortcutState) {
     let hold = app.state::<Store>().get(|cfg| cfg.quick_panel_mode.as_deref() == Some("hold"));
     // Diagnostics for the Windows hotkey bug (see docs/MANUAL-TESTS.md). Debug builds only.
     if cfg!(debug_assertions) {
@@ -111,19 +115,11 @@ fn quick_panel_event(app: &AppHandle, state: ShortcutState) {
     }
 }
 
-/// Debug only. Shows which virtual key the OS uses for the physical Backquote key on this
-/// layout, next to the key global-hotkey registers (VK_OEM_3, US layout).
-#[cfg(all(windows, debug_assertions))]
-fn log_quick_key(hotkey: &str, s: &Shortcut) {
-    use windows::Win32::UI::Input::KeyboardAndMouse::{MapVirtualKeyW, MAPVK_VSC_TO_VK};
-    // Scan code 0x29 is the key left of "1" (Backquote on US, ^ on German).
-    let layout_vk = unsafe { MapVirtualKeyW(0x29, MAPVK_VSC_TO_VK) };
-    eprintln!(
-        "moyboard: quick key {hotkey} -> id {:#x}, registered VK_OEM_3 (0xC0); layout VK for scan 0x29 = {layout_vk:#x}; code {:?}",
-        s.id(),
-        s.key
-    );
+/// Debug builds only: shows which hotkey path is in use, for the Windows checks.
+#[cfg(debug_assertions)]
+fn log_hook_key(hotkey: &str, spec: &crate::quick_key::Spec) {
+    eprintln!("moyboard: quick panel hotkey {hotkey} uses the keyboard hook: {spec:?}");
 }
 
-#[cfg(not(all(windows, debug_assertions)))]
-fn log_quick_key(_hotkey: &str, _s: &Shortcut) {}
+#[cfg(not(debug_assertions))]
+fn log_hook_key(_hotkey: &str, _spec: &crate::quick_key::Spec) {}

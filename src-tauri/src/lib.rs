@@ -1,5 +1,6 @@
 mod audio;
 mod hotkeys;
+mod quick_key;
 mod watch;
 
 use moyboard_core::{config, library, wav};
@@ -888,6 +889,7 @@ pub fn run() {
             app.manage(Mutex::new(engine));
             app.manage(Hotkeys::default());
             app.manage(hotkeys::QuickKey::default());
+            quick_key::start(app.handle().clone());
             app.manage(Watch::default());
             app.manage(LastPlayback::default());
 
