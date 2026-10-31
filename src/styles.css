@@ -1,29 +1,80 @@
 /*
- * Design direction: a broadcast cue board. Dark green-graphite ground, warm paper
- * text, one signal colour (amber) that means "live". No shadows, no gradients,
- * radii kept small. Bricolage Grotesque for everything; weight and width carry hierarchy.
+ * Design direction: Apple-like and quiet. Light by default, dark when the system is dark.
+ * One accent (blue) for focus, selection and primary actions; red only for destructive
+ * or missing. System font, small radii, one soft shadow for floating surfaces only.
+ * Token values are checked against WCAG (text 4.5:1, controls 3:1); see docs/ui-audit.md.
  */
 :root {
-  --ground: #121614;
-  --surface: #1a201d;
-  --raised: #232b27;
-  --line: #2c3631;
-  --ink: #e9e4d6;
-  --ink-2: #9aa59d;
-  --signal: #f2a93b;
-  --signal-ink: #1a1206;
-  --alarm: #e0664f;
+  --ground: #f5f5f7;
+  --surface: #ffffff;
+  --raised: #e8e8ed;
+  --line: #d2d2d7;
+  --control-line: #7a7a80;
+  --ink: #1d1d1f;
+  --ink-2: #5e5e63;
+  --accent: #0066cc;
+  --accent-ink: #ffffff;
+  --alarm: #c9372c;
+  --scrim: rgb(0 0 0 / 0.35);
+  --elevation: 0 8px 24px rgb(0 0 0 / 0.14);
+  --rgb-accent: 0, 102, 204;
+  --rgb-background: 255, 255, 255;
+  --rgb-input: 232, 232, 237;
+  --rgb-color: 29, 29, 31;
 
-  --radius: 4px;
+  --radius: 8px;
   --space: 12px;
-  --font: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
 
-  color-scheme: dark;
+  color-scheme: light;
   font-family: var(--font);
   font-size: 14px;
   line-height: 1.4;
   color: var(--ink);
   background: var(--ground);
+}
+
+/* Dark tokens: follow the system, or force with data-theme="dark". Keep the two blocks identical. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #1c1c1e;
+    --surface: #2c2c2e;
+    --raised: #3a3a3c;
+    --line: #3a3a3c;
+    --control-line: #8e8e93;
+    --ink: #f5f5f7;
+    --ink-2: #b0b0b6;
+    --accent: #4da3ff;
+    --accent-ink: #001a33;
+    --alarm: #ff6961;
+    --scrim: rgb(0 0 0 / 0.55);
+    --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
+    --rgb-accent: 77, 163, 255;
+    --rgb-background: 44, 44, 46;
+    --rgb-input: 58, 58, 60;
+    --rgb-color: 245, 245, 247;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #1c1c1e;
+  --surface: #2c2c2e;
+  --raised: #3a3a3c;
+  --line: #3a3a3c;
+  --control-line: #8e8e93;
+  --ink: #f5f5f7;
+  --ink-2: #b0b0b6;
+  --accent: #4da3ff;
+  --accent-ink: #001a33;
+  --alarm: #ff6961;
+  --scrim: rgb(0 0 0 / 0.55);
+  --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
+  --rgb-accent: 77, 163, 255;
+  --rgb-background: 44, 44, 46;
+  --rgb-input: 58, 58, 60;
+  --rgb-color: 245, 245, 247;
+  color-scheme: dark;
 }
 
 *,
@@ -48,8 +99,13 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* One icon weight across the app; lucide sets the attribute, CSS wins over it. */
+.lucide {
+  stroke-width: 1.75;
 }
 
 .sr-only {
@@ -93,7 +149,7 @@ select {
 .field select,
 .select-wide {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   padding: 6px 8px;
   min-width: 0;
@@ -150,7 +206,7 @@ select {
 .sidebar-handle:hover::before,
 .sidebar-handle:focus-visible::before {
   width: 2px;
-  background: var(--signal);
+  background: var(--accent);
 }
 
 .sidebar-handle:focus-visible {
@@ -193,7 +249,7 @@ body.is-resizing * {
 
 .warn {
   margin: 0;
-  color: var(--signal);
+  color: var(--accent);
   font-size: 13px;
 }
 
@@ -214,7 +270,7 @@ body.is-resizing * {
   height: 34px;
   padding: 0 10px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   color: var(--ink);
   font: inherit;
@@ -227,7 +283,7 @@ body.is-resizing * {
 }
 
 .cat-trigger:focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -241,6 +297,7 @@ body.is-resizing * {
 }
 
 .cat-pop {
+  box-shadow: var(--elevation);
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -285,7 +342,7 @@ body.is-resizing * {
   display: inline-grid;
   place-items: center;
   width: 14px;
-  color: var(--signal);
+  color: var(--accent);
 }
 
 .cat-option-label {
@@ -325,7 +382,7 @@ body.is-resizing * {
 
 .btn {
   background: var(--raised);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   padding: 6px 12px;
   cursor: pointer;
@@ -341,9 +398,9 @@ body.is-resizing * {
 }
 
 .btn-primary {
-  background: var(--signal);
-  border-color: var(--signal);
-  color: var(--signal-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
   font-weight: 650;
 }
 
@@ -431,7 +488,7 @@ button.group-title:hover {
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: var(--accent, var(--line));
+  background: var(--cat, var(--line));
 }
 
 .group-head .count {
@@ -483,7 +540,7 @@ button.group-title:hover {
   bottom: -1px;
   width: 4px;
   border-radius: var(--radius) 0 0 var(--radius);
-  background: var(--accent, transparent);
+  background: var(--cat, transparent);
 }
 
 /* Button row: Stop, Play and Preview. Shown on hover or keyboard focus; Stop also while playing.
@@ -515,7 +572,7 @@ button.group-title:hover {
   height: 36px;
   padding: 0;
   background: var(--ground);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   color: var(--ink-2);
   cursor: pointer;
@@ -527,27 +584,27 @@ button.group-title:hover {
 }
 
 .pad-btn:focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .pad-btn[aria-pressed="true"] {
-  color: var(--signal);
-  border-color: var(--signal);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Play is the main action: the largest, amber-edged target in the row. */
 .pad-play {
-  color: var(--signal);
-  border-color: var(--signal);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Stop shows only while an instance sounds. Its slot is reserved when idle, so Play never moves. */
 .pad-stop:not(:disabled) {
   opacity: 1;
   visibility: visible;
-  color: var(--signal);
-  border-color: var(--signal);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Info row: the name, at the bottom of the tile. Selects the sound. */
@@ -568,7 +625,7 @@ button.group-title:hover {
 }
 
 .pad-select:focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -577,8 +634,8 @@ button.group-title:hover {
 }
 
 .pad.is-selected {
-  border-color: var(--signal);
-  outline: 2px solid var(--signal);
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -622,13 +679,13 @@ button.group-title:hover {
 }
 
 .pad.is-playing {
-  border-color: var(--signal);
-  background: rgb(242 169 59 / 0.12);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .pad.is-playing .pad-glyph {
-  border-color: var(--signal);
-  color: var(--signal);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
@@ -639,7 +696,7 @@ button.group-title:hover {
   bottom: 4px;
   max-width: 45%;
   padding: 1px 5px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   background: var(--ground);
   color: var(--ink-2);
@@ -676,7 +733,7 @@ button.group-title:hover {
   display: block;
   width: 3px;
   height: 100%;
-  background: var(--signal);
+  background: var(--accent);
   transform-origin: bottom;
   animation: eq 900ms ease-in-out infinite;
 }
@@ -702,8 +759,8 @@ button.group-title:hover {
 .pad-count {
   padding: 1px 6px;
   border-radius: var(--radius);
-  background: var(--signal-ink);
-  color: var(--signal);
+  background: var(--accent-ink);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -745,9 +802,9 @@ button.group-title:hover {
 .drop {
   position: absolute;
   inset: 8px;
-  border: 2px dashed var(--signal);
+  border: 2px dashed var(--accent);
   border-radius: var(--radius);
-  background: rgb(18 22 20 / 0.85);
+  background: color-mix(in srgb, var(--ground) 85%, transparent);
   display: grid;
   place-items: center;
   pointer-events: none;
@@ -759,7 +816,7 @@ button.group-title:hover {
   margin: 0;
   font-size: 20px;
   font-weight: 650;
-  color: var(--signal);
+  color: var(--accent);
 }
 
 @keyframes fade {
@@ -792,7 +849,7 @@ button.group-title:hover {
 }
 
 .field input[type="range"] {
-  accent-color: var(--signal);
+  accent-color: var(--accent);
 }
 
 .name-row {
@@ -838,7 +895,7 @@ button.group-title:hover {
 }
 
 .emoji-cell[aria-pressed="true"] {
-  border-color: var(--signal);
+  border-color: var(--accent);
   background: var(--raised);
 }
 
@@ -909,7 +966,7 @@ button.group-title:hover {
 .trim-fields input[type="number"] {
   width: 100%;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   padding: 6px 8px;
   font-variant-numeric: tabular-nums;
@@ -982,7 +1039,7 @@ button.group-title:hover {
 .cat-row input {
   flex: 1;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   padding: 6px 8px;
   min-width: 0;
@@ -1001,12 +1058,12 @@ button.group-title:hover {
 }
 
 .inline-field input[type="range"] {
-  accent-color: var(--signal);
+  accent-color: var(--accent);
   width: 240px;
 }
 
 .inline-field input[type="checkbox"] {
-  accent-color: var(--signal);
+  accent-color: var(--accent);
   width: 16px;
   height: 16px;
 }
@@ -1022,15 +1079,15 @@ button.group-title:hover {
   text-align: left;
   font-variant-numeric: tabular-nums;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   padding: 6px 8px;
   cursor: pointer;
 }
 
 .hotkey.is-recording {
-  border-color: var(--signal);
-  color: var(--signal);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ---------- Toast ---------- */
@@ -1059,16 +1116,16 @@ button.group-title:hover {
 .toast-action {
   margin-left: 10px;
   background: none;
-  border: 1px solid var(--signal);
+  border: 1px solid var(--accent);
   border-radius: var(--radius);
-  color: var(--signal);
+  color: var(--accent);
   font: inherit;
   padding: 1px 8px;
   cursor: pointer;
 }
 
 .toast-action:focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -1162,7 +1219,7 @@ button.group-title:hover {
   height: 36px;
   font-size: 20px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   cursor: pointer;
   padding: 0;
@@ -1174,6 +1231,7 @@ button.group-title:hover {
 }
 
 .emoji-pop {
+  box-shadow: var(--elevation);
   position: absolute;
   z-index: 15;
   top: 100%;
@@ -1190,13 +1248,9 @@ button.group-title:hover {
   gap: 6px;
 }
 
-/* Colours for emoji-mart's dark theme, taken from the app tokens. */
+/* emoji-mart reads the --rgb-* tokens from :root, so it follows light and dark. */
 .emoji-host {
   width: 100%;
-  --rgb-accent: 242, 169, 59;
-  --rgb-background: 26, 32, 29;
-  --rgb-input: 35, 43, 39;
-  --rgb-color: 233, 228, 214;
 }
 
 .emoji-host em-emoji-picker {
@@ -1250,7 +1304,7 @@ button.group-title:hover {
 .btn-danger-solid {
   background: var(--alarm);
   border-color: var(--alarm);
-  color: var(--signal-ink);
+  color: var(--accent-ink);
   font-weight: 650;
 }
 
@@ -1275,7 +1329,7 @@ button.group-title:hover {
 .top-search input {
   width: 100%;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   padding: 6px 30px 6px 30px;
   min-width: 0;
@@ -1309,7 +1363,7 @@ button.group-title:hover {
 .scrim {
   position: absolute;
   inset: 0;
-  background: rgb(10 12 11 / 0.6);
+  background: var(--scrim);
   display: grid;
   place-items: center;
   z-index: 30;
@@ -1317,6 +1371,7 @@ button.group-title:hover {
 }
 
 .dialog {
+  box-shadow: var(--elevation);
   width: min(380px, 100%);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1399,7 +1454,7 @@ button.group-title:hover {
   padding: 0 8px;
   height: 34px;
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   color: var(--ink-2);
 }
@@ -1415,7 +1470,7 @@ button.group-title:hover {
 }
 
 .quick-search:focus-within {
-  border-color: var(--signal);
+  border-color: var(--accent);
 }
 
 .quick-hint {
@@ -1459,7 +1514,7 @@ button.group-title:hover {
 }
 
 .quick-group-head:focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -1520,12 +1575,12 @@ button.group-title:hover {
   right: 0;
   top: 0;
   height: 3px;
-  background: var(--accent, transparent);
+  background: var(--cat, transparent);
 }
 
 .tile.is-playing {
-  border-color: var(--signal);
-  background: rgb(242 169 59 / 0.12);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .tile.is-missing {
@@ -1555,7 +1610,7 @@ button.group-title:hover {
 }
 
 .tile-play:focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -1599,7 +1654,7 @@ button.group-title:hover {
   top: 6px;
   max-width: calc(100% - 6px);
   padding: 0 3px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-line);
   border-radius: var(--radius);
   background: var(--ground);
   color: var(--ink-2);
@@ -1617,8 +1672,8 @@ button.group-title:hover {
   top: 6px;
   padding: 0 3px;
   border-radius: var(--radius);
-  background: var(--signal-ink);
-  color: var(--signal);
+  background: var(--accent-ink);
+  color: var(--accent);
   font-size: 9px;
   font-weight: 650;
   pointer-events: none;
@@ -1640,7 +1695,7 @@ button.group-title:hover {
   display: block;
   width: 2px;
   height: 100%;
-  background: var(--signal);
+  background: var(--accent);
   transform-origin: bottom;
   animation: eq 900ms ease-in-out infinite;
 }
@@ -1670,7 +1725,7 @@ button.group-title:hover {
 }
 
 .quick-resize:focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 

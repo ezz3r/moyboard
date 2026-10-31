@@ -26,7 +26,7 @@ export function SoundTile({ entry, accent, instances, previewing, onPlay, onPrev
     .join(" ");
 
   return (
-    <div className={classes} style={accent ? ({ "--accent": accent } as CSSProperties) : undefined}>
+    <div className={classes} style={accent ? ({ "--cat": accent } as CSSProperties) : undefined}>
       <button
         type="button"
         className="tile-play"

@@ -50,7 +50,7 @@ export function Pad({
     .join(" ");
 
   return (
-    <div className={classes} style={accent ? ({ "--accent": accent } as CSSProperties) : undefined}>
+    <div className={classes} style={accent ? ({ "--cat": accent } as CSSProperties) : undefined}>
       <span className="pad-glyph" aria-hidden="true">
         {missing ? "!" : (entry.meta.emoji ?? "♪")}
       </span>

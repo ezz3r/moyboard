@@ -224,7 +224,7 @@ function WaveEditor({
     const css = getComputedStyle(document.documentElement);
     const ink = css.getPropertyValue("--ink").trim();
     const ink2 = css.getPropertyValue("--ink-2").trim();
-    const signal = css.getPropertyValue("--signal").trim();
+    const accent = css.getPropertyValue("--accent").trim();
 
     const mid = HEIGHT / 2;
     const perSec = wave.peaksPerSec;
@@ -241,7 +241,7 @@ function WaveEditor({
       ctx.fillRect(x, mid - h / 2, 1, h);
     }
     ctx.globalAlpha = 1;
-    ctx.fillStyle = signal;
+    ctx.fillStyle = accent;
     const xs = Math.round((start / dur) * width);
     const xe = Math.round((end / dur) * width);
     ctx.fillRect(xs, 0, 2, HEIGHT);

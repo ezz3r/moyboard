@@ -422,10 +422,9 @@ export default function App() {
           </IconButton>
           <IconButton
             label="Stop all"
-            tone="danger"
             onClick={() => void api.stopAll().catch((err) => notify(String(err)))}
           >
-            <Square size={16} fill="currentColor" aria-hidden="true" />
+            <Square size={18} fill="currentColor" aria-hidden="true" />
           </IconButton>
         </div>
       </header>
@@ -606,7 +605,7 @@ function Group({
   onSelect?: () => void;
   children: ReactNode;
 }) {
-  const style = color ? ({ "--accent": color } as CSSProperties) : undefined;
+  const style = color ? ({ "--cat": color } as CSSProperties) : undefined;
   return (
     <section className="group" style={style}>
       <header className="group-head">

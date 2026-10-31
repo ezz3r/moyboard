@@ -115,7 +115,7 @@ export function CategoryMenu({ value, options, onChange, onNew, onEdit, editable
                 role="option"
                 aria-selected={selected}
                 className="cat-option"
-                style={o.color ? ({ "--accent": o.color } as CSSProperties) : undefined}
+                style={o.color ? ({ "--cat": o.color } as CSSProperties) : undefined}
                 onClick={() => {
                   setOpen(false);
                   onChange(o.key);
@@ -154,7 +154,7 @@ function Dot({ color }: { color: string | null }) {
     <span
       className={`swatch-dot${color ? "" : " is-empty"}`}
       aria-hidden="true"
-      style={color ? ({ "--accent": color } as CSSProperties) : undefined}
+      style={color ? ({ "--cat": color } as CSSProperties) : undefined}
     />
   );
 }

@@ -20,7 +20,7 @@ Constraints that shape every decision:
 ## Stack
 
 - Frontend: React 19, TypeScript (strict), Vite. No UI component library.
-  Bricolage Grotesque is bundled via `@fontsource-variable/bricolage-grotesque`.
+  System font stack (no bundled font). Light and dark follow the system; see the visual direction below.
 - Backend: Rust, Tauri 2.
   - `cpal` enumerates output devices (WASAPI on Windows).
   - `rodio` (with `symphonia-all`) decodes and plays audio; stable API only
@@ -151,8 +151,12 @@ Prerequisites (WSL): rustup with the `x86_64-pc-windows-msvc` target, `cargo-xwi
 - No new runtime dependency for a few lines of code.
 - Accessibility: keep `aria-label`s on icon-only buttons, keyboard access on sliders (role="slider")
   and focus-visible outlines. Respect `prefers-reduced-motion`.
-- Visual direction: dark graphite ground, warm paper text, amber (`--signal`) as the only accent.
-  No shadows, no gradients, small radii. Tokens live in `:root` in `src/styles.css`.
+- Visual direction: Apple-like and quiet. Light by default, dark when the system is dark
+  (`data-theme="dark"` forces it). One accent, blue (`--accent`), for focus, selection and primary
+  actions; red (`--alarm`) only for destructive or missing. No gradients. One soft shadow
+  (`--elevation`) on floating surfaces only (menus, dialogs, emoji popover). Small radii.
+  Tokens live in `:root` and in the two dark blocks in `src/styles.css`; keep those in sync.
+  Text 4.5:1 and control borders 3:1 against their background.
 - Commit messages: imperative summary line, body explaining the why. Commit after each finished unit of work.
 
 ## Verification checklist before committing
