@@ -1,9 +1,12 @@
 // Mirrors the serde output of the Rust commands (camelCase, null for None).
 
 export type SoundMeta = {
+  /** A category id (see `CategoryMeta` map keys), not its display name. */
   category: string | null;
   emoji: string | null;
   volume: number | null;
+  /** Pad colour override, `#rrggbb`. */
+  color: string | null;
   hotkey: string | null;
   trimStart: number | null;
   trimEnd: number | null;
@@ -43,10 +46,16 @@ export type AppSettings = {
   autoRescan: boolean;
 };
 
+export type CategoryMeta = {
+  name: string;
+  color: string | null;
+};
+
 export const emptyMeta: SoundMeta = {
   category: null,
   emoji: null,
   volume: null,
+  color: null,
   hotkey: null,
   trimStart: null,
   trimEnd: null,

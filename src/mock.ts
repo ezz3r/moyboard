@@ -1,5 +1,5 @@
 // Browser-preview backend. Dev builds only, loaded by api.ts when not inside Tauri.
-import type { SoundMeta } from "./types";
+import type { CategoryMeta, SoundMeta } from "./types";
 
 const dir = "C:\\Users\\you\\Music\\moyboard";
 const files: Record<string, SoundMeta> = {
@@ -49,8 +49,14 @@ let autoRescan = true;
 let library = dir;
 
 function blank(): SoundMeta {
-  return { category: null, emoji: null, volume: null, hotkey: null, trimStart: null, trimEnd: null };
+  return { category: null, emoji: null, volume: null, color: null, hotkey: null, trimStart: null, trimEnd: null };
 }
+
+// Category ids are the keys. "Memes" has no entry on purpose: legacy sounds store the name as id.
+const categories: Record<string, CategoryMeta> = {
+  Reactions: { name: "Reactions", color: "#7cb787" },
+  "c-ideas": { name: "Ideas", color: "#5fb3c9" },
+};
 
 const devices = [
   { name: "Speakers (Realtek Audio)", isDefault: true },
@@ -92,6 +98,22 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
     case "forget_sound":
       delete missing[name!];
       return undefined as T;
+    case "list_categories":
+      return categories as T;
+    case "new_category": {
+      const id = `c${Date.now().toString(16)}`;
+      categories[id] = { name: args.name as string, color: null };
+      return id as T;
+    }
+    case "set_category":
+      categories[args.id as string] = { name: args.name as string, color: (args.color as string | null) ?? null };
+      return undefined as T;
+    case "delete_category": {
+      const id = args.id as string;
+      delete categories[id];
+      for (const meta of Object.values(files)) if (meta.category === id) meta.category = null;
+      return undefined as T;
+    }
     case "list_output_devices":
       return { devices, selected: output, monitorSelected: monitor, monitorVolume, previewSelected: preview } as T;
     case "set_preview_device":

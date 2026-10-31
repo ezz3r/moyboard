@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { api, onFileDrop, onLibraryChanged, onPlayback } from "./api";
-import { SoundPanel } from "./components/SoundPanel";
+import { CategoryPanel } from "./components/CategoryPanel";
 import { Pad } from "./components/Pad";
+import { SoundPanel } from "./components/SoundPanel";
 import { Settings as SettingsView } from "./components/Settings";
-import { emptyMeta, type OutputState, type Playing, type SoundEntry } from "./types";
-import { RefreshCw, Settings, Square } from "lucide-react";
+import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry } from "./types";
+import { ChevronDown, Plus, RefreshCw, Settings, Square } from "lucide-react";
 
 const ALL = "all";
 const NONE = "uncategorized";
@@ -13,6 +14,8 @@ type Selection = { type: "sound" | "category"; id: string } | null;
 
 export default function App() {
   const [sounds, setSounds] = useState<SoundEntry[]>([]);
+  const [categories, setCategories] = useState<Record<string, CategoryMeta>>({});
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [libraryDir, setLibraryDir] = useState("");
   const [output, setOutput] = useState<OutputState>({
     devices: [],
@@ -34,7 +37,9 @@ export default function App() {
 
   const refresh = useCallback(async () => {
     try {
-      setSounds(await api.rescan());
+      const [list, cats] = await Promise.all([api.rescan(), api.listCategories()]);
+      setSounds(list);
+      setCategories(cats);
     } catch (e) {
       notify(String(e));
     }
@@ -58,10 +63,16 @@ export default function App() {
     return () => window.clearTimeout(t);
   }, [toast]);
 
-  const categories = useMemo(
-    () => [...new Set(sounds.map((s) => s.meta.category).filter((c): c is string => !!c))].sort(),
-    [sounds],
-  );
+  const nameOf = (id: string) => categories[id]?.name ?? id;
+
+  // Every category: the saved ones, plus any id that only appears on sounds (older files stored names).
+  const catList = useMemo(() => {
+    const ids = new Set<string>(Object.keys(categories));
+    for (const s of sounds) if (s.meta.category) ids.add(s.meta.category);
+    return [...ids]
+      .map((id) => ({ id, name: categories[id]?.name ?? id }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [sounds, categories]);
 
   const visible = useMemo(() => {
     if (filter === ALL) return sounds;
@@ -69,12 +80,48 @@ export default function App() {
     return sounds.filter((s) => s.meta.category === filter);
   }, [sounds, filter]);
 
+  // The All view: one section per category, then Uncategorized (only if it has sounds).
+  const groups = useMemo(
+    () => [
+      ...catList.map((c) => ({
+        key: c.id,
+        name: c.name,
+        color: categories[c.id]?.color ?? null,
+        selectable: true,
+        entries: sounds.filter((s) => s.meta.category === c.id),
+      })),
+      {
+        key: NONE,
+        name: "Uncategorized",
+        color: null,
+        selectable: false,
+        entries: sounds.filter((s) => !s.meta.category),
+      },
+    ].filter((g) => g.selectable || g.entries.length > 0),
+    [catList, categories, sounds],
+  );
+
   const countFor = (key: string) =>
     key === ALL
       ? sounds.length
       : key === NONE
         ? sounds.filter((s) => !s.meta.category).length
         : sounds.filter((s) => s.meta.category === key).length;
+
+  async function addCategory() {
+    const taken = new Set(catList.map((c) => c.name.toLowerCase()));
+    let name = "New category";
+    for (let n = 2; taken.has(name.toLowerCase()); n++) name = `New category ${n}`;
+    try {
+      const id = await api.newCategory(name);
+      await refresh();
+      setFilter(id);
+      setView("pads");
+      setSelection({ type: "category", id });
+    } catch (e) {
+      notify(String(e));
+    }
+  }
 
   // Dropped files are copied in. If a category is selected, they join it.
   const importPaths = useCallback(
@@ -157,6 +204,24 @@ export default function App() {
 
   const selectedSound =
     selection?.type === "sound" ? (sounds.find((s) => s.fileName === selection.id) ?? null) : null;
+  const selectedCategory = selection?.type === "category" ? selection.id : null;
+
+  const renderPad = (s: SoundEntry) => (
+    <Pad
+      key={s.fileName}
+      entry={s}
+      accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
+      selected={selection?.type === "sound" && selection.id === s.fileName}
+      playing={playing.some((p) => p.fileName === s.fileName && !p.previewing)}
+      previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
+      onSelect={() => setSelection({ type: "sound", id: s.fileName })}
+      onPlay={() => act(() => api.playSound(s.fileName))}
+      onStop={() => act(() => api.stopSound(s.fileName, false))}
+      onPreview={() => act(() => api.previewSound(s.fileName))}
+      onStopPreview={() => act(() => api.stopSound(s.fileName, true))}
+      onForget={() => void forget(s.fileName)}
+    />
+  );
 
   return (
     <div className="app">
@@ -229,7 +294,7 @@ export default function App() {
           {[
             { key: ALL, label: "All" },
             { key: NONE, label: "Uncategorized" },
-            ...categories.map((c) => ({ key: c, label: c })),
+            ...catList.map((c) => ({ key: c.id, label: c.name })),
           ].map((item) => (
             <button
               key={item.key}
@@ -239,12 +304,17 @@ export default function App() {
               onClick={() => {
                 setFilter(item.key);
                 setView("pads");
+                if (item.key !== ALL && item.key !== NONE) setSelection({ type: "category", id: item.key });
               }}
             >
               <span>{item.label}</span>
               <span className="count">{countFor(item.key)}</span>
             </button>
           ))}
+          <button type="button" className="rail-add" onClick={() => void addCategory()}>
+            <Plus size={14} aria-hidden="true" />
+            New category
+          </button>
         </nav>
 
         <main className="main">
@@ -252,33 +322,50 @@ export default function App() {
             <SettingsView
               libraryDir={libraryDir}
               output={output}
-              categories={categories}
-              sounds={sounds}
               onLibraryChanged={setLibraryDir}
               onOutputChanged={(patch) => setOutput((o) => ({ ...o, ...patch }))}
-              onCategoriesChanged={() => void refresh()}
+              onRefresh={() => void refresh()}
               onError={notify}
             />
+          ) : filter === ALL ? (
+            sounds.length === 0 ? (
+              <Empty filter={filter} name="" />
+            ) : (
+              <div className="groups">
+                {groups.map((g) => {
+                  const isCollapsed = collapsed.has(g.key);
+                  return (
+                    <Group
+                      key={g.key}
+                      name={g.name}
+                      color={g.color}
+                      count={g.entries.length}
+                      collapsed={isCollapsed}
+                      onToggle={() =>
+                        setCollapsed((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(g.key)) next.delete(g.key);
+                          else next.add(g.key);
+                          return next;
+                        })
+                      }
+                      onSelect={g.selectable ? () => setSelection({ type: "category", id: g.key }) : undefined}
+                    >
+                      {!isCollapsed &&
+                        (g.entries.length > 0 ? (
+                          <div className="pads">{g.entries.map(renderPad)}</div>
+                        ) : (
+                          <p className="group-empty">No sounds yet. Set this category on a sound.</p>
+                        ))}
+                    </Group>
+                  );
+                })}
+              </div>
+            )
           ) : visible.length === 0 ? (
-            <Empty filter={filter} />
+            <Empty filter={filter} name={filter === NONE ? "" : nameOf(filter)} />
           ) : (
-            <div className="pads">
-              {visible.map((s) => (
-                <Pad
-                  key={s.fileName}
-                  entry={s}
-                  selected={selection?.type === "sound" && selection.id === s.fileName}
-                  playing={playing.some((p) => p.fileName === s.fileName && !p.previewing)}
-                  previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
-                  onSelect={() => setSelection({ type: "sound", id: s.fileName })}
-                  onPlay={() => act(() => api.playSound(s.fileName))}
-                  onStop={() => act(() => api.stopSound(s.fileName, false))}
-                  onPreview={() => act(() => api.previewSound(s.fileName))}
-                  onStopPreview={() => act(() => api.stopSound(s.fileName, true))}
-                  onForget={() => void forget(s.fileName)}
-                />
-              ))}
-            </div>
+            <div className="pads">{visible.map(renderPad)}</div>
           )}
         </main>
 
@@ -288,7 +375,7 @@ export default function App() {
               key={selectedSound.fileName}
               entry={selectedSound}
               sounds={sounds}
-              categories={categories}
+              categories={catList}
               onChanged={() => void refresh()}
               onRenamed={(name) => {
                 setSelection({ type: "sound", id: name });
@@ -300,8 +387,22 @@ export default function App() {
               }}
               onError={notify}
             />
+          ) : selectedCategory !== null ? (
+            <CategoryPanel
+              key={selectedCategory}
+              id={selectedCategory}
+              category={categories[selectedCategory]}
+              count={countFor(selectedCategory)}
+              onChanged={() => void refresh()}
+              onDeleted={() => {
+                setSelection(null);
+                if (filter === selectedCategory) setFilter(ALL);
+                void refresh();
+              }}
+              onError={notify}
+            />
           ) : (
-            <p className="side-empty">Select a sound to edit it.</p>
+            <p className="side-empty">Select a sound or a category to edit it.</p>
           )}
         </aside>
       </div>
@@ -325,14 +426,60 @@ export default function App() {
   );
 }
 
-function Empty({ filter }: { filter: string }) {
+function Empty({ filter, name }: { filter: string; name: string }) {
   const text =
     filter === ALL
       ? "No sounds yet. Drop audio files here to copy them in."
       : filter === NONE
         ? "Every sound has a category."
-        : `Nothing in ${filter} yet. Set this category on a sound to see it here.`;
+        : `Nothing in ${name} yet. Set this category on a sound to see it here.`;
   return <p className="empty">{text}</p>;
+}
+
+/** A category section in the All view. The title selects the category; the chevron folds it. */
+function Group({
+  name,
+  color,
+  count,
+  collapsed,
+  onToggle,
+  onSelect,
+  children,
+}: {
+  name: string;
+  color: string | null;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  onSelect?: () => void;
+  children: ReactNode;
+}) {
+  const style = color ? ({ "--accent": color } as CSSProperties) : undefined;
+  return (
+    <section className="group" style={style}>
+      <header className="group-head">
+        <button
+          type="button"
+          className="group-toggle"
+          aria-expanded={!collapsed}
+          aria-label={`${collapsed ? "Expand" : "Collapse"} ${name}`}
+          onClick={onToggle}
+        >
+          <ChevronDown size={16} aria-hidden="true" className={collapsed ? "is-folded" : undefined} />
+        </button>
+        {onSelect ? (
+          <button type="button" className="group-title" onClick={onSelect} title="Edit category">
+            <span className="swatch-dot" aria-hidden="true" />
+            {name}
+          </button>
+        ) : (
+          <span className="group-title">{name}</span>
+        )}
+        <span className="count">{count}</span>
+      </header>
+      {children}
+    </section>
+  );
 }
 
 function IconButton({

@@ -25,7 +25,7 @@ test("lists sounds with category counts", async ({ page }) => {
 });
 
 test("category filter narrows the pad grid", async ({ page }) => {
-  await page.getByRole("button", { name: /^Memes/ }).click();
+  await page.locator(".rail-item", { hasText: "Memes" }).click();
   await expect(page.locator(".pad")).toHaveCount(3);
   await expect(pad(page, "airhorn")).toBeVisible();
   await expect(pad(page, "frog")).toHaveCount(0);
@@ -66,9 +66,9 @@ test("preview output setting is offered in settings", async ({ page }) => {
 });
 
 test("sidebar shows a placeholder until a sound is selected", async ({ page }) => {
-  await expect(sidebar(page)).toContainText("Select a sound to edit it.");
+  await expect(sidebar(page)).toContainText("Select a sound or a category to edit it.");
   await openEdit(page, "airhorn");
-  await expect(sidebar(page)).not.toContainText("Select a sound to edit it.");
+  await expect(sidebar(page)).not.toContainText("Select a sound or a category to edit it.");
 });
 
 test("rename changes the file name shown on the pad", async ({ page }) => {
@@ -89,8 +89,7 @@ test("empty name is rejected", async ({ page }) => {
 test("emoji and category are saved from the sidebar", async ({ page }) => {
   await openEdit(page, "frog");
   await sidebar(page).getByRole("button", { name: "🎺", exact: true }).click();
-  await sidebar(page).getByPlaceholder("None").fill("Reactions");
-  await sidebar(page).getByPlaceholder("None").blur();
+  await sidebar(page).getByLabel("Category", { exact: true }).selectOption({ label: "Reactions" });
   await expect(railCount(page, "Reactions")).toHaveText("3");
   await expect(pad(page, "frog").locator(".pad-glyph")).toHaveText("🎺");
 });
@@ -145,13 +144,40 @@ test("trim saved on the sound is still there after reselecting", async ({ page }
   await expect(page.getByLabel("Start, s")).toHaveValue("0.50");
 });
 
-test("settings: renaming a category updates every sound in it", async ({ page }) => {
-  await page.getByRole("button", { name: "Settings" }).click();
-  const field = page.getByRole("textbox", { name: /Category name, 3 sounds/ });
-  await field.fill("Jokes");
-  await field.blur();
+test("category: rename from the sidebar keeps its sounds", async ({ page }) => {
+  await page.locator(".rail-item", { hasText: "Memes" }).click();
+  const name = sidebar(page).getByRole("textbox", { name: "Category name" });
+  await expect(name).toHaveValue("Memes");
+  await name.fill("Jokes");
+  await name.press("Enter");
   await expect(railCount(page, "Jokes")).toHaveText("3");
   await expect(page.locator(".rail-item", { hasText: "Memes" })).toHaveCount(0);
+  await expect(pad(page, "airhorn")).toBeVisible();
+});
+
+test("category: new category is created and selected", async ({ page }) => {
+  await page.getByRole("button", { name: "New category" }).click();
+  await expect(sidebar(page).getByRole("textbox", { name: "Category name" })).toHaveValue("New category");
+  await expect(page.locator(".rail-item", { hasText: "New category" })).toBeVisible();
+});
+
+test("category colour is applied to its sounds", async ({ page }) => {
+  await page.locator(".rail-item", { hasText: "Memes" }).click();
+  await sidebar(page).getByRole("radio", { name: "Colour #5fb3c9" }).click();
+  await expect(pad(page, "airhorn")).toHaveAttribute("style", /#5fb3c9/);
+});
+
+test("all view: sections per category, Uncategorized last", async ({ page }) => {
+  // Saved and legacy categories, sorted by name. "Ideas" is saved but empty, so it still shows.
+  await expect(page.locator(".group-title")).toHaveText(["Alerts", "Animals", "Ideas", "Memes", "Music", "Reactions", "Uncategorized"]);
+});
+
+test("all view: a section can be folded", async ({ page }) => {
+  await expect(pad(page, "airhorn")).toBeVisible();
+  await page.getByRole("button", { name: "Collapse Memes" }).click();
+  await expect(pad(page, "airhorn")).toHaveCount(0);
+  await page.getByRole("button", { name: "Expand Memes" }).click();
+  await expect(pad(page, "airhorn")).toBeVisible();
 });
 
 test("settings: monitor volume is disabled while monitor is off", async ({ page }) => {

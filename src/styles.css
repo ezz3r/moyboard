@@ -178,6 +178,25 @@ select {
   background: var(--surface);
 }
 
+.rail-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  background: none;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-align: left;
+}
+
+.rail-add:hover {
+  color: var(--ink);
+  border-color: var(--ink-2);
+}
+
 .rail-item[aria-current="true"] {
   color: var(--ink);
   background: var(--raised);
@@ -240,6 +259,86 @@ select {
   border-color: transparent;
 }
 
+/* ---------- Groups (All view) ---------- */
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.group-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.group-toggle:hover {
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.group-toggle svg {
+  transition: transform 120ms ease;
+}
+
+.group-toggle .is-folded {
+  transform: rotate(-90deg);
+}
+
+.group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
+  cursor: default;
+}
+
+button.group-title {
+  cursor: pointer;
+}
+
+button.group-title:hover {
+  background: var(--surface);
+}
+
+.swatch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--accent, var(--line));
+}
+
+.group-head .count {
+  margin-left: 2px;
+}
+
+.group-empty {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
 /* ---------- Pads ---------- */
 
 .pads {
@@ -259,6 +358,17 @@ select {
 
 .pad:hover {
   border-color: var(--ink-2);
+}
+
+.pad::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  height: 4px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--accent, transparent);
 }
 
 /* The whole tile selects the sound. Controls are siblings on top of it. */
@@ -795,4 +905,46 @@ select {
 .btn-icon.is-danger:hover {
   border-color: var(--alarm);
   background: transparent;
+}
+
+/* ---------- Colour swatches and category panel ---------- */
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.swatch[aria-checked="true"] {
+  border-color: var(--ink);
+}
+
+.swatch-none {
+  background: var(--ground);
+  border-color: var(--line);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.swatch-none[aria-checked="true"] {
+  border-color: var(--ink);
+}
+
+.btn-danger {
+  color: var(--alarm);
+  border-color: var(--line);
+}
+
+.btn-danger:hover:not(:disabled) {
+  border-color: var(--alarm);
 }

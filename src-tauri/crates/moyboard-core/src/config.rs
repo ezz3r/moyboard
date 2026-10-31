@@ -5,15 +5,45 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 /// Per-sound metadata, keyed in `Config::sounds` by file name.
+/// `category` holds a category id (a key of `Config::categories`), not its name.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct SoundMeta {
     pub category: Option<String>,
     pub emoji: Option<String>,
     pub volume: Option<f32>,
+    /// Pad colour, overrides the category colour. `None` means inherit.
+    pub color: Option<String>,
     pub hotkey: Option<String>,
     pub trim_start: Option<f64>,
     pub trim_end: Option<f64>,
+}
+
+/// A category's display name and colour. Its id is the key in `Config::categories`,
+/// so renaming never breaks the sounds that point at it.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CategoryMeta {
+    pub name: String,
+    pub color: Option<String>,
+}
+
+/// Accepts `#rrggbb` only, so the frontend cannot store arbitrary CSS.
+pub fn check_color(color: &str) -> Result<(), String> {
+    let ok = color.len() == 7 && color.starts_with('#') && color[1..].chars().all(|c| c.is_ascii_hexdigit());
+    if ok { Ok(()) } else { Err(format!("invalid colour: {color}")) }
+}
+
+/// Trims and checks a category name. Names are short labels, not paragraphs.
+pub fn clean_category_name(name: &str) -> Result<String, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("Category name cannot be empty.".to_string());
+    }
+    if name.chars().count() > 40 {
+        return Err("Category name is longer than 40 characters.".to_string());
+    }
+    Ok(name.to_string())
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -30,6 +60,7 @@ pub struct Config {
     /// `None` means on.
     pub auto_rescan: Option<bool>,
     pub sounds: BTreeMap<String, SoundMeta>,
+    pub categories: BTreeMap<String, CategoryMeta>,
 }
 
 /// Holds `moyboard.json` in the app data dir. Writes go through a temp file, then rename.
@@ -89,6 +120,22 @@ mod tests {
         assert!(text.contains("emoji"));
         let back: Config = serde_json::from_str(&text).unwrap();
         assert_eq!(back.sounds["a.mp3"], cfg.sounds["a.mp3"]);
+    }
+
+    #[test]
+    fn colour_must_be_hex() {
+        assert!(check_color("#f2a93b").is_ok());
+        assert!(check_color("f2a93b").is_err());
+        assert!(check_color("#fff").is_err());
+        assert!(check_color("red").is_err());
+        assert!(check_color("#zzzzzz").is_err());
+    }
+
+    #[test]
+    fn category_name_is_trimmed_and_bounded() {
+        assert_eq!(clean_category_name("  Memes ").unwrap(), "Memes");
+        assert!(clean_category_name("   ").is_err());
+        assert!(clean_category_name(&"x".repeat(41)).is_err());
     }
 
     #[test]

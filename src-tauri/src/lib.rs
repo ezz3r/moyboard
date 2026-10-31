@@ -5,9 +5,10 @@ mod watch;
 use moyboard_core::{config, library, wav};
 
 use audio::{DeviceInfo, Engine, Playing};
-use config::{Config, SoundMeta, Store};
+use config::{CategoryMeta, Config, SoundMeta, Store, check_color, clean_category_name};
 use hotkeys::Hotkeys;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -241,6 +242,9 @@ fn set_sound_meta(
     if let Some(h) = meta.hotkey.as_deref().filter(|h| !h.is_empty()) {
         hotkeys::parse(h)?;
     }
+    if let Some(c) = meta.color.as_deref() {
+        check_color(c)?;
+    }
     let previous = store.get(|cfg| cfg.sounds.get(&file_name).cloned());
     store.update(|cfg| cfg.sounds.insert(file_name.clone(), meta))?;
     if let Err(e) = hotkeys::sync(&app) {
@@ -256,6 +260,79 @@ fn set_sound_meta(
         return Err(format!("{e} (hotkey not saved)"));
     }
     Ok(())
+}
+
+#[tauri::command]
+fn list_categories(store: tauri::State<Store>) -> BTreeMap<String, CategoryMeta> {
+    store.get(|cfg| cfg.categories.clone())
+}
+
+/// Creates a category with a fresh id. Returns the id.
+#[tauri::command]
+fn new_category(name: String, store: tauri::State<Store>) -> Result<String, String> {
+    let name = clean_category_name(&name)?;
+    store.update(|cfg| -> Result<String, String> {
+        ensure_unique_name(cfg, &name, None)?;
+        let id = loop {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_nanos();
+            let id = format!("c{nanos:x}");
+            if !cfg.categories.contains_key(&id) {
+                break id;
+            }
+        };
+        cfg.categories.insert(id.clone(), CategoryMeta { name, color: None });
+        Ok(id)
+    })?
+}
+
+/// Renames or recolours a category. Sounds keep pointing at the same id.
+/// A category that has sounds but no saved entry gets one here.
+#[tauri::command]
+fn set_category(
+    id: String,
+    name: String,
+    color: Option<String>,
+    store: tauri::State<Store>,
+) -> Result<(), String> {
+    let name = clean_category_name(&name)?;
+    if let Some(c) = color.as_deref() {
+        check_color(c)?;
+    }
+    store.update(|cfg| -> Result<(), String> {
+        ensure_unique_name(cfg, &name, Some(&id))?;
+        cfg.categories.insert(id, CategoryMeta { name, color });
+        Ok(())
+    })?
+}
+
+/// Removes a category. Its sounds move to Uncategorized (they stay in the library).
+#[tauri::command]
+fn delete_category(id: String, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
+    store.update(|cfg| {
+        cfg.categories.remove(&id);
+        for meta in cfg.sounds.values_mut() {
+            if meta.category.as_deref() == Some(id.as_str()) {
+                meta.category = None;
+            }
+        }
+    })?;
+    hotkeys::sync(&app)
+}
+
+/// Two categories may not share a name, ignoring case. `own` is the id being edited.
+fn ensure_unique_name(cfg: &Config, name: &str, own: Option<&str>) -> Result<(), String> {
+    let taken = cfg
+        .categories
+        .iter()
+        .any(|(id, c)| Some(id.as_str()) != own && c.name.eq_ignore_ascii_case(name));
+    if taken {
+        Err(format!("a category named {name} already exists"))
+    } else {
+        Ok(())
+    }
 }
 
 #[tauri::command]
@@ -424,6 +501,7 @@ fn export_trim(
                 category: source.category,
                 emoji: source.emoji,
                 volume: source.volume,
+                color: source.color,
                 ..SoundMeta::default()
             },
         )
@@ -504,6 +582,10 @@ pub fn run() {
             set_sound_meta,
             rename_sound,
             forget_sound,
+            list_categories,
+            new_category,
+            set_category,
+            delete_category,
             list_output_devices,
             set_output_device,
             set_monitor_device,

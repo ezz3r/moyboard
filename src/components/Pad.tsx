@@ -1,9 +1,12 @@
 import { Headphones, Play, Square } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { SoundEntry } from "../types";
 import { stemOf } from "../names";
 
 type Props = {
   entry: SoundEntry;
+  /** Category or per-sound colour, `#rrggbb`. Drawn as a stripe on the top edge. */
+  accent: string | null;
   selected: boolean;
   playing: boolean;
   previewing: boolean;
@@ -21,6 +24,7 @@ type Props = {
  */
 export function Pad({
   entry,
+  accent,
   selected,
   playing,
   previewing,
@@ -44,7 +48,7 @@ export function Pad({
     .join(" ");
 
   return (
-    <div className={classes}>
+    <div className={classes} style={accent ? ({ "--accent": accent } as CSSProperties) : undefined}>
       <button
         type="button"
         className="pad-select"

@@ -2,7 +2,16 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { AppSettings, ImportReport, OutputState, Playing, SoundEntry, SoundMeta, Waveform } from "./types";
+import type {
+  AppSettings,
+  CategoryMeta,
+  ImportReport,
+  OutputState,
+  Playing,
+  SoundEntry,
+  SoundMeta,
+  Waveform,
+} from "./types";
 
 export const isTauri = "__TAURI_INTERNALS__" in window;
 
@@ -19,6 +28,11 @@ export const api = {
   getLibraryDir: () => call<string>("get_library_dir"),
   setLibraryDir: (path: string) => call<string>("set_library_dir", { path }),
   rescan: () => call<SoundEntry[]>("rescan"),
+  listCategories: () => call<Record<string, CategoryMeta>>("list_categories"),
+  newCategory: (name: string) => call<string>("new_category", { name }),
+  setCategory: (id: string, name: string, color: string | null) =>
+    call<void>("set_category", { id, name, color }),
+  deleteCategory: (id: string) => call<void>("delete_category", { id }),
   importFiles: (paths: string[]) => call<ImportReport>("import_files", { paths }),
   setSoundMeta: (fileName: string, meta: SoundMeta) => call<void>("set_sound_meta", { fileName, meta }),
   renameSound: (fileName: string, newName: string) => call<string>("rename_sound", { fileName, newName }),

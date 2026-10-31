@@ -4,12 +4,14 @@ import { EMOJIS } from "../emojis";
 import { HotkeyField } from "./HotkeyField";
 import { TrimEditor } from "./TrimEditor";
 import { extOf, stemOf } from "../names";
+import { Swatches } from "./Swatches";
 import type { SoundEntry, SoundMeta } from "../types";
 
 type Props = {
   entry: SoundEntry;
   sounds: SoundEntry[];
-  categories: string[];
+  /** Every category, as id and display name, sorted by name. */
+  categories: { id: string; name: string }[];
   onChanged: () => void;
   onRenamed: (newName: string) => void;
   onExported: (newName: string) => void;
@@ -24,9 +26,7 @@ type Props = {
 export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, onExported, onError }: Props) {
   const ext = extOf(entry.fileName);
   const [stem, setStem] = useState(stemOf(entry.fileName));
-  const [category, setCategory] = useState(entry.meta.category ?? "");
   const [volume, setVolume] = useState(entry.meta.volume ?? 1);
-  const listId = `cats-${entry.fileName}`;
 
   // Saves are queued and built on the latest known meta, so two quick edits
   // (emoji, then category) do not overwrite each other before the rescan lands.
@@ -73,12 +73,6 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
       setStem(stemOf(entry.fileName));
       onError(String(e));
     }
-  }
-
-  async function commitCategory() {
-    const next = category.trim() || null;
-    if (next === (entry.meta.category ?? null)) return;
-    await save({ category: next }).catch(() => setCategory(entry.meta.category ?? ""));
   }
 
   const hotkey = entry.meta.hotkey;
@@ -141,20 +135,30 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
 
       <label className="field">
         <span>Category</span>
-        <input
-          value={category}
-          list={listId}
-          placeholder="None"
-          onChange={(e) => setCategory(e.target.value)}
-          onBlur={() => void commitCategory()}
-          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-        />
-        <datalist id={listId}>
+        <select
+          className="select-wide"
+          aria-label="Category"
+          value={entry.meta.category ?? ""}
+          onChange={(e) => void save({ category: e.target.value || null })}
+        >
+          <option value="">Uncategorized</option>
           {categories.map((c) => (
-            <option key={c} value={c} />
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
-        </datalist>
+        </select>
       </label>
+
+      <div className="field">
+        <span>Colour</span>
+        <Swatches
+          label="Pad colour"
+          value={entry.meta.color ?? null}
+          inheritLabel="Use category colour"
+          onChange={(c) => void save({ color: c })}
+        />
+      </div>
 
       <div className="field">
         <span>Hotkey</span>
