@@ -29,6 +29,8 @@ export function HotkeyField({ value, onChange, id }: Props) {
       onKeyDown={(e) => {
         if (!recording) return;
         e.preventDefault();
+        // Keep Escape here: the edit sheet closes on Escape, and recording must not close it.
+        e.stopPropagation();
         if (e.key === "Escape") return setRecording(false);
         if (e.key === "Backspace" || e.key === "Delete") {
           onChange(null);

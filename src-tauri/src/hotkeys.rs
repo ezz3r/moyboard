@@ -1,4 +1,4 @@
-use crate::config::Store;
+use moyboard_core::config::Store;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};

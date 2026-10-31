@@ -1,0 +1,11 @@
+[package]
+name = "moyboard-core"
+version = "0.1.0"
+edition = "2024"
+description = "Pure logic for moyboard: library files, metadata store, trim math, WAV header"
+publish = false
+
+[dependencies]
+dirs = "7.0.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

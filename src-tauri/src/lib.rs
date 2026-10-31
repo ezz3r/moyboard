@@ -1,8 +1,8 @@
 mod audio;
-mod config;
 mod hotkeys;
-mod library;
 mod watch;
+
+use moyboard_core::{config, library, wav};
 
 use audio::{DeviceInfo, Engine};
 use config::{Config, SoundMeta, Store};
@@ -317,7 +317,7 @@ fn export_trim(
     store: tauri::State<Store>,
 ) -> Result<String, String> {
     let src = sound_path(&store, &file_name)?;
-    let (start, take) = audio::trim_window(trim_start, trim_end)?;
+    let (start, take) = wav::trim_window(trim_start, trim_end)?;
     let dir = current_dir(&store)?;
     let stem = Path::new(&file_name)
         .file_stem()

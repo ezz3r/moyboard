@@ -2057,6 +2057,7 @@ version = "0.1.0"
 dependencies = [
  "cpal",
  "dirs",
+ "moyboard-core",
  "notify",
  "rodio",
  "serde",
@@ -2065,6 +2066,15 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-global-shortcut",
+]
+
+[[package]]
+name = "moyboard-core"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
