@@ -353,6 +353,35 @@ fn delete_sound(file_name: String, app: AppHandle, store: tauri::State<Store>) -
     Ok(())
 }
 
+/// Which hotkey setting is being saved, so it does not clash with its own stored value.
+#[derive(Clone, Copy)]
+enum Slot<'a> {
+    Sound(&'a str),
+    Quick,
+    Stop,
+}
+
+/// Refuses a hotkey that another sound, the Quick Panel or Stop all already uses.
+fn check_hotkey_free(cfg: &Config, hotkey: &str, me: Slot) -> Result<(), String> {
+    let id = hotkeys::parse(hotkey)?.id();
+    let same = |h: &str| hotkeys::parse(h).is_ok_and(|s| s.id() == id);
+    for (file, meta) in &cfg.sounds {
+        if matches!(me, Slot::Sound(f) if f == file) {
+            continue;
+        }
+        if meta.hotkey.as_deref().is_some_and(same) {
+            return Err(format!("{file} already uses this hotkey"));
+        }
+    }
+    if !matches!(me, Slot::Quick) && cfg.quick_panel_hotkey.as_deref().is_some_and(same) {
+        return Err("Quick Panel already uses this hotkey".to_string());
+    }
+    if !matches!(me, Slot::Stop) && cfg.stop_all_hotkey.as_deref().is_some_and(same) {
+        return Err("Stop all sounds already uses this hotkey".to_string());
+    }
+    Ok(())
+}
+
 /// Saves metadata, then re-registers hotkeys. If a hotkey cannot be registered
 /// (already taken by another app, for example), the previous metadata is restored
 /// and the error is returned.
@@ -365,7 +394,7 @@ fn set_sound_meta(
 ) -> Result<(), String> {
     library::check_file_name(&file_name)?;
     if let Some(h) = meta.hotkey.as_deref().filter(|h| !h.is_empty()) {
-        hotkeys::parse(h)?;
+        store.get(|cfg| check_hotkey_free(cfg, h, Slot::Sound(&file_name)))?;
     }
     if let Some(c) = meta.color.as_deref() {
         check_color(c)?;
@@ -808,16 +837,7 @@ fn set_quick_panel_settings(
     }
     let hotkey = hotkey.filter(|h| !h.is_empty());
     if let Some(h) = &hotkey {
-        let id = hotkeys::parse(h)?.id();
-        let clash = store.get(|cfg| {
-            cfg.sounds
-                .iter()
-                .find(|(_, m)| m.hotkey.as_deref().and_then(|x| hotkeys::parse(x).ok()).map(|s| s.id()) == Some(id))
-                .map(|(file, _)| file.clone())
-        });
-        if let Some(file) = clash {
-            return Err(format!("{file} already uses this hotkey"));
-        }
+        store.get(|cfg| check_hotkey_free(cfg, h, Slot::Quick))?;
     }
     let previous = store.get(|cfg| (cfg.quick_panel_hotkey.clone(), cfg.quick_panel_mode.clone()));
     store.update(|cfg| {
@@ -829,6 +849,28 @@ fn set_quick_panel_settings(
             cfg.quick_panel_hotkey = previous.0;
             cfg.quick_panel_mode = previous.1;
         })?;
+        hotkeys::sync(&app)?;
+        return Err(format!("{e} (hotkey not saved)"));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_stop_all_hotkey(store: tauri::State<Store>) -> Option<String> {
+    store.get(|cfg| cfg.stop_all_hotkey.clone())
+}
+
+/// Saves the Stop all hotkey. Refused if another sound or panel uses it; rolled back if it cannot be registered.
+#[tauri::command]
+fn set_stop_all_hotkey(hotkey: Option<String>, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
+    let hotkey = hotkey.filter(|h| !h.is_empty());
+    if let Some(h) = &hotkey {
+        store.get(|cfg| check_hotkey_free(cfg, h, Slot::Stop))?;
+    }
+    let previous = store.get(|cfg| cfg.stop_all_hotkey.clone());
+    store.update(|cfg| cfg.stop_all_hotkey = hotkey)?;
+    if let Err(e) = hotkeys::sync(&app) {
+        store.update(|cfg| cfg.stop_all_hotkey = previous)?;
         hotkeys::sync(&app)?;
         return Err(format!("{e} (hotkey not saved)"));
     }
@@ -872,8 +914,9 @@ fn hide_quick_panel(app: AppHandle) {
 }
 
 #[tauri::command]
-fn stop_all(engine: tauri::State<AudioState>) -> Result<(), String> {
+fn stop_all(app: AppHandle, engine: tauri::State<AudioState>) -> Result<(), String> {
     lock(&engine)?.stop_all();
+    publish(&app);
     Ok(())
 }
 
@@ -934,6 +977,7 @@ pub fn run() {
             app.manage(Mutex::new(engine));
             app.manage(Hotkeys::default());
             app.manage(hotkeys::QuickKey::default());
+            app.manage(hotkeys::StopKey::default());
             quick_key::start(app.handle().clone());
             app.manage(Watch::default());
             app.manage(LastPlayback::default());
@@ -1025,6 +1069,8 @@ pub fn run() {
             set_start_minimized,
             get_quick_panel_settings,
             set_quick_panel_settings,
+            get_stop_all_hotkey,
+            set_stop_all_hotkey,
             show_quick_panel,
             hide_quick_panel,
             save_quick_panel_geometry,

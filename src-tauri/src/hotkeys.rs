@@ -12,6 +12,10 @@ pub struct Hotkeys(pub Mutex<HashMap<u32, String>>);
 #[derive(Default)]
 pub struct QuickKey(pub Mutex<Option<u32>>);
 
+/// Shortcut id of the Stop all hotkey, if one is registered.
+#[derive(Default)]
+pub struct StopKey(pub Mutex<Option<u32>>);
+
 /// Parses a hotkey like "Ctrl+Shift+Digit1". Empty string means none.
 pub fn parse(hotkey: &str) -> Result<Shortcut, String> {
     hotkey
@@ -36,6 +40,7 @@ pub fn sync(app: &AppHandle) -> Result<(), String> {
     let mut table = map.0.lock().unwrap();
     table.clear();
     *app.state::<QuickKey>().0.lock().unwrap() = None;
+    *app.state::<StopKey>().0.lock().unwrap() = None;
 
     let mut errors = Vec::new();
     for (file, hotkey) in bindings {
@@ -51,6 +56,15 @@ pub fn sync(app: &AppHandle) -> Result<(), String> {
                 table.insert(shortcut.id(), file);
             }
             Err(e) => errors.push(format!("hotkey {hotkey} for {file}: {e}")),
+        }
+    }
+    // Always through the plugin (RegisterHotKey), so a clash with a sound is reported here.
+    // shortcut: no scan-code hook path for this key, so it is matched by RegisterHotKey (layout-dependent), upgrade if that bites.
+    let stop = store.get(|cfg| cfg.stop_all_hotkey.clone().filter(|h| !h.is_empty()));
+    if let Some(hotkey) = stop {
+        match parse(&hotkey).and_then(|s| gs.register(s).map(|()| s).map_err(|e| format!("Hotkey {hotkey} is already in use or invalid ({e})"))) {
+            Ok(s) => *app.state::<StopKey>().0.lock().unwrap() = Some(s.id()),
+            Err(e) => errors.push(e),
         }
     }
     // Registered after the sounds, so a clash with a sound is the one reported.
@@ -79,6 +93,15 @@ pub fn sync(app: &AppHandle) -> Result<(), String> {
 
 /// Plugin handler. Plays or stops the sound bound to a pressed shortcut.
 pub fn on_event(app: &AppHandle, shortcut: &Shortcut, event: tauri_plugin_global_shortcut::ShortcutEvent) {
+    if *app.state::<StopKey>().0.lock().unwrap() == Some(shortcut.id()) {
+        if event.state == ShortcutState::Pressed {
+            if let Ok(mut engine) = crate::lock(&app.state::<crate::AudioState>()) {
+                engine.stop_all();
+            }
+            crate::publish(app);
+        }
+        return;
+    }
     if *app.state::<QuickKey>().0.lock().unwrap() == Some(shortcut.id()) {
         quick_panel_event(app, event.state);
         return;

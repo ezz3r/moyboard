@@ -70,6 +70,8 @@ export const api = {
   getQuickPanelSettings: () => call<QuickPanelSettings>("get_quick_panel_settings"),
   setQuickPanelSettings: (hotkey: string | null, mode: "hold" | "toggle") =>
     call<void>("set_quick_panel_settings", { hotkey, mode }),
+  getStopAllHotkey: () => call<string | null>("get_stop_all_hotkey"),
+  setStopAllHotkey: (hotkey: string | null) => call<void>("set_stop_all_hotkey", { hotkey }),
   showQuickPanel: () => call<void>("show_quick_panel"),
   hideQuickPanel: () => call<void>("hide_quick_panel"),
   saveQuickPanelGeometry: (x: number, y: number, width: number, height: number) =>

@@ -170,6 +170,8 @@ export function Settings({
 
       <QuickPanelSection onError={onError} />
 
+      <StopAllSection onError={onError} />
+
       <StartupSection onError={onError} />
 
     </div>
@@ -309,6 +311,43 @@ function QuickPanelSection({ onError }: { onError: (m: string) => void }) {
             </label>
           </fieldset>
         </>
+      )}
+    </section>
+  );
+}
+
+/** Global hotkey that stops every playing sound, also while the window is hidden. */
+function StopAllSection({ onError }: { onError: (m: string) => void }) {
+  const [hotkey, setHotkey] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    api
+      .getStopAllHotkey()
+      .then(setHotkey)
+      .catch((e) => onError(String(e)));
+  }, [onError]);
+
+  // Saves at once. A refused hotkey reverts and shows why.
+  const save = async (next: string | null) => {
+    const prev = hotkey;
+    setHotkey(next);
+    try {
+      await api.setStopAllHotkey(next);
+    } catch (e) {
+      setHotkey(prev);
+      onError(String(e));
+    }
+  };
+
+  return (
+    <section className="settings-section">
+      <h2>Stop all sounds</h2>
+      {hotkey !== undefined && (
+        <div className="inline-field">
+          <span>Hotkey</span>
+          <span className="hotkey-row">
+            <HotkeyField value={hotkey} onChange={(h) => void save(h)} />
+          </span>
+        </div>
       )}
     </section>
   );

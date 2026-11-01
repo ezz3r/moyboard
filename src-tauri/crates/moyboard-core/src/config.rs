@@ -86,6 +86,8 @@ pub struct Config {
     pub quick_panel_hotkey: Option<String>,
     /// `"hold"` (shown while the key is down) or `"toggle"`. `None` means toggle.
     pub quick_panel_mode: Option<String>,
+    /// Global hotkey that stops every playing sound. `None` means no hotkey.
+    pub stop_all_hotkey: Option<String>,
     /// Start hidden in the tray when launched with Windows (`--minimized`). `None` means off.
     pub start_minimized: Option<bool>,
     /// Width of the edit sidebar in CSS pixels. `None` means the default.

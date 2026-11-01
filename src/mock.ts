@@ -52,6 +52,7 @@ let autostart = false;
 let startMinimized = false;
 let quickHotkey: string | null = null;
 let quickMode: "hold" | "toggle" = "toggle";
+let stopHotkey: string | null = null;
 let library = dir;
 
 function blank(): SoundMeta {
@@ -143,8 +144,19 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       const hotkey = (args.hotkey as string | null) || null;
       const clash = hotkey && Object.values(files).find((m) => m.hotkey === hotkey);
       if (clash) throw new Error(`${hotkey} already uses this hotkey`);
+      if (hotkey && hotkey === stopHotkey) throw new Error("Stop all sounds already uses this hotkey");
       quickHotkey = hotkey;
       quickMode = args.mode as "hold" | "toggle";
+      return undefined as T;
+    }
+    case "get_stop_all_hotkey":
+      return stopHotkey as T;
+    case "set_stop_all_hotkey": {
+      const hotkey = (args.hotkey as string | null) || null;
+      const clash = hotkey && Object.values(files).find((m) => m.hotkey === hotkey);
+      if (clash) throw new Error(`${hotkey} already uses this hotkey`);
+      if (hotkey && hotkey === quickHotkey) throw new Error("Quick Panel already uses this hotkey");
+      stopHotkey = hotkey;
       return undefined as T;
     }
     case "save_quick_panel_geometry":
