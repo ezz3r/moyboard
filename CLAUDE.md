@@ -41,7 +41,10 @@ src/                     React frontend
   mock.ts                in-memory backend for browser preview and Playwright (dev only, not in prod bundle)
   types.ts               types mirroring the Rust serde output (camelCase)
   names.ts               stemOf / extOf helpers for file names
-  colors.ts              preset colour swatches
+  colors.ts              colour picker presets (Apple system colours)
+  colorTokens.ts         resolveColor, colorStyle: plate, tint and border per colour
+  playback.ts            countsOf: playing voices per output for one sound
+  dragToCategory.ts      pointer-event drag of a pad onto a category
   components/
     Pad.tsx              one sound tile: select body, play (another instance), centre stop, headphone preview, hover-only controls
     CategoryMenu.tsx     top-bar category listbox with colour dots and counts; edit and new entries
@@ -52,7 +55,8 @@ src/                     React frontend
     HotkeyField.tsx      press-to-record hotkey input
     TrimEditor.tsx       waveform, markers, region preview, save trim / export WAV (inline in the sidebar)
     ConfirmDialog.tsx    modal yes/no (delete)
-    Swatches.tsx         colour preset row
+    ColorPicker.tsx      colour popover: area, hex, presets, recents, reset
+    PlayingBadge.tsx     output badge (speaker or headphones, bars, count)
     Settings.tsx         library folder, output, monitor and preview devices, folder watching, window, Quick Panel, startup
 src-tauri/
   src/lib.rs             Tauri commands, app setup, state wiring, tray, Quick Panel window, autostart
@@ -164,7 +168,7 @@ Prerequisites (WSL): rustup with the `x86_64-pc-windows-msvc` target, `cargo-xwi
 1. `npm run build` passes (tsc is strict; `noUnusedLocals` is on).
 2. `cargo test --manifest-path src-tauri/crates/moyboard-core/Cargo.toml` passes.
 3. `cargo xwin check --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --tests` passes with no warnings.
-4. `npm run test:e2e` passes (49 tests at time of writing).
+4. `npm run test:e2e` passes (61 tests at time of writing).
 5. For UI changes: look at the result (Playwright screenshot or `npm run dev`) at desktop width and at 420 px.
 6. For Windows-specific behavior (audio routing, global hotkeys, OS drag-and-drop, watcher, folder picker):
    say clearly that it was not run, and add or update the relevant item in `docs/MANUAL-TESTS.md`.

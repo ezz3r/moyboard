@@ -172,6 +172,16 @@ Run on the Windows build. Debug builds print `moyboard: quick panel key Pressed/
 - [ ] Output dropdown opens upward when the bottom bar is low, and clicks outside close it.
 - [ ] Icon picker is fully visible inside the edit card at 1200 px and 640 px.
 
+## Playing state, colour and drag (v9, not run on Windows)
+
+- [ ] Stop all sounds hotkey (Settings → Stop all sounds): stops main and preview sounds while the window is hidden in the tray, also from the tray menu.
+- [ ] Stop all hotkey clashes: setting it to a key a sound or the Quick Panel uses is refused with a message.
+- [ ] Real audio: a sound played on "Play to" shows the blue speaker badge; a headphone preview shows the green headphones badge; both at once show two badges.
+- [ ] Hover only: the Stop button appears only while the pointer is on a playing pad.
+- [ ] Colour picker: the popover stays on screen in the narrow sidebar; EyeDropper "Pick from screen" appears only if WebView2 supports it, and works.
+- [ ] Drag a pad by press-and-hold into another category (drop bar, and All-view sections). OS file drop of an audio file onto the window still imports the file after a pad drag.
+- [ ] Drag inside WebView2 does not start a native file drag or a text selection.
+
 ## Windows-only items not run in WSL
 The v2 playback routing (preview device, Stop per sound, playback events),
 global hotkey toggling, Recycle Bin delete and the Windows installer were not

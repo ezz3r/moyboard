@@ -608,3 +608,58 @@ test("category menu: arrow keys move through entries, Escape closes", async ({ p
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await expect(menuTrigger(page)).toBeFocused();
 });
+
+test("playing badges: main is blue, headphone preview is green, both show two badges", async ({ page }) => {
+  const airhorn = pad(page, "airhorn");
+  await airhorn.hover();
+  await airhorn.getByRole("button", { name: "Play airhorn" }).click();
+  const main = airhorn.locator(".playing-badge.is-main");
+  await expect(main).toBeVisible();
+  await expect(main).toHaveCSS("color", "rgb(0, 102, 204)");
+  await expect(airhorn.locator(".playing-badge.is-preview")).toHaveCount(0);
+  await airhorn.getByRole("button", { name: "Preview airhorn on headphones" }).click();
+  const preview = airhorn.locator(".playing-badge.is-preview");
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveCSS("color", "rgb(29, 127, 58)");
+  await expect(airhorn.locator(".playing-badge")).toHaveCount(2);
+});
+
+test("playing pad: Stop shows only while the pointer is on the pad", async ({ page }) => {
+  // The mock sound plays for 3 s, so the checks below run back to back while it sounds.
+  const airhorn = pad(page, "airhorn");
+  const play = airhorn.getByRole("button", { name: "Play airhorn" });
+  await airhorn.hover();
+  await play.click();
+  await expect(airhorn.locator(".playing-badge.is-main")).toBeVisible();
+  await expect(airhorn.locator(".pad-stop")).toBeEnabled();
+  const stopVisible = () => airhorn.evaluate((p) => getComputedStyle(p.querySelector(".pad-stop")!).visibility === "visible");
+  await expect.poll(stopVisible).toBe(true);
+  await page.mouse.move(0, 0);
+  await expect.poll(stopVisible).toBe(false);
+  // Play again so a sound is still sounding for the last check.
+  await airhorn.hover();
+  await play.click();
+  await expect.poll(stopVisible).toBe(true);
+});
+
+test("drag a pad onto a section header in the All view", async ({ page }) => {
+  const from = await padGrip(page, "airhorn");
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x, from.y + 30, { steps: 4 });
+  const section = page.locator("section.group", { hasText: "Ideas" });
+  await section.scrollIntoViewIfNeeded();
+  const box = (await section.boundingBox())!;
+  await page.mouse.move(box.x + 40, box.y + 20, { steps: 10 });
+  await expect(section).toHaveClass(/is-over/);
+  await page.mouse.up();
+  await expect(page.locator(".toast")).toHaveText("Moved to Ideas");
+});
+
+test("stop all sounds hotkey is recorded in Settings", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  const field = page.locator("section.settings-section", { has: page.getByRole("heading", { name: "Stop all sounds" }) }).locator("button.hotkey");
+  await field.click();
+  await page.keyboard.press("Control+Shift+Digit2");
+  await expect(field).toHaveText("Ctrl+Shift+Digit2");
+});
