@@ -800,7 +800,7 @@ button.group-title:hover {
 }
 
 .pad:hover .pad-row .pad-btn:not(.pad-stop),
-.pad:focus-within .pad-row .pad-btn:not(.pad-stop) {
+.pad:has(:focus-visible) .pad-row .pad-btn:not(.pad-stop) {
   opacity: 1;
   visibility: visible;
   transition-delay: 0s;
@@ -851,7 +851,7 @@ button.group-title:hover {
 
 /* Stop shows on hover or focus, and only while the pad sounds. Its slot stays reserved, so Play never moves. */
 .pad:hover .pad-stop:not(:disabled),
-.pad:focus-within .pad-stop:not(:disabled) {
+.pad:has(:focus-visible) .pad-stop:not(:disabled) {
   opacity: 1;
   visibility: visible;
   transition-delay: 0s;

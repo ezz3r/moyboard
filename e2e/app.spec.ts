@@ -662,3 +662,14 @@ test("stop all sounds hotkey is recorded in Settings", async ({ page }) => {
   await page.keyboard.press("Control+Shift+Digit2");
   await expect(field).toHaveText("Ctrl+Shift+Digit2");
 });
+
+test("pad buttons go away when the pointer leaves, even after a click on the name", async ({ page }) => {
+  const rimshot = pad(page, "rimshot");
+  const select = rimshot.locator(".pad-select");
+  const box = (await select.boundingBox())!;
+  await select.click({ position: { x: box.width / 2, y: box.height - 8 } }); // the name strip, not the Play button
+  const play = rimshot.getByRole("button", { name: "Play rimshot" });
+  await expect(play).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(play).toBeHidden();
+});
