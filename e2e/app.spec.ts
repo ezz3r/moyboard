@@ -483,15 +483,13 @@ test("quick panel: arrows move between rows, Enter plays", async ({ page }) => {
   await expect(plays.nth(0)).toBeFocused();
 });
 
-test("layout: bottom bar sits under the grid and holds output and both volumes", async ({ page }) => {
+test("layout: no bottom bar on the pads; output and volumes live in Settings", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 800 });
-  const bar = page.locator(".bottom-bar");
-  await expect(bar.getByRole("combobox", { name: "Output device" })).toBeVisible();
-  await expect(bar.getByRole("slider", { name: "Volume for others (main output)" })).toBeVisible();
-  await expect(bar.getByRole("slider", { name: "Volume for you (monitor output)" })).toBeVisible();
-  const grid = (await page.locator(".main").boundingBox())!;
-  const strip = (await bar.boundingBox())!;
-  expect(grid.y + grid.height).toBeLessThanOrEqual(strip.y + 1);
+  await expect(page.locator(".bottom-bar")).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Output device" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByRole("slider", { name: "Volume for others (main output)" })).toBeVisible();
+  await expect(page.getByRole("slider", { name: "Volume for you (monitor output)" })).toBeVisible();
 });
 
 test("layout: the edit card is inset from the window edge", async ({ page }) => {
@@ -695,6 +693,7 @@ test("quick panel: the wheel scrolls the board while Ctrl, Alt or Shift is held 
 });
 
 test("You and Others sliders are always adjustable", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
   await expect(page.getByRole("slider", { name: "Volume for you (monitor output)" })).toBeEnabled();
   await expect(page.getByRole("slider", { name: "Volume for others (main output)" })).toBeEnabled();
 });

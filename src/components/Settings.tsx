@@ -112,6 +112,22 @@ export function Settings({
             />
           </>
         )}
+        <label className="inline-field">
+          <span>Others volume <output className="value">{Math.round(output.masterVolume * 100)}%</output></span>
+          <input
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={output.masterVolume}
+            aria-label="Volume for others (main output)"
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              onOutputChanged({ masterVolume: v });
+              void api.setMasterVolume(v).catch((err) => onError(String(err)));
+            }}
+          />
+        </label>
       </section>
 
       <section className="settings-section">
@@ -127,6 +143,7 @@ export function Settings({
             max={2}
             step={0.05}
             value={output.monitorVolume}
+            aria-label="Volume for you (monitor output)"
             onChange={(e) => {
               const v = Number(e.target.value);
               onOutputChanged({ monitorVolume: v });

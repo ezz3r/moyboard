@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { api, onFileDrop, onLibraryChanged, onPlayback } from "./api";
 import { CategoryMenu, type CategoryOption } from "./components/CategoryMenu";
-import { Select } from "./components/Select";
 import { CategoryPanel } from "./components/CategoryPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { Pad } from "./components/Pad";
@@ -524,66 +523,6 @@ export default function App() {
           )}
         </main>
 
-        <footer className="bottom-bar">
-          <div className="top-field device">
-            <span className="field-caption">Play to</span>
-            <Select
-              aria-label="Output device"
-              value={output.selected ?? ""}
-              options={[
-                { value: "", label: "System default output" },
-                ...output.devices.map((d) => ({ value: d.id, label: d.name })),
-              ]}
-              onChange={async (v) => {
-                const name = v || null;
-                try {
-                  await api.setOutputDevice(name);
-                  setOutput((o) => ({ ...o, selected: name }));
-                } catch (err) {
-                  notify(String(err));
-                }
-              }}
-            />
-          </div>
-
-          <label className="top-field volume">
-            <span>Others</span>
-            <input
-              type="range"
-              min={0}
-              max={2}
-              step={0.01}
-              value={output.masterVolume}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setOutput((o) => ({ ...o, masterVolume: v }));
-                void api.setMasterVolume(v).catch((err) => notify(String(err)));
-              }}
-              aria-label="Volume for others (main output)"
-              aria-valuetext={`${Math.round(output.masterVolume * 100)} percent`}
-            />
-            <output className="value">{Math.round(output.masterVolume * 100)} %</output>
-          </label>
-
-          <label className="top-field volume" title="Your volume: what you hear on your Windows default output, and headphone previews">
-            <span>You</span>
-            <input
-              type="range"
-              min={0}
-              max={2}
-              step={0.01}
-              value={output.monitorVolume}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setOutput((o) => ({ ...o, monitorVolume: v }));
-                void api.setMonitorVolume(v).catch((err) => notify(String(err)));
-              }}
-              aria-label="Volume for you (monitor output)"
-              aria-valuetext={`${Math.round(output.monitorVolume * 100)} percent`}
-            />
-            <output className="value">{Math.round(output.monitorVolume * 100)} %</output>
-          </label>
-        </footer>
         </div>
 
         <SidebarHandle
