@@ -22,7 +22,8 @@ const sidebar = (page: Page) => page.getByRole("complementary", { name: "Selecte
 /** Selects a pad (its edit button) and waits for the sidebar to show it. */
 async function openEdit(page: Page, name: string) {
   await pad(page, name).hover();
-  await page.getByRole("button", { name: `Select ${name}` }).click();
+  // The middle of the tile is the Play button now; the name is the selection area.
+  await page.getByRole("button", { name: `Select ${name}` }).locator(".pad-name").click();
   await expect(sidebar(page).getByRole("textbox", { name: "Name" })).toHaveValue(name);
 }
 
@@ -54,7 +55,7 @@ test("missing file is flagged and can be forgotten", async ({ page }) => {
 });
 
 test("clicking the pad body selects it and does not play", async ({ page }) => {
-  await pad(page, "airhorn").getByRole("button", { name: "Select airhorn" }).click();
+  await pad(page, "airhorn").getByRole("button", { name: "Select airhorn" }).locator(".pad-name").click();
   await expect(pad(page, "airhorn")).toHaveClass(/is-selected/);
   await expect(pad(page, "airhorn").getByRole("button", { name: "Play airhorn" })).toBeVisible();
   await expect(pad(page, "airhorn")).not.toHaveClass(/is-playing/);
@@ -164,7 +165,8 @@ test("emoji and category are saved from the sidebar", async ({ page }) => {
   await picker.getByRole("searchbox").fill("trumpet");
   await picker.getByRole("button", { name: /🎺/ }).first().click();
   await expect(picker).toHaveCount(0);
-  await sidebar(page).getByLabel("Category", { exact: true }).selectOption({ label: "Reactions" });
+  await sidebar(page).getByRole("combobox", { name: "Category" }).click();
+  await page.getByRole("option", { name: "Reactions" }).click();
   expect(await categoryCount(page, "Reactions")).toBe("3");
   await expect(pad(page, "frog").locator(".pad-glyph")).toHaveText("🎺");
 });
@@ -394,12 +396,12 @@ test("quick panel: right click previews, and the Stop button stops everything", 
   await expect(airhorn).not.toHaveClass(/is-previewing/);
 });
 
-test("quick panel: rows are grouped and folding hides them", async ({ page }) => {
+test("quick panel: one flat grid, no categories, no hint line", async ({ page }) => {
   await page.goto("/?view=quick");
-  await expect(page.locator(".quick-group-head", { hasText: "Memes" })).toBeVisible();
-  await page.locator(".quick-group-head", { hasText: "Memes" }).click();
-  await expect(page.locator(".quick .tile", { hasText: "airhorn" })).toHaveCount(0);
-  await expect(page.locator(".quick-group-head", { hasText: "Memes" })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".quick .quick-grid .tile")).toHaveCount(9);
+  await expect(page.locator(".quick-group-head")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Category" })).toHaveCount(0);
+  await expect(page.locator(".quick-hint")).toHaveCount(0);
 });
 
 test("quick panel: arrows move between rows, Enter plays", async ({ page }) => {
@@ -432,6 +434,42 @@ test("layout: the edit card is inset from the window edge", async ({ page }) => 
   const card = (await sidebar(page).boundingBox())!;
   expect(card.x + card.width).toBeLessThanOrEqual(1200 - 16 + 1);
   expect(card.y).toBeGreaterThanOrEqual(15);
+});
+
+test("dropdown: app's own list, keyboard pick, Escape closes and returns focus", async ({ page }) => {
+  await openEdit(page, "airhorn");
+  const cat = sidebar(page).getByRole("combobox", { name: "Category" });
+  await cat.click();
+  await expect(page.getByRole("listbox", { name: "Category" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox", { name: "Category" })).toHaveCount(0);
+  await expect(cat).toBeFocused();
+  await cat.click();
+  await page.getByRole("option", { name: "Music" }).click();
+  await expect(cat).toContainText("Music");
+});
+
+test("icon picker opens at a usable width inside the card", async ({ page }) => {
+  await openEdit(page, "airhorn");
+  await sidebar(page).locator(".emoji-trigger").click();
+  const pop = page.getByRole("dialog", { name: "Choose icon" });
+  await expect(pop).toBeVisible();
+  const box = (await pop.boundingBox())!;
+  const card = (await sidebar(page).boundingBox())!;
+  expect(box.width).toBeGreaterThan(240);
+  expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width);
+});
+
+test("pad: Play sits in the middle of the tile; selected pad has no outline", async ({ page }) => {
+  const rimshot = pad(page, "rimshot");
+  await rimshot.hover();
+  const tile = (await rimshot.boundingBox())!;
+  const play = (await rimshot.getByRole("button", { name: "Play rimshot" }).boundingBox())!;
+  // The button row is centred in the band above the name (6 px top, 24 px bottom).
+  const bandMid = tile.y + (tile.height - 18) / 2;
+  expect(Math.abs(play.y + play.height / 2 - bandMid)).toBeLessThan(3);
+  await rimshot.getByRole("button", { name: "Select rimshot" }).locator(".pad-name").click();
+  expect(await rimshot.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("none");
 });
 
 test("sidebar: drag the handle to resize, double-click resets", async ({ page }) => {

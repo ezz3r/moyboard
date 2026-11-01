@@ -157,10 +157,7 @@ select {
   border-color: transparent;
 }
 
-.top-field select,
-.field input,
-.field select,
-.select-wide {
+.field input {
   background: var(--surface);
   border: 1px solid var(--control-line);
   border-radius: var(--radius);
@@ -168,7 +165,119 @@ select {
   min-width: 0;
 }
 
-.device select {
+/* Custom dropdown (components/Select.tsx). Same 36 px height as the buttons next to it. */
+.select {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.select-trigger:hover {
+  border-color: var(--ink-2);
+}
+
+.select-trigger[aria-expanded="true"] {
+  border-color: var(--accent);
+}
+
+.select-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.select-trigger > svg {
+  flex: none;
+  color: var(--ink-2);
+}
+
+.select-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: min(60vh, 320px);
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--elevation);
+}
+
+.select-pop.is-up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.select-option:hover,
+.select-option:focus-visible {
+  color: var(--ink);
+  background: var(--surface);
+  outline: none;
+}
+
+.select-option[aria-selected="true"] {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.select-check {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  flex: none;
+  color: var(--accent);
+}
+
+.select-option-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.device .select {
   width: 280px;
   max-width: 34vw;
 }
@@ -176,7 +285,7 @@ select {
 /* Narrow windows: the output picker takes its own full-width row. */
 @media (max-width: 560px) {
   .device,
-  .device select {
+  .device .select {
     width: 100%;
     max-width: none;
   }
@@ -197,6 +306,28 @@ select {
 .volume output {
   min-width: 3.5em;
   text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Every slider takes the accent, so the bottom bar and the card match. */
+input[type="range"] {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+/* Bottom bar: caption and control on one line, same height. */
+.top-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.field-caption {
+  color: var(--ink-2);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 /* Bottom bar: output device and both volumes. Left column only, under a hairline. */
@@ -634,14 +765,19 @@ button.group-title:hover {
 
 /* Button row: Stop, Play and Preview. Shown on hover or keyboard focus; Stop also while playing.
    Hidden, not removed, so the slots keep their place and nothing moves. */
+/* Taken out of flow and centred in the area above the name, so it sits in the middle of the tile. */
 .pad-row {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  inset: 6px 6px 24px;
+  z-index: 2; /* above .pad-select, which fills the same tile */
   display: flex;
+  align-items: center;
   gap: 4px;
+  pointer-events: none; /* only the buttons take clicks; the gaps let the pad body through */
 }
 
 .pad-row .pad-btn {
+  pointer-events: auto;
   opacity: 0;
   visibility: hidden;
   transition: opacity 120ms ease, visibility 0s linear 120ms;
@@ -729,10 +865,11 @@ button.group-title:hover {
   cursor: default;
 }
 
+/* Selected: accent border and a faint tint, drawn inside the tile so the grid cannot clip it. */
 .pad.is-selected {
   border-color: var(--accent);
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 
 /* Icon as the tile background: behind the buttons and the name, faint, not clickable. */
@@ -1112,8 +1249,7 @@ button.group-title:hover {
   overflow-wrap: anywhere;
 }
 
-.select-wide {
-  width: 100%;
+.settings-section .select {
   max-width: 480px;
 }
 
@@ -1233,7 +1369,7 @@ button.group-title:hover {
     flex-wrap: wrap;
   }
 
-  .device select {
+  .device .select {
     width: 200px;
   }
 
@@ -1332,7 +1468,9 @@ button.group-title:hover {
   z-index: 15;
   top: 100%;
   left: 0;
-  right: 0;
+  /* Sized from the card, not from the 44 px trigger: the field is narrow inside the row. */
+  width: calc(var(--side-w, 300px) - 34px);
+  max-width: calc(100vw - 48px);
   margin-top: 6px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1569,13 +1707,6 @@ button.group-title:hover {
   border-color: var(--accent);
 }
 
-.quick-hint {
-  margin: 0;
-  padding: 4px 8px 0;
-  color: var(--ink-2);
-  font-size: 12px;
-}
-
 .quick-error {
   margin: 6px;
   color: var(--alarm);
@@ -1590,57 +1721,6 @@ button.group-title:hover {
 }
 
 /* Dense list: one row per sound, grouped by category. */
-.quick-group + .quick-group {
-  margin-top: 6px;
-}
-
-.quick-group-head {
-  all: unset;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  height: 26px;
-  padding: 0 4px;
-  cursor: pointer;
-  color: var(--ink-2);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.quick-group-head:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.quick-group-head svg {
-  transition: transform 0s;
-}
-
-.quick-group-head .is-folded {
-  transform: rotate(-90deg);
-}
-
-.quick-group-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  flex: none;
-}
-
-.quick-group-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.quick-group-count {
-  font-variant-numeric: tabular-nums;
-}
-
 /* Tiles: small squares in a grid, row by row. Same look as the main board, only smaller. */
 .quick-grid {
   display: grid;

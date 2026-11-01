@@ -165,6 +165,13 @@ Run on the Windows build. Debug builds print `moyboard: quick panel key Pressed/
 - [ ] Grid scrolls; the header and the bottom bar do not move.
 - [ ] Dark mode: card shadow is visible against the window background.
 
+## Polish v8 (not run on Windows)
+- [ ] Quick Panel: open and close 10 times, also after moving and after resizing it. Position and size stay the same every time (not run in WSL; the fix is untested on Windows).
+- [ ] Quick Panel: moved to a second monitor and back still opens on the saved monitor at the saved size.
+- [ ] Quick Panel at 150 % and 200 % scaling: size stays the same after reopening.
+- [ ] Output dropdown opens upward when the bottom bar is low, and clicks outside close it.
+- [ ] Icon picker is fully visible inside the edit card at 1200 px and 640 px.
+
 ## Windows-only items not run in WSL
 The v2 playback routing (preview device, Stop per sound, playback events),
 global hotkey toggling, Recycle Bin delete and the Windows installer were not

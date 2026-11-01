@@ -5,6 +5,7 @@ import { HotkeyField } from "./HotkeyField";
 import { TrimEditor } from "./TrimEditor";
 import { extOf, stemOf } from "../names";
 import { Swatches } from "./Swatches";
+import { Select } from "./Select";
 import type { SoundEntry, SoundMeta } from "../types";
 
 type Props = {
@@ -98,22 +99,15 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
       <div className="field-row">
         <EmojiField value={entry.meta.emoji} onChange={(e) => void save({ emoji: e })} />
 
-        <label className="field grow">
+        <div className="field grow">
           <span>Category</span>
-          <select
-            className="select-wide"
+          <Select
             aria-label="Category"
             value={entry.meta.category ?? ""}
-            onChange={(e) => void save({ category: e.target.value || null })}
-          >
-            <option value="">Uncategorized</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            options={[{ value: "", label: "Uncategorized" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+            onChange={(v) => void save({ category: v || null })}
+          />
+        </div>
       </div>
 
       <label className="field">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { api, onFileDrop, onLibraryChanged, onPlayback } from "./api";
 import { CategoryMenu, type CategoryOption } from "./components/CategoryMenu";
+import { Select } from "./components/Select";
 import { CategoryPanel } from "./components/CategoryPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { Pad } from "./components/Pad";
@@ -429,13 +430,17 @@ export default function App() {
         </main>
 
         <footer className="bottom-bar">
-          <label className="top-field device">
-            <span>Play to</span>
-            <select
+          <div className="top-field device">
+            <span className="field-caption">Play to</span>
+            <Select
               aria-label="Output device"
               value={output.selected ?? ""}
-              onChange={async (e) => {
-                const name = e.target.value || null;
+              options={[
+                { value: "", label: "System default output" },
+                ...output.devices.map((d) => ({ value: d.id, label: d.name })),
+              ]}
+              onChange={async (v) => {
+                const name = v || null;
                 try {
                   await api.setOutputDevice(name);
                   setOutput((o) => ({ ...o, selected: name }));
@@ -443,15 +448,8 @@ export default function App() {
                   notify(String(err));
                 }
               }}
-            >
-              <option value="">System default output</option>
-              {output.devices.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
 
           <label className="top-field volume">
             <span>Others</span>

@@ -21,12 +21,12 @@ export default function EmojiPicker({ onPick }: Props) {
     const picker = new Picker({
       data,
       set: "native",
-      theme: "dark",
+      theme: "auto",
       locale: "en",
       previewPosition: "none",
       skinTonePosition: "search",
-      perLine: 8,
-      dynamicWidth: true,
+      // Fixed grid: 7 × 36 px fits the popover, which is the sidebar width minus its padding.
+      perLine: 7,
       maxFrequentRows: 2,
       autoFocus: true,
       onEmojiSelect: (e: { native: string }) => latest.current(e.native),

@@ -179,6 +179,8 @@ pub fn show_quick(app: &AppHandle) {
 /// Puts the panel where the user left it, clamped to the monitor it is on (or the first one).
 fn apply_quick_geometry(app: &AppHandle, w: &WebviewWindow) {
     let Some(saved) = app.state::<Store>().get(|cfg| cfg.quick_panel_geometry) else {
+        // Nothing saved yet: centre it once; the first move or resize then saves its place.
+        let _ = w.center();
         return;
     };
     let Ok(monitors) = w.available_monitors() else {
@@ -198,8 +200,11 @@ fn apply_quick_geometry(app: &AppHandle, w: &WebviewWindow) {
     let a = monitor.work_area();
     let area = (a.position.x, a.position.y, a.size.width, a.size.height);
     let g = config::clamp_geometry(saved, area);
-    let _ = w.set_size(tauri::PhysicalSize::new(g.width, g.height));
+    // Position before size: setting the size first can apply the previous monitor's scale factor.
     let _ = w.set_position(tauri::PhysicalPosition::new(g.x, g.y));
+    let _ = w.set_size(tauri::PhysicalSize::new(g.width, g.height));
+    // Tells the page that the move and resize below are ours, so it does not save them back.
+    let _ = w.emit("quick-panel-restored", ());
 }
 
 pub fn quick_visible(app: &AppHandle) -> bool {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, pickFolder } from "../api";
 import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings, TileSizeKind, TileSizes } from "../types";
 import { HotkeyField } from "./HotkeyField";
+import { Select } from "./Select";
 
 type Props = {
   libraryDir: string;
@@ -58,11 +59,15 @@ export function Settings({
       <section className="settings-section">
         <h2>For others</h2>
         <p className="hint">Pick the virtual cable that Discord or your game listens to.</p>
-        <select
-          className="select-wide"
+        <Select
+          aria-label="For others"
           value={output.selected ?? ""}
-          onChange={async (e) => {
-            const name = e.target.value || null;
+          options={[
+            { value: "", label: "System default" },
+            ...output.devices.map((d) => ({ value: d.id, label: d.name + (d.isDefault ? " (default)" : "") })),
+          ]}
+          onChange={async (v) => {
+            const name = v || null;
             try {
               await api.setOutputDevice(name);
               onOutputChanged({ selected: name });
@@ -70,15 +75,7 @@ export function Settings({
               onError(String(err));
             }
           }}
-        >
-          <option value="">System default</option>
-          {output.devices.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-              {d.isDefault ? " (default)" : ""}
-            </option>
-          ))}
-        </select>
+        />
       </section>
 
       <section className="settings-section">
@@ -143,11 +140,15 @@ export function Settings({
         <p className="hint">
           Headphone previews play here and never on the output above. Must differ from it.
         </p>
-        <select
-          className="select-wide"
+        <Select
+          aria-label="Preview output"
           value={output.previewSelected ?? ""}
-          onChange={async (e) => {
-            const name = e.target.value || null;
+          options={[
+            { value: "", label: "System default" },
+            ...output.devices.map((d) => ({ value: d.id, label: d.name + (d.isDefault ? " (default)" : "") })),
+          ]}
+          onChange={async (v) => {
+            const name = v || null;
             try {
               await api.setPreviewDevice(name);
               onOutputChanged({ previewSelected: name });
@@ -155,15 +156,7 @@ export function Settings({
               onError(String(err));
             }
           }}
-        >
-          <option value="">System default</option>
-          {output.devices.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-              {d.isDefault ? " (default)" : ""}
-            </option>
-          ))}
-        </select>
+        />
         {previewSame && (
           <p className="warning" role="alert">
             Preview and main output use the same device. Choose a different preview device.
