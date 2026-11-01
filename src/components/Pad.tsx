@@ -1,13 +1,13 @@
 import { Headphones, Play, Square } from "lucide-react";
-import type { CSSProperties } from "react";
 import type { SoundEntry } from "../types";
 import { hotkeyLabel, stemOf } from "../names";
 import type { Counts } from "../playback";
 import { PlayingBadge } from "./PlayingBadge";
+import { colorStyle } from "../colorTokens";
 
 type Props = {
   entry: SoundEntry;
-  /** Category or per-sound colour, `#rrggbb`. Drawn as a stripe on the left edge. */
+  /** Category or per-sound colour, `#rrggbb`, or null for neutral. Sets the plate and tint. */
   accent: string | null;
   selected: boolean;
   /** Voices still sounding per output. Play always starts one more. */
@@ -52,9 +52,9 @@ export function Pad({
     .join(" ");
 
   return (
-    <div className={classes} style={accent ? ({ "--cat": accent } as CSSProperties) : undefined}>
+    <div className={classes} style={colorStyle(accent)}>
       <span className="pad-glyph" aria-hidden="true">
-        {missing ? "!" : (entry.meta.emoji ?? "♪")}
+        <span className="pad-plate">{missing ? "!" : (entry.meta.emoji ?? "♪")}</span>
       </span>
 
       {missing ? null : (

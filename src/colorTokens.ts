@@ -1,0 +1,42 @@
+import type { CSSProperties } from "react";
+import type { CategoryMeta, SoundMeta } from "./types";
+
+/** Relative luminance (WCAG) of a `#rrggbb` colour, 0 (black) to 1 (white). */
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * The colour a sound shows: its own colour, else its category's, else none.
+ * `null` means neutral (no colour marking).
+ */
+export function resolveColor(meta: SoundMeta, categories: Record<string, CategoryMeta>): string | null {
+  if (meta.color) return meta.color;
+  if (meta.category) return categories[meta.category]?.color ?? null;
+  return null;
+}
+
+/**
+ * CSS variables for one colour marking: `--cat` (the colour), `--plate` (icon background),
+ * `--tint` (surface tint) and `--cat-line` (hairline border). All are opaque mixes with the
+ * surface, so they never stack on the page. Strengths come from `--plate-pct` and `--tint-pct`
+ * (set per theme in styles.css). Very light and very dark colours get a stronger plate, so it
+ * still shows on the surface. Null gives no variables; the CSS falls back to neutral.
+ */
+export function colorStyle(color: string | null): CSSProperties {
+  if (!color) return {};
+  const lum = luminance(color);
+  // shortcut: fixed plate boosts for extreme luminance, not a contrast solver; upgrade if a colour looks faint.
+  const boost = lum > 0.7 ? "2.2" : lum < 0.06 ? "1.6" : "1";
+  return {
+    "--cat": color,
+    "--plate": `color-mix(in srgb, ${color} calc(var(--plate-pct) * ${boost}), var(--surface))`,
+    "--tint": `color-mix(in srgb, ${color} var(--tint-pct), var(--surface))`,
+    "--cat-line": `color-mix(in srgb, ${color} 45%, var(--line))`,
+  } as CSSProperties;
+}

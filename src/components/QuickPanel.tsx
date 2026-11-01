@@ -4,6 +4,7 @@ import { api, isTauri, onLibraryChanged, onPlayback } from "../api";
 import { SoundTile } from "./SoundTile";
 import type { CategoryMeta, Playing, SoundEntry } from "../types";
 import { countsOf } from "../playback";
+import { resolveColor } from "../colorTokens";
 import { GripVertical, Layers, Square, X } from "lucide-react";
 
 const ALL = "all";
@@ -169,7 +170,7 @@ export function QuickPanel() {
               <SoundTile
                 key={s.fileName}
                 entry={s}
-                accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
+                accent={resolveColor(s.meta, categories)}
                 counts={countsOf(playing, s.fileName)}
                 onPlay={() => act(() => api.playSound(s.fileName))}
                 onPreview={() => act(() => api.previewSound(s.fileName))}

@@ -18,6 +18,9 @@
   /* Playing on the main output (blue) and in the headphone preview (green). Icon and bars carry the meaning too. */
   --playing-main: #0066cc;
   --playing-preview: #1d7f3a;
+  /* Colour marking strengths: plate on the icon, tint of the surface. Dark themes need more. */
+  --plate-pct: 22%;
+  --tint-pct: 10%;
   --scrim: rgb(0 0 0 / 0.35);
   --elevation: 0 8px 24px rgb(0 0 0 / 0.14);
   --rgb-accent: 0, 102, 204;
@@ -52,6 +55,8 @@
     --alarm: #ff6961;
     --playing-main: #4da3ff;
     --playing-preview: #5fd17f;
+    --plate-pct: 30%;
+    --tint-pct: 14%;
     --scrim: rgb(0 0 0 / 0.55);
     --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
     --rgb-accent: 77, 163, 255;
@@ -75,6 +80,8 @@
   --alarm: #ff6961;
   --playing-main: #4da3ff;
   --playing-preview: #5fd17f;
+  --plate-pct: 30%;
+  --tint-pct: 14%;
   --scrim: rgb(0 0 0 / 0.55);
   --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
   --rgb-accent: 77, 163, 255;
@@ -748,26 +755,14 @@ button.group-title:hover {
   flex-direction: column;
   gap: 6px;
   padding: 6px 6px 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--cat-line, var(--line));
   border-radius: 10px;
-  background: var(--surface);
+  background: var(--tint, var(--surface));
   transition: border-color 120ms ease;
 }
 
 .pad:hover {
   border-color: var(--ink-2);
-}
-
-/* Category or pad colour as an accent stripe on the top edge. */
-.pad::before {
-  content: "";
-  position: absolute;
-  left: -1px;
-  right: -1px;
-  top: -1px;
-  height: 4px;
-  border-radius: 10px 10px 0 0;
-  background: var(--cat, transparent);
 }
 
 /* Button row: Stop, Play and Preview. Shown on hover or keyboard focus; Stop also while playing.
@@ -889,10 +884,23 @@ button.group-title:hover {
   z-index: 0;
   display: grid;
   place-items: center;
-  font-size: calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.5);
-  line-height: 1;
-  opacity: 0.28;
   pointer-events: none;
+}
+
+/* Icon plate: a rounded square in the colour (or neutral). Holds the emoji. */
+.pad-plate,
+.tile-plate {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--plate, color-mix(in srgb, var(--ink-2) 14%, var(--surface)));
+  line-height: 1;
+}
+
+.pad-plate {
+  width: calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.5);
+  font-size: calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.26);
 }
 
 /* One line. A long name fades out at the end instead of wrapping. The full name is in the tooltip. */
@@ -925,13 +933,11 @@ button.group-title:hover {
 .pad.is-playing {
   border-color: var(--playing-main);
   box-shadow: 0 0 0 2px var(--playing-main);
-  background: color-mix(in srgb, var(--playing-main) 10%, transparent);
 }
 
 .pad.is-previewing:not(.is-playing) {
   border-color: var(--playing-preview);
   box-shadow: 0 0 0 2px var(--playing-preview);
-  background: color-mix(in srgb, var(--playing-preview) 10%, transparent);
 }
 
 /* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
@@ -1949,9 +1955,9 @@ button.group-title:hover {
 .tile {
   position: relative;
   height: var(--tile-h, 56px);
-  border: 1px solid var(--line);
+  border: 1px solid var(--cat-line, var(--line));
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--tint, var(--surface));
   overflow: hidden;
 }
 
@@ -1960,25 +1966,12 @@ button.group-title:hover {
   border-color: var(--ink-2);
 }
 
-/* Category or pad colour as a stripe on the top edge. */
-.tile::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 3px;
-  background: var(--cat, transparent);
-}
-
 .tile.is-playing {
   border-color: var(--playing-main);
-  background: color-mix(in srgb, var(--playing-main) 12%, transparent);
 }
 
 .tile.is-previewing:not(.is-playing) {
   border-color: var(--playing-preview);
-  background: color-mix(in srgb, var(--playing-preview) 12%, transparent);
 }
 
 .tile.is-missing {
@@ -2020,10 +2013,12 @@ button.group-title:hover {
   z-index: 0;
   display: grid;
   place-items: center;
-  font-size: calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.5);
-  line-height: 1;
-  opacity: 0.28;
   pointer-events: none;
+}
+
+.tile-plate {
+  width: calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.6);
+  font-size: calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.3);
 }
 
 .tile-name {

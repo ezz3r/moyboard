@@ -11,6 +11,7 @@ import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry, type TileSizes } from "./types";
 import { stemOf } from "./names";
 import { countsOf } from "./playback";
+import { resolveColor } from "./colorTokens";
 import { ChevronDown, RefreshCw, Search, Settings, Square, X } from "lucide-react";
 
 const ALL = "all";
@@ -295,7 +296,7 @@ export default function App() {
     <Pad
       key={s.fileName}
       entry={s}
-      accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
+      accent={resolveColor(s.meta, categories)}
       selected={selection?.type === "sound" && selection.id === s.fileName}
       counts={countsOf(playing, s.fileName)}
       onSelect={() => setSelection({ type: "sound", id: s.fileName })}

@@ -1,12 +1,12 @@
-import type { CSSProperties } from "react";
 import type { SoundEntry } from "../types";
 import { hotkeyLabel, stemOf } from "../names";
 import type { Counts } from "../playback";
 import { PlayingBadge } from "./PlayingBadge";
+import { colorStyle } from "../colorTokens";
 
 type Props = {
   entry: SoundEntry;
-  /** Category or per-sound colour, `#rrggbb`. Drawn as a stripe on the top edge. */
+  /** Category or per-sound colour, `#rrggbb`, or null for neutral. Sets the plate and tint. */
   accent: string | null;
   /** Voices still sounding per output. Play always starts one more. */
   counts: Counts;
@@ -29,7 +29,7 @@ export function SoundTile({ entry, accent, counts, onPlay, onPreview }: Props) {
     .join(" ");
 
   return (
-    <div className={classes} style={accent ? ({ "--cat": accent } as CSSProperties) : undefined}>
+    <div className={classes} style={colorStyle(accent)}>
       <button
         type="button"
         className="tile-play"
@@ -43,7 +43,7 @@ export function SoundTile({ entry, accent, counts, onPlay, onPreview }: Props) {
         title={`${name}\nLeft click: play · Right click: preview`}
       >
         <span className="tile-glyph" aria-hidden="true">
-          {missing ? "!" : (entry.meta.emoji ?? "♪")}
+          <span className="tile-plate">{missing ? "!" : (entry.meta.emoji ?? "♪")}</span>
         </span>
         <span className="tile-name">{missing ? "File missing" : name}</span>
       </button>
