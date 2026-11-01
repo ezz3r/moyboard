@@ -47,7 +47,7 @@ export function subscribePlayback(handler: (p: Playing[]) => void): () => void {
 let autoRescan = true;
 let closeToTray = true;
 let sidebarWidth = 300;
-let tileSizes = { pad: 128, padHeight: 96, quick: 56, quickHeight: 56 };
+let tileSizes = { pad: 128, padHeight: 128, quick: 56, quickHeight: 56 };
 let autostart = false;
 let startMinimized = false;
 let quickHotkey: string | null = null;

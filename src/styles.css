@@ -119,29 +119,42 @@ select {
 
 /* ---------- Shell ---------- */
 
+/* Window margin: 16 px on every side, the same gap used between regions. */
 .app {
   height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
+  padding: 16px;
 }
 
+/* Header: large category title on the left, search and icon buttons on the right.
+   Fixed; only the grid scrolls. */
 .top {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
-  min-height: 52px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
+  gap: 8px 12px;
+  min-height: 48px;
   flex: none;
 }
 
-.brand {
-  font-size: 18px;
+/* The header title is the category trigger: large, no box until hovered. */
+.top .cat-trigger {
+  height: 40px;
+  min-width: 0;
+  max-width: min(420px, 50vw);
+  padding: 0 6px;
+  border-color: transparent;
+  background: none;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-right: 8px;
+  letter-spacing: -0.01em;
+}
+
+.top .cat-trigger:hover {
+  background: var(--raised);
+  border-color: transparent;
 }
 
 .top-field select,
@@ -181,6 +194,23 @@ select {
   width: 96px;
 }
 
+.volume output {
+  min-width: 3.5em;
+  text-align: right;
+}
+
+/* Bottom bar: output device and both volumes. Left column only, under a hairline. */
+.bottom-bar {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  min-height: 56px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
 .top-actions {
   display: flex;
   gap: 4px;
@@ -192,11 +222,21 @@ select {
   min-height: 0;
 }
 
-/* Drag handle between the pad grid and the sidebar. A hairline, widened to a hit area. */
+/* Left column: header, scrolling grid, bottom bar. */
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Drag handle between the stage and the edit card. Hidden until hover or focus, so the card stands alone. */
 .sidebar-handle {
   position: relative;
   flex: none;
-  width: 8px;
+  width: 16px;
   z-index: 1;
   cursor: col-resize;
   touch-action: none;
@@ -205,17 +245,19 @@ select {
 .sidebar-handle::before {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 3px;
-  width: 1px;
-  background: var(--line);
+  top: 16px;
+  bottom: 16px;
+  left: 7px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 120ms ease;
 }
 
 .sidebar-handle:hover::before,
 .sidebar-handle:focus-visible::before {
-  width: 2px;
-  background: var(--accent);
+  opacity: 1;
 }
 
 .sidebar-handle:focus-visible {
@@ -229,11 +271,38 @@ body.is-resizing * {
 }
 
 /* Always rendered: the selected sound's editor, or a placeholder. */
+/* Edit card: an inset, elevated surface with the window margin around it. */
 .sidebar {
   width: var(--side-w, 300px);
   flex: none;
   padding: 16px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--elevation);
+}
+
+.field-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.field-row > * {
+  min-width: 0;
+}
+
+.field.grow {
+  flex: 1;
+}
+
+/* Label left, value right (e.g. Volume 80 %). */
+.field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
 }
 
 .side-empty {
@@ -254,10 +323,6 @@ body.is-resizing * {
   gap: 12px;
 }
 
-.panel > .panel-group + .panel-group {
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
-}
 
 .panel-foot {
   display: flex;
@@ -392,11 +457,14 @@ body.is-resizing * {
   font-size: 12px;
 }
 
+/* The only scrolling area in the left column. */
 .main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: 4px;
+  scrollbar-width: thin;
 }
 
 /* ---------- Buttons ---------- */
@@ -552,15 +620,15 @@ button.group-title:hover {
   border-color: var(--ink-2);
 }
 
-/* Category or pad colour as a stripe on the left edge. */
+/* Category or pad colour as an accent stripe on the top edge. */
 .pad::before {
   content: "";
   position: absolute;
   left: -1px;
+  right: -1px;
   top: -1px;
-  bottom: -1px;
-  width: 4px;
-  border-radius: var(--radius) 0 0 var(--radius);
+  height: 4px;
+  border-radius: 10px 10px 0 0;
   background: var(--cat, transparent);
 }
 
@@ -1163,8 +1231,6 @@ button.group-title:hover {
 @media (max-width: 720px) {
   .top {
     flex-wrap: wrap;
-    height: auto;
-    padding: 10px 12px;
   }
 
   .device select {
@@ -1175,24 +1241,25 @@ button.group-title:hover {
     margin-left: 0;
   }
 
+  /* Narrow: the card moves under the grid, still inset. */
   .body {
     flex-direction: column;
   }
 
-  .main {
+  .stage {
     flex: 1 1 45%;
-    min-height: 0;
   }
 
   .sidebar-handle {
     display: none;
   }
 
+  /* Keep the grid the larger part; the card takes what its content needs, up to 55 %. */
   .sidebar {
-    flex: 0 1 55%;
+    flex: 0 1 auto;
+    max-height: 55%;
     width: auto;
-    border-left: 0;
-    border-top: 1px solid var(--line);
+    min-height: 0;
   }
 
 }

@@ -79,40 +79,26 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
   const hotkey = entry.meta.hotkey;
   const clash = hotkey ? sounds.find((s) => s.fileName !== entry.fileName && s.meta.hotkey === hotkey) : undefined;
 
+  // Edit card order: Name, Emoji and Category, Volume, Trim, Colour, Hotkey, then Delete.
   return (
     <div className="panel">
-      <div className="panel-group">
-        <label className="field">
-          <span>Name</span>
-          <span className="name-row">
-            <input
-              value={stem}
-              onChange={(e) => setStem(e.target.value)}
-              onBlur={() => void rename()}
-              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-            />
-            <span className="ext">{ext}</span>
-          </span>
-        </label>
-
-        <label className="field">
-          <span>
-            Volume <output className="value">{Math.round(volume * 100)}%</output>
-          </span>
+      <label className="field">
+        <span>Name</span>
+        <span className="name-row">
           <input
-            type="range"
-            min={0}
-            max={2}
-            step={0.05}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
+            value={stem}
+            onChange={(e) => setStem(e.target.value)}
+            onBlur={() => void rename()}
+            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
           />
-        </label>
-      </div>
-      <div className="panel-group">
+          <span className="ext">{ext}</span>
+        </span>
+      </label>
+
+      <div className="field-row">
         <EmojiField value={entry.meta.emoji} onChange={(e) => void save({ emoji: e })} />
 
-        <label className="field">
+        <label className="field grow">
           <span>Category</span>
           <select
             className="select-wide"
@@ -128,39 +114,50 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
             ))}
           </select>
         </label>
-
-        <div className="field">
-          <span>Colour</span>
-          <Swatches
-            label="Pad colour"
-            value={entry.meta.color ?? null}
-            inheritLabel="Use category colour"
-            onChange={(c) => void save({ color: c })}
-          />
-        </div>
-
       </div>
-      <div className="panel-group">
-        <div className="field">
-          <span>Hotkey</span>
-          <span className="hotkey-row">
-            <HotkeyField value={hotkey ?? null} onChange={(h) => void save({ hotkey: h })} />
-            {hotkey && (
-              <button type="button" className="btn btn-quiet" onClick={() => void save({ hotkey: null })}>
-                Clear
-              </button>
-            )}
-          </span>
-          {clash && <p className="warn">{stemOf(clash.fileName)} already uses this hotkey.</p>}
-        </div>
-      </div>
-      <div className="panel-group">
-        <TrimEditor
-          key={entry.fileName}
-          entry={entry}
-          onSaved={onChanged}
-          onExported={onExported}
+
+      <label className="field">
+        <span className="field-head">
+          Volume <output className="value">{Math.round(volume * 100)}%</output>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={2}
+          step={0.05}
+          value={volume}
+          onChange={(e) => setVolume(Number(e.target.value))}
         />
+      </label>
+
+      <TrimEditor
+        key={entry.fileName}
+        entry={entry}
+        onSaved={onChanged}
+        onExported={onExported}
+      />
+
+      <div className="field">
+        <span>Colour</span>
+        <Swatches
+          label="Pad colour"
+          value={entry.meta.color ?? null}
+          inheritLabel="Use category colour"
+          onChange={(c) => void save({ color: c })}
+        />
+      </div>
+
+      <div className="field">
+        <span>Hotkey</span>
+        <span className="hotkey-row">
+          <HotkeyField value={hotkey ?? null} onChange={(h) => void save({ hotkey: h })} />
+          {hotkey && (
+            <button type="button" className="btn btn-quiet" onClick={() => void save({ hotkey: null })}>
+              Clear
+            </button>
+          )}
+        </span>
+        {clash && <p className="warn">{stemOf(clash.fileName)} already uses this hotkey.</p>}
       </div>
 
       <div className="panel-foot">

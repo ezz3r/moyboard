@@ -564,7 +564,7 @@ pub struct TileSizes {
 fn get_tile_sizes(store: tauri::State<Store>) -> TileSizes {
     store.get(|cfg| TileSizes {
         pad: cfg.pad_size.unwrap_or(128),
-        pad_height: cfg.pad_height.unwrap_or(96),
+        pad_height: cfg.pad_height.unwrap_or(128),
         quick: cfg.quick_tile_size.unwrap_or(56),
         quick_height: cfg.quick_tile_height.unwrap_or(56),
     })

@@ -40,7 +40,7 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "info" | "error"; settings?: boolean } | null>(null);
   const [sideWidth, setSideWidth] = useState(SIDEBAR_DEFAULT);
-  const [tileSizes, setTileSizes] = useState<TileSizes>({ pad: 128, padHeight: 96, quick: 56, quickHeight: 56 });
+  const [tileSizes, setTileSizes] = useState<TileSizes>({ pad: 128, padHeight: 128, quick: 56, quickHeight: 56 });
 
   // Same-device errors get an "Open Settings" action; the message text is the marker.
   const notify = useCallback(
@@ -308,9 +308,9 @@ export default function App() {
 
   return (
     <div className="app" style={{ "--pad-min": `${tileSizes.pad}px`, "--pad-h": `${tileSizes.padHeight}px` } as CSSProperties}>
-      <header className="top">
-        <span className="brand">moyboard</span>
-
+      <div className="body" style={{ "--side-w": `${sideWidth}px` } as CSSProperties}>
+        <div className="stage">
+        <header className="top">
         <CategoryMenu
           value={filter}
           options={categoryOptions}
@@ -322,66 +322,6 @@ export default function App() {
           onEdit={editFilter}
           editable={filter !== ALL && filter !== NONE}
         />
-
-        <label className="top-field device">
-          <span className="sr-only">Output device</span>
-          <select
-            value={output.selected ?? ""}
-            onChange={async (e) => {
-              const name = e.target.value || null;
-              try {
-                await api.setOutputDevice(name);
-                setOutput((o) => ({ ...o, selected: name }));
-              } catch (err) {
-                notify(String(err));
-              }
-            }}
-          >
-            <option value="">System default output</option>
-            {output.devices.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="top-field volume">
-          <span>Others</span>
-          <input
-            type="range"
-            min={0}
-            max={2}
-            step={0.01}
-            value={master}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setMaster(v);
-              void api.setMasterVolume(v).catch((err) => notify(String(err)));
-            }}
-            aria-label="Volume for others (main output)"
-            aria-valuetext={`${Math.round(master * 100)} percent`}
-          />
-        </label>
-
-        <label className="top-field volume" title={output.monitorActive ? "Your volume: sounds you hear on the Windows default output" : "Off: the Windows default output is the main output"}>
-          <span>You</span>
-          <input
-            type="range"
-            min={0}
-            max={2}
-            step={0.01}
-            value={output.monitorVolume}
-            disabled={!output.monitorActive}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setOutput((o) => ({ ...o, monitorVolume: v }));
-              void api.setMonitorVolume(v).catch((err) => notify(String(err)));
-            }}
-            aria-label="Volume for you (monitor output)"
-            aria-valuetext={`${Math.round(output.monitorVolume * 100)} percent`}
-          />
-        </label>
 
         <div className="top-search" role="search">
           <Search size={16} aria-hidden="true" />
@@ -428,8 +368,6 @@ export default function App() {
           </IconButton>
         </div>
       </header>
-
-      <div className="body" style={{ "--side-w": `${sideWidth}px` } as CSSProperties}>
 
         <main className="main">
           {view === "settings" ? (
@@ -489,6 +427,72 @@ export default function App() {
             <div className="pads">{visible.map(renderPad)}</div>
           )}
         </main>
+
+        <footer className="bottom-bar">
+          <label className="top-field device">
+            <span>Play to</span>
+            <select
+              aria-label="Output device"
+              value={output.selected ?? ""}
+              onChange={async (e) => {
+                const name = e.target.value || null;
+                try {
+                  await api.setOutputDevice(name);
+                  setOutput((o) => ({ ...o, selected: name }));
+                } catch (err) {
+                  notify(String(err));
+                }
+              }}
+            >
+              <option value="">System default output</option>
+              {output.devices.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="top-field volume">
+            <span>Others</span>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={0.01}
+              value={master}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setMaster(v);
+                void api.setMasterVolume(v).catch((err) => notify(String(err)));
+              }}
+              aria-label="Volume for others (main output)"
+              aria-valuetext={`${Math.round(master * 100)} percent`}
+            />
+            <output className="value">{Math.round(master * 100)} %</output>
+          </label>
+
+          <label className="top-field volume" title={output.monitorActive ? "Your volume: sounds you hear on the Windows default output" : "Off: the Windows default output is the main output"}>
+            <span>You</span>
+            <input
+              type="range"
+              min={0}
+              max={2}
+              step={0.01}
+              value={output.monitorVolume}
+              disabled={!output.monitorActive}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setOutput((o) => ({ ...o, monitorVolume: v }));
+                void api.setMonitorVolume(v).catch((err) => notify(String(err)));
+              }}
+              aria-label="Volume for you (monitor output)"
+              aria-valuetext={`${Math.round(output.monitorVolume * 100)} percent`}
+            />
+            <output className="value">{Math.round(output.monitorVolume * 100)} %</output>
+          </label>
+        </footer>
+        </div>
 
         <SidebarHandle
           width={sideWidth}

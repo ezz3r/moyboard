@@ -57,7 +57,7 @@ export function CategoryPanel({ id, category, count, onChanged, onDeleted, onErr
 
       <p className="hint">{count === 1 ? "1 sound" : `${count} sounds`}. Sounds keep their colour if they set their own.</p>
 
-      <div>
+      <div className="panel-foot">
         <button
           type="button"
           className="btn btn-danger"

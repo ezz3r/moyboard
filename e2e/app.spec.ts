@@ -416,6 +416,24 @@ test("quick panel: arrows move between rows, Enter plays", async ({ page }) => {
   await expect(plays.nth(0)).toBeFocused();
 });
 
+test("layout: bottom bar sits under the grid and holds output and both volumes", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
+  const bar = page.locator(".bottom-bar");
+  await expect(bar.getByRole("combobox", { name: "Output device" })).toBeVisible();
+  await expect(bar.getByRole("slider", { name: "Volume for others (main output)" })).toBeVisible();
+  await expect(bar.getByRole("slider", { name: "Volume for you (monitor output)" })).toBeVisible();
+  const grid = (await page.locator(".main").boundingBox())!;
+  const strip = (await bar.boundingBox())!;
+  expect(grid.y + grid.height).toBeLessThanOrEqual(strip.y + 1);
+});
+
+test("layout: the edit card is inset from the window edge", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
+  const card = (await sidebar(page).boundingBox())!;
+  expect(card.x + card.width).toBeLessThanOrEqual(1200 - 16 + 1);
+  expect(card.y).toBeGreaterThanOrEqual(15);
+});
+
 test("sidebar: drag the handle to resize, double-click resets", async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 800 });
   const sidebar = page.locator(".sidebar");
