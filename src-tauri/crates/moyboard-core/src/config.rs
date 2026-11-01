@@ -125,6 +125,12 @@ pub struct Config {
     /// Guided cable setup. `None` means not started, `"guided"` means the guide is waiting for a
     /// cable, `"completed"` means a cable was found and the guide is done.
     pub setup_state: Option<String>,
+    /// Mode B microphone endpoint ID. `None` means the Windows default recording device.
+    pub mic_id: Option<String>,
+    /// Mic gain, 0..=2. `None` means 1.0.
+    pub mic_volume: Option<f32>,
+    /// The main window's "set up audio routing" banner was dismissed. `None` means shown.
+    pub banner_dismissed: Option<bool>,
     /// Custom colours used lately, newest first, `#rrggbb`, at most `RECENT_COLORS`.
     pub recent_colors: Vec<String>,
     pub sounds: BTreeMap<String, SoundMeta>,
@@ -225,6 +231,16 @@ mod tests {
         assert_eq!(cfg.sounds["a.mp3"].emoji.as_deref(), Some("📣"));
         assert_eq!(cfg.categories["c-memes"].name, "Memes");
         assert_eq!(cfg.recent_colors, vec!["#5fb3c9".to_string()]);
+    }
+
+    #[test]
+    fn routing_fields_default_to_none_and_load_from_old_files() {
+        // A config written before Mode B has none of the new keys.
+        let cfg: Config = serde_json::from_str(r#"{"audioMode":"mix","cablePlayback":"a"}"#).unwrap();
+        assert_eq!(cfg.audio_mode.as_deref(), Some("mix"));
+        assert_eq!(cfg.mic_id, None);
+        assert_eq!(cfg.mic_volume, None);
+        assert_eq!(cfg.banner_dismissed, None);
     }
 
     #[test]
