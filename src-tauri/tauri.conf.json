@@ -36,6 +36,9 @@
     ],
     "windows": {
       "nsis": {
+        "template": "installer/installer.nsi",
+        "installMode": "currentUser",
+        "languages": ["English", "German"],
         "installerIcon": "icons/icon.ico",
         "sidebarImage": "icons/installer-sidebar.bmp",
         "headerImage": "icons/installer-header.bmp"

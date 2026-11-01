@@ -200,3 +200,13 @@ before a release.
 - [ ] Changing "Play to" or the preview device does not disable "You".
 - [ ] Reset settings: after confirming, the output, preview, volumes, tile sizes, Quick Panel hotkey and mode, Stop all hotkey, library folder and "Start with Windows" are back to default; sounds and categories are still there.
 - [ ] Reset settings with "Start with Windows" on: the Run entry is removed (check the Startup folder or Task Manager's Startup tab).
+
+## Installer choice page (guided cable setup, not run on Windows)
+- [ ] Installer runs without admin prompt (`installMode: currentUser`).
+- [ ] English and German installer: "Virtual audio device" page appears after the directory page.
+- [ ] Default selection is "I already have one". Next writes `existing`.
+- [ ] Choosing "No, I only have a microphone" then Next writes `none`.
+- [ ] `reg query HKCU\Software\moyboard\Setup` shows `VirtualDevice` with the chosen value.
+- [ ] Silent `moyboard_*_x64-setup.exe /S` writes `existing`; `/S /VIRTUALDEVICE=none` writes `none`.
+- [ ] Silent install does not show the choice page.
+- [ ] Umlauts render correctly in the German page (`$\u` escapes in the template).
