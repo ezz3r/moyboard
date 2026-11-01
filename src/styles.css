@@ -1664,12 +1664,17 @@ button.group-title:hover {
   overflow: hidden;
 }
 
+/* Scrolls with wheel and touch; the bar itself is hidden. */
 .quick-body {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
   padding: 8px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.quick-body::-webkit-scrollbar {
+  display: none;
 }
 
 /* Rail: one row of icon buttons (move, stop, hide) and below it the category button. */
