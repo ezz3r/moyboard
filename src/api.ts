@@ -5,9 +5,14 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AppSettings,
+  AudioMode,
   AutostartSettings,
+  CablePair,
   CategoryMeta,
+  OutputDevice,
   QuickPanelSettings,
+  RoutingState,
+  SetupState,
   TileSizeKind,
   TileSizes,
   ImportReport,
@@ -58,6 +63,15 @@ export const api = {
     call<string>("export_trim", { fileName, trimStart, trimEnd }),
   setMonitorVolume: (volume: number) => call<void>("set_monitor_volume", { volume }),
   getSettings: () => call<AppSettings>("get_settings"),
+  getRouting: () => call<RoutingState>("get_routing"),
+  setAudioMode: (mode: AudioMode) => call<void>("set_audio_mode", { mode }),
+  setCable: (playback: string, record: string) => call<void>("set_cable", { playback, record }),
+  /** Saved cable if both sides are still connected, else the first known cable, else null. */
+  detectCable: () => call<CablePair | null>("detect_cable"),
+  setSetupState: (state: SetupState) => call<void>("set_setup_state", { state }),
+  listInputDevices: () => call<OutputDevice[]>("list_input_devices"),
+  /** Opens a fixed help link in the default browser. The backend allows only known links. */
+  openUrl: (url: string) => call<void>("open_url", { url }),
   setAutoRescan: (enabled: boolean) => call<void>("set_auto_rescan", { enabled }),
   setCloseToTray: (enabled: boolean) => call<void>("set_close_to_tray", { enabled }),
   getTileSizes: () => call<TileSizes>("get_tile_sizes"),

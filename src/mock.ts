@@ -55,6 +55,31 @@ let quickHotkey: string | null = null;
 let quickMode: "hold" | "toggle" = "toggle";
 let stopHotkey: string | null = null;
 let recentColors: string[] = [];
+// Mode B routing. The cable is "connected" only when a test (or the dev user) turns it on.
+let audioMode: "sounds" | "mix" = "sounds";
+let cablePlayback: string | null = null;
+let cableRecord: string | null = null;
+// The guide state survives a reload in this tab, so e2e can test the resume on start.
+function readSetupState(): "guided" | "completed" | null {
+  try {
+    const v = sessionStorage.getItem("mockSetupState");
+    return v === "guided" || v === "completed" ? v : null;
+  } catch {
+    return null;
+  }
+}
+let setupState: "guided" | "completed" | null = readSetupState();
+let cableConnected = false;
+const inputs = [
+  { id: "wasapi:mic", name: "Microphone (USB Audio)", isDefault: true },
+];
+const cableInputs = [
+  { id: "wasapi:cable-out", name: "CABLE Output (VB-Audio Virtual Cable)", isDefault: false },
+];
+// Dev and e2e only: lets a test plug the cable in while the guide is waiting.
+(window as unknown as { __mockCable: (on: boolean) => void }).__mockCable = (on: boolean) => {
+  cableConnected = on;
+};
 let library = dir;
 
 function blank(): SoundMeta {
@@ -129,6 +154,41 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
     }
     case "list_output_devices":
       return { devices, selected: output, masterVolume, monitorVolume, previewSelected: preview } as T;
+    case "get_routing":
+      return { mode: audioMode, cablePlayback, cableRecord, setupState } as T;
+    case "set_audio_mode": {
+      const mode = args.mode as "sounds" | "mix";
+      if (mode === "mix" && !cablePlayback) throw new Error("Choose a virtual cable first.");
+      audioMode = mode;
+      return undefined as T;
+    }
+    case "set_cable": {
+      if (!cableConnected) throw new Error("That cable is not connected. Check that both sides are listed in Windows.");
+      cablePlayback = args.playback as string;
+      cableRecord = args.record as string;
+      return undefined as T;
+    }
+    case "detect_cable":
+      if (!cableConnected) return null as T;
+      return {
+        playbackId: "wasapi:cable",
+        playbackName: "CABLE Input (VB-Audio Virtual Cable)",
+        recordId: "wasapi:cable-out",
+        recordName: "CABLE Output (VB-Audio Virtual Cable)",
+      } as T;
+    case "set_setup_state":
+      setupState = (args.state as "guided" | "completed" | null) ?? null;
+      try {
+        if (setupState) sessionStorage.setItem("mockSetupState", setupState);
+        else sessionStorage.removeItem("mockSetupState");
+      } catch {
+        // Storage can be blocked. The mock still works for this page load.
+      }
+      return undefined as T;
+    case "list_input_devices":
+      return (cableConnected ? [...inputs, ...cableInputs] : inputs) as T;
+    case "open_url":
+      return undefined as T;
     case "set_preview_device":
       preview = (args.name as string | null) ?? null;
       return undefined as T;
@@ -254,6 +314,10 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       closeToTray = true;
       autostart = false;
       startMinimized = false;
+      audioMode = "sounds";
+      cablePlayback = null;
+      cableRecord = null;
+      setupState = null;
       return undefined as T;
     default:
       throw new Error(`unknown command: ${cmd}`);

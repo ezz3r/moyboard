@@ -8,6 +8,7 @@ import { Pad } from "./components/Pad";
 import { SIDEBAR_DEFAULT, SidebarHandle } from "./components/SidebarHandle";
 import { SoundPanel } from "./components/SoundPanel";
 import { Settings as SettingsView } from "./components/Settings";
+import { CableGuide } from "./components/CableGuide";
 import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry, type TileSizes } from "./types";
 import { stemOf } from "./names";
 import { countsOf } from "./playback";
@@ -33,7 +34,7 @@ export default function App() {
     previewSelected: null,
   });
   const [settingsKey, setSettingsKey] = useState(0);
-  const [view, setView] = useState<"pads" | "settings">("pads");
+  const [view, setView] = useState<"pads" | "settings" | "guide">("pads");
   const [filter, setFilter] = useState(ALL);
   const [selection, setSelection] = useState<Selection>(null);
   const [query, setQuery] = useState("");
@@ -79,8 +80,14 @@ export default function App() {
     void (async () => {
       await loadSettings();
       await refresh();
+      // A guided cable setup that was not finished (or was postponed) resumes on start.
+      try {
+        if ((await api.getRouting()).setupState === "guided") setView("guide");
+      } catch (e) {
+        notify(String(e));
+      }
     })();
-  }, [loadSettings, refresh]);
+  }, [loadSettings, refresh, notify]);
 
   // Settings are remounted so their own sections (autostart, Quick Panel, ...) read the new values.
   const onReset = useCallback(async () => {
@@ -412,7 +419,14 @@ export default function App() {
               {stemOf(dragged.fileName)}
             </div>
           )}
-          {view === "settings" ? (
+          {view === "guide" ? (
+            <CableGuide
+              onFinish={() => setView("settings")}
+              onLater={() => setView("pads")}
+              onSomethingElse={() => setView("settings")}
+              onError={notify}
+            />
+          ) : view === "settings" ? (
             <SettingsView
               key={settingsKey}
               libraryDir={libraryDir}
@@ -427,6 +441,7 @@ export default function App() {
                 setTileSizes((t) => ({ ...t, [kind]: size }));
                 void api.setTileSize(kind, size).catch((e) => notify(String(e)));
               }}
+              onOpenGuide={() => setView("guide")}
             />
           ) : needle && (filter === ALL ? !sounds.some(matches) : visible.length === 0) ? (
             <p className="empty">No sounds found.</p>

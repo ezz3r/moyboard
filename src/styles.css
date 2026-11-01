@@ -1475,6 +1475,91 @@ button.group-title:hover {
 
 }
 
+/* Audio routing (Settings) and the cable guide */
+.segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.segment {
+  min-height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.segment.on {
+  background: var(--accent);
+  color: var(--surface);
+}
+
+.steps {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps code {
+  font-size: 12px;
+}
+
+.step-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.step-actions,
+.cable-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cable-pick > * {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.status {
+  margin: 6px 0 2px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.status.ok {
+  color: var(--ink);
+}
+
+.status.alarm {
+  color: var(--alarm);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.segment:focus-visible,
+.link-button:focus-visible,
+.step-actions .btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

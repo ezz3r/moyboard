@@ -91,3 +91,24 @@ export type Waveform = {
 export type TileSizeKind = "pad" | "padHeight" | "quick" | "quickHeight";
 
 export type TileSizes = { pad: number; padHeight: number; quick: number; quickHeight: number };
+
+/** "sounds" = Mode A (sounds to one output). "mix" = Mode B (sounds into the virtual cable). */
+export type AudioMode = "sounds" | "mix";
+
+/** Guided cable setup: null = not started, "guided" = waiting for a cable, "completed" = done. */
+export type SetupState = "guided" | "completed" | null;
+
+export type RoutingState = {
+  mode: AudioMode;
+  cablePlayback: string | null;
+  cableRecord: string | null;
+  setupState: SetupState;
+};
+
+/** A virtual cable with both sides connected. Playback is written to, record is read by Discord. */
+export type CablePair = {
+  playbackId: string;
+  playbackName: string;
+  recordId: string;
+  recordName: string;
+};

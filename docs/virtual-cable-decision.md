@@ -1,6 +1,10 @@
 # Virtual cable decision (gate test)
 
-Status: **pending**. Gate test not run yet. Milestones 2 onward depend on a pass.
+Status: **pending**. Gate test not run yet.
+
+Note: this gate was written for the earlier plan that bundled a driver. The current plan
+(guided VB-CABLE setup, no bundled driver) does not depend on it. The gate is kept for reference
+in case a bundled driver is reconsidered.
 
 Driver candidate: VirtualDrivers/Virtual-Audio-Driver (MIT). Pinned release: _TBD_.
 

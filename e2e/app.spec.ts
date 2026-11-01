@@ -706,3 +706,45 @@ test("reset settings puts a changed tile size back to its default", async ({ pag
   await page.getByRole("alertdialog").getByRole("button", { name: "Reset", exact: true }).click();
   await expect(quick).toHaveValue("56");
 });
+
+// Audio routing and the virtual cable guide (browser mock; no real devices).
+const plugCable = (page: Page, on: boolean) =>
+  page.evaluate((v) => (window as unknown as { __mockCable: (on: boolean) => void }).__mockCable(v), on);
+
+test("audio routing: Mode B needs a cable first", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("radio", { name: "Mic and sounds" }).click();
+  await expect(page.getByText("Choose a virtual cable first.")).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Sounds only" })).toHaveAttribute("aria-checked", "true");
+});
+
+test("cable guide: waits, finds the cable, and saves it", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Setup guide" }).click();
+  await expect(page.getByRole("heading", { name: "Install a virtual cable" })).toBeVisible();
+  await expect(page.getByText("Waiting for the virtual cable")).toBeVisible();
+  await plugCable(page, true);
+  await expect(page.getByRole("heading", { name: "Virtual cable found" })).toBeVisible({ timeout: 6000 });
+  await expect(page.getByText("CABLE Output (VB-Audio Virtual Cable)")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Audio routing" })).toBeVisible();
+});
+
+test("cable guide: an unfinished guide opens again on start", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Setup guide" }).click();
+  await expect(page.getByRole("heading", { name: "Install a virtual cable" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Install a virtual cable" })).toBeVisible();
+});
+
+test("cable guide: Mode B with a found cable shows the Discord input", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Setup guide" }).click();
+  await plugCable(page, true);
+  await expect(page.getByRole("heading", { name: "Virtual cable found" })).toBeVisible({ timeout: 6000 });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("radio", { name: "Mic and sounds" }).click();
+  await expect(page.getByText("Detected: CABLE Input (VB-Audio Virtual Cable) / CABLE Output (VB-Audio Virtual Cable)")).toBeVisible();
+  await expect(page.getByText("Input Device → CABLE Output (VB-Audio Virtual Cable)")).toBeVisible();
+});

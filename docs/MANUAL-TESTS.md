@@ -210,3 +210,17 @@ before a release.
 - [ ] Silent `moyboard_*_x64-setup.exe /S` writes `existing`; `/S /VIRTUALDEVICE=none` writes `none`.
 - [ ] Silent install does not show the choice page.
 - [ ] Umlauts render correctly in the German page (`$\u` escapes in the template).
+
+## Audio routing and cable guide (Mode A/B, not run on Windows)
+- [ ] Settings → Audio routing: "Sounds only" keeps the For others selector working.
+- [ ] "Mic and sounds" without a saved cable shows "Choose a virtual cable first." and stays on Sounds only.
+- [ ] With VB-CABLE installed, the cable line shows "Detected: CABLE Input / CABLE Output" and Discord input names the CABLE Output device.
+- [ ] Mode B: For others is replaced by the Mode B note; output really goes to the cable (play a pad, check the cable's meter in Windows).
+- [ ] Switching back to Sounds only restores the saved For others output.
+- [ ] Setup guide without a cable: "Waiting for the virtual cable…"; installing VB-CABLE (no reboot) turns it into "Virtual cable found" within about 2 s.
+- [ ] Setup guide "Open download page" opens https://vb-audio.com/Cable/ in the default browser (`explorer.exe`).
+- [ ] Guide started from Settings, app closed and reopened before a cable exists: the guide opens on start.
+- [ ] "Remind me later" closes the guide; it opens again on the next start while no cable is set up.
+- [ ] "I use something else" leaves the guide and opens Settings.
+- [ ] Checked the VB-Audio step texts against the live page (they can change).
+- [ ] Unplugging the cable while Mode B is active: the cable line shows "Not connected" (no crash).

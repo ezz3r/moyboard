@@ -115,6 +115,16 @@ pub struct Config {
     pub quick_tile_height: Option<u32>,
     /// Last position and size of the Quick Panel. `None` means the default.
     pub quick_panel_geometry: Option<PanelGeometry>,
+    /// `"sounds"` (Mode A: sounds to one output) or `"mix"` (Mode B: mic and sounds into a cable).
+    /// `None` means `"sounds"`.
+    pub audio_mode: Option<String>,
+    /// Mode B cable: the playback endpoint (moyboard writes to it) and the recording endpoint
+    /// (Discord reads from it). Endpoint IDs, not names.
+    pub cable_playback: Option<String>,
+    pub cable_record: Option<String>,
+    /// Guided cable setup. `None` means not started, `"guided"` means the guide is waiting for a
+    /// cable, `"completed"` means a cable was found and the guide is done.
+    pub setup_state: Option<String>,
     /// Custom colours used lately, newest first, `#rrggbb`, at most `RECENT_COLORS`.
     pub recent_colors: Vec<String>,
     pub sounds: BTreeMap<String, SoundMeta>,
@@ -198,6 +208,8 @@ mod tests {
             master_volume: Some(1.5),
             quick_tile_size: Some(90),
             stop_all_hotkey: Some("Ctrl+Shift+KeyS".into()),
+            audio_mode: Some("mix".into()),
+            setup_state: Some("guided".into()),
             recent_colors: vec!["#5fb3c9".into()],
             ..Default::default()
         };
@@ -208,6 +220,8 @@ mod tests {
         assert_eq!(cfg.master_volume, None);
         assert_eq!(cfg.quick_tile_size, None);
         assert_eq!(cfg.stop_all_hotkey, None);
+        assert_eq!(cfg.audio_mode, None);
+        assert_eq!(cfg.setup_state, None);
         assert_eq!(cfg.sounds["a.mp3"].emoji.as_deref(), Some("📣"));
         assert_eq!(cfg.categories["c-memes"].name, "Memes");
         assert_eq!(cfg.recent_colors, vec!["#5fb3c9".to_string()]);

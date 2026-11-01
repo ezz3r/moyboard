@@ -84,6 +84,20 @@ impl Engine {
             .collect())
     }
 
+    /// Recording endpoints (inputs), with the same IDs as outputs use. Only for cable detection
+    /// and the microphone list; nothing is opened here.
+    pub fn list_input_devices() -> Result<Vec<DeviceInfo>, String> {
+        let host = cpal::default_host();
+        let default = host.default_input_device().and_then(|d| device_id(&d));
+        let devices = host.input_devices().map_err(|e| e.to_string())?;
+        Ok(devices
+            .filter_map(|d| {
+                let id = device_id(&d)?;
+                Some(DeviceInfo { name: device_name(&d), is_default: Some(&id) == default.as_ref(), id })
+            })
+            .collect())
+    }
+
     /// `None` selects the system default output. Stops main playback, keeps previews.
     pub fn set_device(&mut self, id: Option<&str>) -> Result<(), String> {
         let sink = open(id)?;

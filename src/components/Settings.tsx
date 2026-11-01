@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, pickFolder } from "../api";
-import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings, TileSizeKind, TileSizes } from "../types";
+import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings, RoutingState, TileSizeKind, TileSizes } from "../types";
+import { AudioRouting } from "./AudioRouting";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { HotkeyField } from "./HotkeyField";
 import { Select } from "./Select";
@@ -15,6 +16,7 @@ type Props = {
   onReset: () => void;
   tileSizes: TileSizes;
   onTileSizeChanged: (kind: TileSizeKind, size: number) => void;
+  onOpenGuide: () => void;
 };
 
 export function Settings({
@@ -27,7 +29,13 @@ export function Settings({
   onReset,
   tileSizes,
   onTileSizeChanged,
+  onOpenGuide,
 }: Props) {
+  const [routing, setRouting] = useState<RoutingState | null>(null);
+  useEffect(() => {
+    api.getRouting().then(setRouting).catch((e) => onError(String(e)));
+  }, [onError]);
+
   return (
     <div className="settings">
       <section className="settings-section">
@@ -53,25 +61,57 @@ export function Settings({
       </section>
 
       <section className="settings-section">
+        <h2>Audio routing</h2>
+        {routing && (
+          <AudioRouting
+            routing={routing}
+            outputs={output.devices}
+            onRoutingChanged={setRouting}
+            onOpenGuide={async () => {
+              // Opening the guide marks it as in progress unless a cable is already set up.
+              // The state is saved before the guide opens, so a restart right after resumes it.
+              if (routing.setupState !== "completed") {
+                try {
+                  await api.setSetupState("guided");
+                } catch (e) {
+                  onError(String(e));
+                }
+              }
+              onOpenGuide();
+            }}
+            onError={onError}
+          />
+        )}
+      </section>
+
+      <section className="settings-section">
         <h2>For others</h2>
-        <p className="hint">Pick the virtual cable that Discord or your game listens to.</p>
-        <Select
-          aria-label="For others"
-          value={output.selected ?? ""}
-          options={[
-            { value: "", label: "System default" },
-            ...output.devices.map((d) => ({ value: d.id, label: d.name + (d.isDefault ? " (default)" : "") })),
-          ]}
-          onChange={async (v) => {
-            const name = v || null;
-            try {
-              await api.setOutputDevice(name);
-              onOutputChanged({ selected: name });
-            } catch (err) {
-              onError(String(err));
-            }
-          }}
-        />
+        {routing?.mode === "mix" ? (
+          <>
+            <p className="hint">In Mode B, sounds go to the virtual cable chosen under Audio routing.</p>
+          </>
+        ) : (
+          <>
+            <p className="hint">Pick the virtual cable that Discord or your game listens to.</p>
+            <Select
+              aria-label="For others"
+              value={output.selected ?? ""}
+              options={[
+                { value: "", label: "System default" },
+                ...output.devices.map((d) => ({ value: d.id, label: d.name + (d.isDefault ? " (default)" : "") })),
+              ]}
+              onChange={async (v) => {
+                const name = v || null;
+                try {
+                  await api.setOutputDevice(name);
+                  onOutputChanged({ selected: name });
+                } catch (err) {
+                  onError(String(err));
+                }
+              }}
+            />
+          </>
+        )}
       </section>
 
       <section className="settings-section">

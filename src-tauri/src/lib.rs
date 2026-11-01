@@ -7,6 +7,7 @@ use moyboard_core::{config, library, wav};
 
 use audio::{DeviceInfo, Engine, Playing};
 use config::{CategoryMeta, Config, PanelGeometry, SoundMeta, Store, check_color, clean_category_name};
+use moyboard_core::cable::{self, CablePair, Endpoint};
 use hotkeys::Hotkeys;
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -529,8 +530,125 @@ fn set_output_device(
     store: tauri::State<Store>,
     engine: tauri::State<AudioState>,
 ) -> Result<(), String> {
+    if store.get(|cfg| cfg.audio_mode.as_deref() == Some("mix")) {
+        return Err("Mode B sends to the virtual cable. Switch to Mode A to pick another output.".into());
+    }
     lock(&engine)?.set_device(name.as_deref())?;
     store.update(|cfg| cfg.output_device = name)
+}
+
+/// Audio routing as saved. The cable's live state comes from `detect_cable`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RoutingState {
+    /// `"sounds"` (Mode A) or `"mix"` (Mode B).
+    mode: String,
+    cable_playback: Option<String>,
+    cable_record: Option<String>,
+    setup_state: Option<String>,
+}
+
+#[tauri::command]
+fn get_routing(store: tauri::State<Store>) -> RoutingState {
+    store.get(|cfg| RoutingState {
+        mode: cfg.audio_mode.clone().unwrap_or_else(|| "sounds".into()),
+        cable_playback: cfg.cable_playback.clone(),
+        cable_record: cfg.cable_record.clone(),
+        setup_state: cfg.setup_state.clone(),
+    })
+}
+
+/// Mode A (`sounds`) uses the chosen output. Mode B (`mix`) uses the cable's playback side.
+/// The device opens before the mode is saved, so a failure changes nothing.
+#[tauri::command]
+fn set_audio_mode(mode: String, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
+    if mode != "sounds" && mode != "mix" {
+        return Err(format!("unknown audio mode: {mode}"));
+    }
+    let (cable, output) = store.get(|cfg| (cfg.cable_playback.clone(), cfg.output_device.clone()));
+    let target = if mode == "mix" {
+        Some(cable.ok_or("Choose a virtual cable first.")?)
+    } else {
+        output
+    };
+    lock(&engine)?.set_device(target.as_deref())?;
+    store.update(|cfg| cfg.audio_mode = Some(mode))
+}
+
+/// Saves the Mode B cable. Both sides must be connected right now.
+#[tauri::command]
+fn set_cable(
+    playback: String,
+    record: String,
+    store: tauri::State<Store>,
+    engine: tauri::State<AudioState>,
+) -> Result<(), String> {
+    let (out, inp) = endpoints_now()?;
+    cable::check_pair(&out, &inp, &playback, &record)
+        .ok_or("That cable is not connected. Check that both sides are listed in Windows.")?;
+    if store.get(|cfg| cfg.audio_mode.as_deref() == Some("mix")) {
+        lock(&engine)?.set_device(Some(&playback))?;
+    }
+    store.update(|cfg| {
+        cfg.cable_playback = Some(playback);
+        cfg.cable_record = Some(record);
+    })
+}
+
+/// The cable to use now: the saved pair when both sides are still there, otherwise the first
+/// known cable found by name. `None` when no cable is connected.
+#[tauri::command]
+fn detect_cable(store: tauri::State<Store>) -> Result<Option<CablePair>, String> {
+    let (out, inp) = endpoints_now()?;
+    let saved = store.get(|cfg| (cfg.cable_playback.clone(), cfg.cable_record.clone()));
+    if let (Some(p), Some(r)) = saved {
+        if let Some(pair) = cable::check_pair(&out, &inp, &p, &r) {
+            return Ok(Some(pair));
+        }
+    }
+    Ok(cable::find_cable(&out, &inp))
+}
+
+/// Saved guided-setup state: `None`, `"guided"` or `"completed"`.
+#[tauri::command]
+fn set_setup_state(state: Option<String>, store: tauri::State<Store>) -> Result<(), String> {
+    if let Some(s) = &state {
+        if s != "guided" && s != "completed" {
+            return Err(format!("unknown setup state: {s}"));
+        }
+    }
+    store.update(|cfg| cfg.setup_state = state)
+}
+
+#[tauri::command]
+fn list_input_devices() -> Result<Vec<DeviceInfo>, String> {
+    Engine::list_input_devices()
+}
+
+/// Opens one of the fixed help links in the default browser. Anything else is refused, so the
+/// frontend cannot open arbitrary URLs.
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    const ALLOWED: [&str; 2] = ["https://vb-audio.com/Cable/", "https://vb-audio.com/"];
+    if !ALLOWED.contains(&url.as_str()) {
+        return Err("link not allowed".into());
+    }
+    // explorer.exe hands an https URL to the default browser. Other systems use xdg-open (dev only).
+    #[cfg(windows)]
+    let program = "explorer.exe";
+    #[cfg(not(windows))]
+    let program = "xdg-open";
+    std::process::Command::new(program)
+        .arg(&url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("open browser: {e}"))
+}
+
+fn endpoints_now() -> Result<(Vec<Endpoint>, Vec<Endpoint>), String> {
+    let to_endpoints =
+        |list: Vec<DeviceInfo>| list.into_iter().map(|d| Endpoint { id: d.id, name: d.name }).collect();
+    Ok((to_endpoints(Engine::list_devices()?), to_endpoints(Engine::list_input_devices()?)))
 }
 
 #[tauri::command]
@@ -997,10 +1115,15 @@ pub fn run() {
 
             let mut engine = Engine::new();
             let mon_gain = store.get(|cfg| cfg.monitor_volume);
+            // Mode B opens the cable instead of the saved output. The saved output stays as it was.
+            let active = store.get(|cfg| match cfg.audio_mode.as_deref() {
+                Some("mix") => cfg.cable_playback.clone(),
+                _ => out.clone(),
+            });
             // A saved main or preview device that is gone is kept, so play reports it instead of using the default.
-            if let Err(e) = engine.set_device(out.as_deref()) {
+            if let Err(e) = engine.set_device(active.as_deref()) {
                 eprintln!("moyboard: saved output device unavailable: {e}");
-                engine.keep_unavailable(out.as_deref(), None);
+                engine.keep_unavailable(active.as_deref(), None);
             }
             engine.set_monitor_gain(mon_gain.unwrap_or(1.0));
             engine.set_master(store.get(|cfg| cfg.master_volume).unwrap_or(1.0));
@@ -1095,6 +1218,13 @@ pub fn run() {
             delete_category,
             list_output_devices,
             set_output_device,
+            get_routing,
+            set_audio_mode,
+            set_cable,
+            detect_cable,
+            set_setup_state,
+            list_input_devices,
+            open_url,
             set_monitor_volume,
             set_preview_device,
             get_settings,
