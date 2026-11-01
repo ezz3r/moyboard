@@ -105,14 +105,14 @@ export function Settings({
       <section className="settings-section">
         <h2>Tile size</h2>
         <p className="hint">Smallest width and height of a tile. Tiles reflow to fit the window.</p>
-        <TileSlider
+        <TileNumber
           label="Soundboard width"
           value={tileSizes.pad}
           min={96}
           max={240}
           onChange={(v) => onTileSizeChanged("pad", v)}
         />
-        <TileSlider
+        <TileNumber
           label="Soundboard height"
           value={tileSizes.padHeight}
           min={64}
@@ -122,11 +122,15 @@ export function Settings({
         <TileNumber
           label="Quick Panel width"
           value={tileSizes.quick}
+          min={16}
+          max={400}
           onChange={(v) => onTileSizeChanged("quick", v)}
         />
         <TileNumber
           label="Quick Panel height"
           value={tileSizes.quickHeight}
+          min={16}
+          max={400}
           onChange={(v) => onTileSizeChanged("quickHeight", v)}
         />
       </section>
@@ -402,33 +406,8 @@ function StartupSection({ onError }: { onError: (m: string) => void }) {
   );
 }
 
-/** Free number entry in px for the Quick Panel tiles. Saves each valid value; 16 px is the smallest that still lays out. */
-function TileNumber({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  const [draft, setDraft] = useState(String(value));
-  useEffect(() => setDraft(String(value)), [value]);
-  return (
-    <label className="inline-field">
-      <span>{label}</span>
-      <span className="tile-number">
-        <input
-          type="number"
-          min={16}
-          max={400}
-          step={1}
-          value={draft}
-          onChange={(e) => {
-            setDraft(e.target.value);
-            const n = Number(e.target.value);
-            if (Number.isInteger(n) && n >= 16 && n <= 400) onChange(n);
-          }}
-        />
-        <span>px</span>
-      </span>
-    </label>
-  );
-}
-
-function TileSlider({
+/** Number entry in px for a tile size. Saves each valid value within min..max. */
+function TileNumber({
   label,
   value,
   min,
@@ -441,12 +420,27 @@ function TileSlider({
   max: number;
   onChange: (v: number) => void;
 }) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
   return (
     <label className="inline-field">
-      <span>
-        {label} <output className="value">{value} px</output>
+      <span>{label}</span>
+      <span className="tile-number">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={1}
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            const n = Number(e.target.value);
+            if (Number.isInteger(n) && n >= min && n <= max) onChange(n);
+          }}
+        />
+        <span>px</span>
       </span>
-      <input type="range" min={min} max={max} step={4} value={value} onChange={(e) => onChange(Number(e.target.value))} />
     </label>
   );
 }
+
