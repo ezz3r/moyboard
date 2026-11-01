@@ -27,6 +27,21 @@ export function QuickPanel() {
   const [tileH, setTileH] = useState(56);
   const [catOpen, setCatOpen] = useState(false);
   const rail = useRef<HTMLElement>(null);
+  const body = useRef<HTMLDivElement>(null);
+
+  // Hold mode keeps the hotkey down while scrolling. With Ctrl or Alt held the wheel zooms or does
+  // nothing, so the board scrolls itself. The listener is not passive, so the zoom can be stopped.
+  useEffect(() => {
+    const el = body.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.altKey && !e.shiftKey) return;
+      e.preventDefault();
+      el.scrollTop += e.deltaY || e.deltaX;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -155,7 +170,7 @@ export function QuickPanel() {
 
   return (
     <div className="quick" style={{ "--tile-min": `${tileMin}px`, "--tile-h": `${tileH}px` } as CSSProperties}>
-      <div className="quick-body">
+      <div className="quick-body" ref={body}>
         {error && (
           <p className="quick-error" role="alert">
             {error}

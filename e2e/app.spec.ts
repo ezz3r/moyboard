@@ -673,3 +673,21 @@ test("pad buttons go away when the pointer leaves, even after a click on the nam
   await page.mouse.move(0, 0);
   await expect(play).toBeHidden();
 });
+
+test("quick panel: the wheel scrolls the board while Ctrl, Alt or Shift is held (hold mode)", async ({ page }) => {
+  await page.goto("/?view=quick");
+  await page.locator(".quick .tile").first().waitFor();
+  // Shorter than the tiles, so there is something to scroll.
+  await page.evaluate(() => ((document.querySelector(".quick") as HTMLElement).style.height = "40px"));
+  for (const mod of ["ctrlKey", "altKey", "shiftKey"] as const) {
+    const top = await page.evaluate((m) => {
+      const body = document.querySelector(".quick-body") as HTMLElement;
+      body.scrollTop = 0;
+      const ev = new WheelEvent("wheel", { deltaY: 80, bubbles: true, cancelable: true, [m]: true });
+      body.dispatchEvent(ev);
+      return { scrolled: body.scrollTop, prevented: ev.defaultPrevented };
+    }, mod);
+    expect(top.scrolled, mod).toBeGreaterThan(0);
+    expect(top.prevented, mod).toBe(true);
+  }
+});
