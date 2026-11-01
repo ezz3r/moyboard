@@ -224,3 +224,19 @@ before a release.
 - [ ] "I use something else" leaves the guide and opens Settings.
 - [ ] Checked the VB-Audio step texts against the live page (they can change).
 - [ ] Unplugging the cable while Mode B is active: the cable line shows "Not connected" (no crash).
+
+## Mode B: mic and sounds (Windows, real devices)
+- [ ] Fresh VB-CABLE install on a clean VM or snapshot: after Refresh, the cable is detected and the install hint disappears.
+- [ ] No cable: the hint box shows "Open VB-Audio website", and it opens https://vb-audio.com/Cable/ in the browser.
+- [ ] Mic and sounds: Discord (input = CABLE Output) hears the microphone and sounds together.
+- [ ] Mic level meter moves while speaking; microphone volume changes what Discord hears.
+- [ ] Test cable: success message on a working setup; error message after unplugging the cable.
+- [ ] Mic unplugged while running: Settings shows the error; plugging it back in restarts the mic within about 2 s.
+- [ ] Microphone privacy denied (Windows Settings → Privacy → Microphone off for desktop apps): error and the privacy button opens `ms-settings:privacy-microphone`.
+- [ ] Tray tooltip reads "moyboard – Mic routing active" in Mode B and "moyboard" in Mode A.
+- [ ] Latency: speaking and hearing it in Discord's self-view feels acceptable (no multi-second delay).
+- [ ] 30+ minute run with sounds and speech: no crackling, no growing delay (drift handling in `moyboard-core/src/mic.rs`).
+- [ ] Sample rates 44.1, 48 and 96 kHz for the mic and the cable (Windows sound settings).
+- [ ] Mixer setup (Wave Link, VoiceMeeter) still works in Sounds only mode.
+- [ ] Quick Panel, hotkeys and stop-all work unchanged in both modes.
+- [ ] Banner on the pads until a cable is saved or dismissed; dismiss stays after restart.

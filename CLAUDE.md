@@ -63,9 +63,11 @@ src-tauri/
   src/audio.rs           Engine: output streams, per-sound players, monitor, waveform, WAV export
   src/hotkeys.rs         global shortcut registry (shortcut id -> file name; Quick Panel hotkey with Hold/Toggle)
   src/watch.rs           folder watcher, emits `library-changed` (debounced 300 ms)
+  src/mic.rs             Mode B mic capture (cpal input -> rtrb ring -> rodio source in the cable mixer), cable test peak
   crates/moyboard-core/  pure logic, no audio dependency (testable on Linux)
     src/library.rs       list/import/create files, name collision handling, path checks
     src/config.rs        SoundMeta, Config, Store (moyboard.json, atomic writes)
+    src/mic.rs           mic drift rule (fill window 10-60 ms), mono mean
     src/wav.rs           trim_window, wav_header
 e2e/app.spec.ts          Playwright UI flows (run against dev server + mock)
 docs/MANUAL-TESTS.md     Windows checklist for things automation cannot cover
@@ -168,7 +170,7 @@ Prerequisites (WSL): rustup with the `x86_64-pc-windows-msvc` target, `cargo-xwi
 1. `npm run build` passes (tsc is strict; `noUnusedLocals` is on).
 2. `cargo test --manifest-path src-tauri/crates/moyboard-core/Cargo.toml` passes.
 3. `cargo xwin check --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc --tests` passes with no warnings.
-4. `npm run test:e2e` passes (61 tests at time of writing).
+4. `npm run test:e2e` passes (74 tests at time of writing; the drag-cancel case already fails on 43618fe, see the Known gaps).
 5. For UI changes: look at the result (Playwright screenshot or `npm run dev`) at desktop width and at 420 px.
 6. For Windows-specific behavior (audio routing, global hotkeys, OS drag-and-drop, watcher, folder picker):
    say clearly that it was not run, and add or update the relevant item in `docs/MANUAL-TESTS.md`.
@@ -176,6 +178,8 @@ Prerequisites (WSL): rustup with the `x86_64-pc-windows-msvc` target, `cargo-xwi
 ## Known gaps and limits
 
 - Not yet verified on a real Windows machine with a real virtual cable (see `docs/MANUAL-TESTS.md`).
+- Mode B mic mixing, cable test and drift handling are not run on Windows yet; only compiled (`cargo xwin check`) and unit-tested for the pure rules.
+- Mode A output list does not sort virtual devices first yet.
 - Host (Linux) `cargo test` for the `moyboard` crate needs ALSA headers; `moyboard-core` tests do not.
 - Playwright tests use the browser mock. They do not cover Tauri IPC, audio, hotkeys, tray, autostart, window move/resize, or OS drag-and-drop.
 - Quick Panel and tray behaviour (focus, hold/toggle, monitor clamping, Run entry) is unverified on Windows.
