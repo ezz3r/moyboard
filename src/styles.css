@@ -15,12 +15,11 @@
   --accent: #0066cc;
   --accent-ink: #ffffff;
   --alarm: #c9372c;
-  /* Playing on the main output (blue) and in the headphone preview (green). Icon and bars carry the meaning too. */
-  --playing-main: #0066cc;
-  --playing-preview: #1d7f3a;
-  /* Colour marking strengths: plate on the icon, tint of the surface. Dark themes need more. */
+  /* Playing for others (green) and for yourself in the headphone preview (yellow). */
+  --playing-others: #1d7f3a;
+  --playing-self: #9a6700;
+  /* Colour marking strength: the disc behind the icon. Dark themes need more. */
   --plate-pct: 22%;
-  --tint-pct: 10%;
   --scrim: rgb(0 0 0 / 0.35);
   --elevation: 0 8px 24px rgb(0 0 0 / 0.14);
   --rgb-accent: 0, 102, 204;
@@ -53,10 +52,9 @@
     --accent: #4da3ff;
     --accent-ink: #001a33;
     --alarm: #ff6961;
-    --playing-main: #4da3ff;
-    --playing-preview: #5fd17f;
+    --playing-others: #5fd17f;
+    --playing-self: #ffd60a;
     --plate-pct: 30%;
-    --tint-pct: 14%;
     --scrim: rgb(0 0 0 / 0.55);
     --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
     --rgb-accent: 77, 163, 255;
@@ -78,10 +76,9 @@
   --accent: #4da3ff;
   --accent-ink: #001a33;
   --alarm: #ff6961;
-  --playing-main: #4da3ff;
-  --playing-preview: #5fd17f;
+  --playing-others: #5fd17f;
+  --playing-self: #ffd60a;
   --plate-pct: 30%;
-  --tint-pct: 14%;
   --scrim: rgb(0 0 0 / 0.55);
   --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
   --rgb-accent: 77, 163, 255;
@@ -755,9 +752,9 @@ button.group-title:hover {
   flex-direction: column;
   gap: 6px;
   padding: 6px 6px 0;
-  border: 1px solid var(--cat-line, var(--line));
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--tint, var(--surface));
+  background: var(--surface);
   transition: border-color 120ms ease;
 }
 
@@ -887,20 +884,24 @@ button.group-title:hover {
   pointer-events: none;
 }
 
-/* Icon plate: a rounded square in the colour (or neutral). Holds the emoji. */
+/* Colour: a soft disc behind the icon. No frame or border. Clamped to the pad height, so it never reaches the name. */
 .pad-plate,
 .tile-plate {
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  border-radius: 14px;
-  background: var(--plate, color-mix(in srgb, var(--ink-2) 14%, var(--surface)));
-  line-height: 1;
+  border-radius: 50%;
+  background: var(--plate, transparent);
 }
 
 .pad-plate {
-  width: calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.5);
-  font-size: calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.26);
+  height: min(100%, calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.7));
+}
+
+.pad-mark {
+  font-size: calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.5);
+  line-height: 1;
+  opacity: 0.28;
 }
 
 /* One line. A long name fades out at the end instead of wrapping. The full name is in the tooltip. */
@@ -931,13 +932,13 @@ button.group-title:hover {
 
 /* Live ring: a steady ring in the category colour while the pad sounds. No animation. */
 .pad.is-playing {
-  border-color: var(--playing-main);
-  box-shadow: 0 0 0 2px var(--playing-main);
+  border-color: var(--playing-others);
+  box-shadow: 0 0 0 2px var(--playing-others);
 }
 
 .pad.is-previewing:not(.is-playing) {
-  border-color: var(--playing-preview);
-  box-shadow: 0 0 0 2px var(--playing-preview);
+  border-color: var(--playing-self);
+  box-shadow: 0 0 0 2px var(--playing-self);
 }
 
 /* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
@@ -989,11 +990,11 @@ button.group-title:hover {
 }
 
 .playing-badge.is-main {
-  color: var(--playing-main);
+  color: var(--playing-others);
 }
 
 .playing-badge.is-preview {
-  color: var(--playing-preview);
+  color: var(--playing-self);
 }
 
 .playing-eq {
@@ -1955,9 +1956,9 @@ button.group-title:hover {
 .tile {
   position: relative;
   height: var(--tile-h, 56px);
-  border: 1px solid var(--cat-line, var(--line));
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--tint, var(--surface));
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -1967,11 +1968,11 @@ button.group-title:hover {
 }
 
 .tile.is-playing {
-  border-color: var(--playing-main);
+  border-color: var(--playing-others);
 }
 
 .tile.is-previewing:not(.is-playing) {
-  border-color: var(--playing-preview);
+  border-color: var(--playing-self);
 }
 
 .tile.is-missing {
@@ -2008,17 +2009,22 @@ button.group-title:hover {
 /* Tile text scales with --tile-min (56 px tile: 14 px emoji, 10 px name). */
 /* Icon is the background, in the upper part; the name sits centred under it, in front. */
 .tile-glyph {
-  position: absolute;
-  inset: 0 0 calc(var(--tile-min, 56px) * 0.5) 0;
-  z-index: 0;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
   display: grid;
   place-items: center;
   pointer-events: none;
 }
 
 .tile-plate {
-  width: calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.6);
-  font-size: calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.3);
+  height: min(100%, calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.7));
+}
+
+.tile-mark {
+  font-size: calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.5);
+  line-height: 1;
+  opacity: 0.28;
 }
 
 .tile-name {
@@ -2059,14 +2065,7 @@ button.group-title:hover {
   pointer-events: none;
 }
 
-.tile-status {
-  position: absolute;
-  right: 4px;
-  top: 4px;
-  display: flex;
-  gap: 3px;
-  pointer-events: none;
-}
+
 
 .quick-resize {
   position: absolute;

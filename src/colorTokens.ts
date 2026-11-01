@@ -22,11 +22,10 @@ export function resolveColor(meta: SoundMeta, categories: Record<string, Categor
 }
 
 /**
- * CSS variables for one colour marking: `--cat` (the colour), `--plate` (icon background),
- * `--tint` (surface tint) and `--cat-line` (hairline border). All are opaque mixes with the
- * surface, so they never stack on the page. Strengths come from `--plate-pct` and `--tint-pct`
- * (set per theme in styles.css). Very light and very dark colours get a stronger plate, so it
- * still shows on the surface. Null gives no variables; the CSS falls back to neutral.
+ * CSS variables for one colour marking: `--cat` (the colour) and `--plate` (the disc behind the
+ * icon). The plate is an opaque mix with the surface. Its strength comes from `--plate-pct`
+ * (set per theme in styles.css). Very light and very dark colours get a stronger disc, so it
+ * still shows on the surface. The pad and tile surface stay neutral. Null gives no variables.
  */
 export function colorStyle(color: string | null): CSSProperties {
   if (!color) return {};
@@ -36,7 +35,5 @@ export function colorStyle(color: string | null): CSSProperties {
   return {
     "--cat": color,
     "--plate": `color-mix(in srgb, ${color} calc(var(--plate-pct) * ${boost}), var(--surface))`,
-    "--tint": `color-mix(in srgb, ${color} var(--tint-pct), var(--surface))`,
-    "--cat-line": `color-mix(in srgb, ${color} 45%, var(--line))`,
   } as CSSProperties;
 }

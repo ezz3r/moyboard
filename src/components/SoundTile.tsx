@@ -1,7 +1,6 @@
 import type { SoundEntry } from "../types";
 import { hotkeyLabel, stemOf } from "../names";
 import type { Counts } from "../playback";
-import { PlayingBadge } from "./PlayingBadge";
 import { colorStyle } from "../colorTokens";
 
 type Props = {
@@ -43,18 +42,14 @@ export function SoundTile({ entry, accent, counts, onPlay, onPreview }: Props) {
         title={`${name}\nLeft click: play · Right click: preview`}
       >
         <span className="tile-glyph" aria-hidden="true">
-          <span className="tile-plate">{missing ? "!" : (entry.meta.emoji ?? "♪")}</span>
+          <span className="tile-plate">
+            <span className="tile-mark">{missing ? "!" : (entry.meta.emoji ?? "♪")}</span>
+          </span>
         </span>
         <span className="tile-name">{missing ? "File missing" : name}</span>
       </button>
 
       {entry.meta.hotkey && !missing && <span className="tile-key">{hotkeyLabel(entry.meta.hotkey)}</span>}
-      {(playing || previewing) && !missing && (
-        <div className="tile-status">
-          {playing && <PlayingBadge output="main" count={main} />}
-          {previewing && <PlayingBadge output="preview" count={preview} />}
-        </div>
-      )}
     </div>
   );
 }

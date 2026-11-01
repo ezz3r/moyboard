@@ -58,7 +58,9 @@ export function Pad({
   return (
     <div className={classes} style={colorStyle(accent)} onPointerDown={onDragStart}>
       <span className="pad-glyph" aria-hidden="true">
-        <span className="pad-plate">{missing ? "!" : (entry.meta.emoji ?? "♪")}</span>
+        <span className="pad-plate">
+          <span className="pad-mark">{missing ? "!" : (entry.meta.emoji ?? "♪")}</span>
+        </span>
       </span>
 
       {missing ? null : (

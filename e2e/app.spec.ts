@@ -609,18 +609,18 @@ test("category menu: arrow keys move through entries, Escape closes", async ({ p
   await expect(menuTrigger(page)).toBeFocused();
 });
 
-test("playing badges: main is blue, headphone preview is green, both show two badges", async ({ page }) => {
+test("playing badges: others are green, yourself in the preview is yellow, both show two badges", async ({ page }) => {
   const airhorn = pad(page, "airhorn");
   await airhorn.hover();
   await airhorn.getByRole("button", { name: "Play airhorn" }).click();
   const main = airhorn.locator(".playing-badge.is-main");
   await expect(main).toBeVisible();
-  await expect(main).toHaveCSS("color", "rgb(0, 102, 204)");
+  await expect(main).toHaveCSS("color", "rgb(29, 127, 58)");
   await expect(airhorn.locator(".playing-badge.is-preview")).toHaveCount(0);
   await airhorn.getByRole("button", { name: "Preview airhorn on headphones" }).click();
   const preview = airhorn.locator(".playing-badge.is-preview");
   await expect(preview).toBeVisible();
-  await expect(preview).toHaveCSS("color", "rgb(29, 127, 58)");
+  await expect(preview).toHaveCSS("color", "rgb(154, 103, 0)");
   await expect(airhorn.locator(".playing-badge")).toHaveCount(2);
 });
 
