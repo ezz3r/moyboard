@@ -1637,6 +1637,17 @@ button.group-title:hover {
 /* ---------- Quick Panel window ---------- */
 
 /* The panel shows and hides at once: no fades, transitions or animations in this window. */
+.quick-error {
+  margin: 6px;
+  color: var(--alarm);
+  font-size: 13px;
+}
+
+/* Dense list: one row per sound, grouped by category. */
+/* Tiles: small squares in a grid, row by row. Same look as the main board, only smaller. */
+/* ---------- Quick Panel ----------
+   Frameless window: tiles on the left, a narrow rail on the right with the category filter,
+   window move, Stop and Hide. No transitions: the window is shown and hidden often. */
 .quick,
 .quick * {
   transition: none !important;
@@ -1644,84 +1655,121 @@ button.group-title:hover {
 }
 
 .quick {
-  height: 100vh;
+  height: 100%;
   display: flex;
-  flex-direction: column;
-  border: 1px solid var(--line);
+  flex-direction: row;
   background: var(--ground);
-  position: relative;
-}
-
-.quick-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px;
-  border-bottom: 1px solid var(--line);
-}
-
-.quick-grip {
-  display: inline-grid;
-  place-items: center;
-  width: 26px;
-  height: 34px;
-  padding: 0;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  color: var(--ink-2);
-  font-size: 16px;
-  cursor: move;
-}
-
-.quick-grip:hover {
-  color: var(--ink);
-  border-color: var(--line);
-}
-
-.quick-search {
-  flex: 1;
-  min-width: 96px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  height: 34px;
-  background: var(--surface);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius);
-  color: var(--ink-2);
-}
-
-.quick-search input {
-  flex: 1;
-  min-width: 0;
-  background: none;
-  border: 0;
-  color: var(--ink);
-  font: inherit;
-  outline: none;
-}
-
-.quick-search:focus-within {
-  border-color: var(--accent);
-}
-
-.quick-error {
-  margin: 6px;
-  color: var(--alarm);
-  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .quick-body {
   flex: 1;
-  min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   padding: 8px;
+  scrollbar-width: thin;
 }
 
-/* Dense list: one row per sound, grouped by category. */
-/* Tiles: small squares in a grid, row by row. Same look as the main board, only smaller. */
+.quick-rail {
+  flex: none;
+  width: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 6px 24px;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+}
+
+.quick-grip {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  cursor: move;
+  border-radius: var(--radius);
+}
+
+.quick-grip:hover {
+  background: var(--raised);
+}
+
+.quick-cats {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.quick-cat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 6px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quick-cat:hover {
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.quick-cat[aria-pressed="true"] {
+  background: var(--raised);
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.quick-cat:focus-visible,
+.quick-grip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.quick-cat-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cat, transparent);
+}
+
+.quick-cat-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-cat-count {
+  flex: none;
+  font-size: 12px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.quick-rail-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--tile-min, 56px), 1fr));
@@ -1853,35 +1901,6 @@ button.group-title:hover {
   font-size: 11px;
   font-weight: 650;
   pointer-events: none;
-}
-
-.tile-eq {
-  position: absolute;
-  right: 4px;
-  bottom: 5px;
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 1px;
-  height: 9px;
-  width: 8px;
-  pointer-events: none;
-}
-
-.tile-eq i {
-  display: block;
-  width: 2px;
-  height: 100%;
-  background: var(--accent);
-  transform-origin: bottom;
-  animation: eq 900ms ease-in-out infinite;
-}
-
-.tile-eq i:nth-child(2) {
-  animation-delay: -300ms;
-}
-
-.tile-eq i:nth-child(3) {
-  animation-delay: -600ms;
 }
 
 .quick-resize {

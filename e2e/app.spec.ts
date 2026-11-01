@@ -362,14 +362,17 @@ test("right-click does not open a menu (default prevented)", async ({ page }) =>
   expect(prevented).toBe(true);
 });
 
-test("quick panel: sounds with search, and no sidebar or editing", async ({ page }) => {
+test("quick panel: rail filters by category, no search field, no sidebar", async ({ page }) => {
   await page.goto("/?view=quick");
   await expect(page.locator(".quick")).toBeVisible();
   await expect(page.locator(".quick .tile")).toHaveCount(9);
   await expect(page.getByRole("complementary", { name: "Selected item" })).toHaveCount(0);
-  await page.getByRole("searchbox", { name: "Search sounds" }).fill("airhorn");
-  await expect(page.locator(".quick .tile")).toHaveCount(1);
-  await expect(page.locator(".quick .tile")).toContainText("airhorn");
+  await expect(page.getByRole("searchbox")).toHaveCount(0);
+  await page.locator(".quick-cat", { hasText: "Memes" }).click();
+  await expect(page.locator(".quick .tile")).toHaveCount(3);
+  await expect(page.locator(".quick-cat", { hasText: "Memes" })).toHaveAttribute("aria-pressed", "true");
+  await page.locator(".quick-cat", { hasText: "All" }).click();
+  await expect(page.locator(".quick .tile")).toHaveCount(9);
 });
 
 test("quick panel: play from the panel starts another instance", async ({ page }) => {
@@ -377,7 +380,7 @@ test("quick panel: play from the panel starts another instance", async ({ page }
   const airhorn = page.locator(".quick .tile", { hasText: "airhorn" });
   await airhorn.hover();
   await airhorn.getByRole("button", { name: "Play airhorn" }).click();
-  await expect(airhorn.locator(".tile-eq")).toBeVisible();
+  await expect(airhorn).toHaveClass(/is-playing/);
   await expect(airhorn.getByRole("button", { name: "Stop all airhorn" })).toHaveCount(0);
 });
 
@@ -388,27 +391,27 @@ test("quick panel: right click previews, and the Stop button stops everything", 
   await airhorn.getByRole("button", { name: "Play airhorn" }).click({ button: "right" });
   await expect(airhorn).toHaveClass(/is-previewing/);
   await expect(airhorn.getByRole("button", { name: /preview/i })).toHaveCount(0);
-  await expect(airhorn.locator(".tile-eq")).toHaveCount(0);
+  await expect(airhorn).not.toHaveClass(/is-playing/);
   await airhorn.getByRole("button", { name: "Play airhorn" }).click();
-  await expect(airhorn.locator(".tile-eq")).toBeVisible();
+  await expect(airhorn).toHaveClass(/is-playing/);
   await page.getByRole("button", { name: "Stop all sounds" }).click();
-  await expect(airhorn.locator(".tile-eq")).toHaveCount(0);
+  await expect(airhorn).not.toHaveClass(/is-playing/);
   await expect(airhorn).not.toHaveClass(/is-previewing/);
 });
 
-test("quick panel: one flat grid, no categories, no hint line", async ({ page }) => {
+test("quick panel: one grid, category rail, no hint line", async ({ page }) => {
   await page.goto("/?view=quick");
   await expect(page.locator(".quick .quick-grid .tile")).toHaveCount(9);
-  await expect(page.locator(".quick-group-head")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Category" })).toHaveCount(0);
+  await expect(page.locator(".quick-cat")).toHaveCount(8); // All, Uncategorized, six named
   await expect(page.locator(".quick-hint")).toHaveCount(0);
+  await expect(page.locator(".quick-group-head")).toHaveCount(0);
 });
 
 test("quick panel: arrows move between rows, Enter plays", async ({ page }) => {
   await page.goto("/?view=quick");
   const plays = page.locator(".quick .tile-play:not(:disabled)");
   await expect(plays.first()).toBeVisible();
-  await page.getByRole("searchbox", { name: "Search sounds" }).press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
   await expect(plays.nth(0)).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(plays.nth(1)).toBeFocused();

@@ -51,14 +51,6 @@ export function SoundTile({ entry, accent, instances, previewing, onPlay, onPrev
           x{instances}
         </span>
       )}
-      {playing && (
-        <span className="tile-eq" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </span>
-      )}
-
     </div>
   );
 }

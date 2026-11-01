@@ -1,21 +1,25 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { api, isTauri, onLibraryChanged, onPlayback } from "../api";
-import { stemOf } from "../names";
 import { SoundTile } from "./SoundTile";
 import type { CategoryMeta, Playing, SoundEntry } from "../types";
-import { GripVertical, Search, Square, X } from "lucide-react";
+import { GripVertical, Square, X } from "lucide-react";
+
+const ALL = "all";
+const NONE = "uncategorized";
+
+type Filter = { key: string; label: string; color: string | null; count: number };
 
 /**
- * The Quick Panel window: one flat grid of sounds and a search field. Left click plays on the
- * main output, right click previews on the headphones. Up/Down move between tiles, Enter plays,
- * Esc hides. No categories and no editing; those stay in the main window.
+ * The Quick Panel window: a grid of tiles, with a narrow rail on the right for the category
+ * filter, moving the window, Stop and Hide. Left click plays on the main output, right click
+ * previews on the headphones. Up/Down move between tiles, Enter plays, Esc hides.
  */
 export function QuickPanel() {
   const [sounds, setSounds] = useState<SoundEntry[]>([]);
   const [categories, setCategories] = useState<Record<string, CategoryMeta>>({});
   const [playing, setPlaying] = useState<Playing[]>([]);
-  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState(ALL);
   const [error, setError] = useState<string | null>(null);
   const [tileMin, setTileMin] = useState(56);
   const [tileH, setTileH] = useState(56);
@@ -103,61 +107,46 @@ export function QuickPanel() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const needle = query.trim().toLowerCase();
+  // Rail entries: All, Uncategorized, then the named categories; counts as in the main window.
+  const filters: Filter[] = useMemo(() => {
+    const ids = new Set<string>(Object.keys(categories));
+    for (const s of sounds) if (s.meta.category) ids.add(s.meta.category);
+    const named = [...ids]
+      .map((id) => ({ id, name: categories[id]?.name ?? id }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const count = (key: string) =>
+      key === ALL
+        ? sounds.length
+        : key === NONE
+          ? sounds.filter((s) => !s.meta.category).length
+          : sounds.filter((s) => s.meta.category === key).length;
+    return [
+      { key: ALL, label: "All", color: null, count: count(ALL) },
+      { key: NONE, label: "Uncategorized", color: null, count: count(NONE) },
+      ...named.map((c) => ({ key: c.id, label: c.name, color: categories[c.id]?.color ?? null, count: count(c.id) })),
+    ];
+  }, [sounds, categories]);
+
   const visible = useMemo(
-    () => sounds.filter((s) => !needle || stemOf(s.fileName).toLowerCase().includes(needle)),
-    [sounds, needle],
+    () =>
+      sounds.filter((s) =>
+        filter === ALL ? true : filter === NONE ? !s.meta.category : s.meta.category === filter,
+      ),
+    [sounds, filter],
   );
 
   const act = (run: () => Promise<void>) => void run().catch((e) => setError(String(e)));
 
   return (
     <div className="quick" style={{ "--tile-min": `${tileMin}px`, "--tile-h": `${tileH}px` } as CSSProperties}>
-      <header className="quick-head">
-        <button
-          type="button"
-          className="quick-grip"
-          aria-label="Move panel"
-          title="Drag to move"
-          onPointerDown={(e) => {
-            if (e.button === 0 && isTauri) void getCurrentWebviewWindow().startDragging();
-          }}
-        >
-          <GripVertical size={16} aria-hidden="true" />
-        </button>
-        <div className="quick-search">
-          <Search size={14} aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            placeholder="Search"
-            aria-label="Search sounds"
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <button
-          type="button"
-          className="btn-icon"
-          aria-label="Stop all sounds"
-          title="Stop all sounds"
-          onClick={() => act(() => api.stopAll())}
-        >
-          <Square size={14} fill="currentColor" aria-hidden="true" />
-        </button>
-        <button type="button" className="btn-icon" aria-label="Hide Quick Panel" title="Hide (Esc)" onClick={() => void hide()}>
-          <X size={16} aria-hidden="true" />
-        </button>
-      </header>
-
-      {error && (
-        <p className="quick-error" role="alert">
-          {error}
-        </p>
-      )}
-
       <div className="quick-body">
+        {error && (
+          <p className="quick-error" role="alert">
+            {error}
+          </p>
+        )}
         {visible.length === 0 ? (
-          <p className="empty">{sounds.length === 0 ? "No sounds yet. Add sounds in the main window." : "No sounds found."}</p>
+          <p className="empty">{sounds.length === 0 ? "No sounds yet. Add sounds in the main window." : "No sounds in this category."}</p>
         ) : (
           <div className="quick-grid">
             {visible.map((s) => (
@@ -174,6 +163,53 @@ export function QuickPanel() {
           </div>
         )}
       </div>
+
+      <aside className="quick-rail" aria-label="Quick Panel controls">
+        <button
+          type="button"
+          className="quick-grip"
+          aria-label="Move panel"
+          title="Drag to move"
+          onPointerDown={(e) => {
+            if (e.button === 0 && isTauri) void getCurrentWebviewWindow().startDragging();
+          }}
+        >
+          <GripVertical size={16} aria-hidden="true" />
+        </button>
+
+        <nav className="quick-cats" aria-label="Categories">
+          {filters.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              className="quick-cat"
+              aria-pressed={filter === f.key}
+              title={`${f.label} (${f.count})`}
+              style={f.color ? ({ "--cat": f.color } as CSSProperties) : undefined}
+              onClick={() => setFilter(f.key)}
+            >
+              {f.color && <span className="quick-cat-dot" aria-hidden="true" />}
+              <span className="quick-cat-name">{f.label}</span>
+              <span className="quick-cat-count">{f.count}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="quick-rail-foot">
+          <button
+            type="button"
+            className="btn-icon"
+            aria-label="Stop all sounds"
+            title="Stop all sounds (main and preview)"
+            onClick={() => act(() => api.stopAll())}
+          >
+            <Square size={14} fill="currentColor" aria-hidden="true" />
+          </button>
+          <button type="button" className="btn-icon" aria-label="Hide Quick Panel" title="Hide (Esc)" onClick={() => void hide()}>
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+      </aside>
 
       <button
         type="button"
