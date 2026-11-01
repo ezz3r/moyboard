@@ -1672,48 +1672,83 @@ button.group-title:hover {
   scrollbar-width: thin;
 }
 
+/* Rail: one row of icon buttons (move, stop, hide) and below it the category button. */
 .quick-rail {
   flex: none;
-  width: 112px;
+  width: 104px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 4px 6px 24px;
+  padding: 6px;
   background: var(--surface);
   border-left: 1px solid var(--line);
 }
 
-.quick-grip {
+.quick-rail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 2px;
+}
+
+.quick-ico {
   display: grid;
   place-items: center;
-  height: 24px;
-  border: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   background: none;
-  color: var(--ink-2);
-  cursor: move;
+  border: 0;
   border-radius: var(--radius);
+  color: var(--ink-2);
+  cursor: pointer;
 }
 
-.quick-grip:hover {
+.quick-ico:hover {
   background: var(--raised);
+  color: var(--ink);
 }
 
-.quick-cats {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.quick-ico:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.quick-ico[aria-expanded="true"] {
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.quick-ico-cat {
+  width: 100%;
+}
+
+.quick-cat-wrap {
+  position: relative;
+}
+
+/* Category list opens to the left of the rail, over the tiles. */
+.quick-cat-pop {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 6px);
+  z-index: 20;
+  width: 180px;
+  max-height: min(70vh, 320px);
   overflow-y: auto;
-  scrollbar-width: thin;
+  padding: 4px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--elevation);
 }
 
 .quick-cat {
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
   min-height: 32px;
-  padding: 0 6px;
+  padding: 0 8px;
   background: none;
   border: 0;
   border-radius: var(--radius);
@@ -1724,21 +1759,16 @@ button.group-title:hover {
   cursor: pointer;
 }
 
-.quick-cat:hover {
-  background: var(--raised);
+.quick-cat:hover,
+.quick-cat:focus-visible {
+  background: var(--surface);
   color: var(--ink);
+  outline: none;
 }
 
-.quick-cat[aria-pressed="true"] {
-  background: var(--raised);
+.quick-cat[aria-selected="true"] {
   color: var(--ink);
   font-weight: 650;
-}
-
-.quick-cat:focus-visible,
-.quick-grip:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
 }
 
 .quick-cat-dot {
@@ -1762,12 +1792,6 @@ button.group-title:hover {
   font-size: 12px;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
-}
-
-.quick-rail-foot {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
 }
 
 .quick-grid {

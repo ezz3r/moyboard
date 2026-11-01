@@ -368,10 +368,12 @@ test("quick panel: rail filters by category, no search field, no sidebar", async
   await expect(page.locator(".quick .tile")).toHaveCount(9);
   await expect(page.getByRole("complementary", { name: "Selected item" })).toHaveCount(0);
   await expect(page.getByRole("searchbox")).toHaveCount(0);
-  await page.locator(".quick-cat", { hasText: "Memes" }).click();
+  const catButton = page.getByRole("button", { name: /^Category:/ });
+  await catButton.click();
+  await page.getByRole("option", { name: /Memes/ }).click();
   await expect(page.locator(".quick .tile")).toHaveCount(3);
-  await expect(page.locator(".quick-cat", { hasText: "Memes" })).toHaveAttribute("aria-pressed", "true");
-  await page.locator(".quick-cat", { hasText: "All" }).click();
+  await catButton.click();
+  await page.getByRole("option", { name: /All/ }).click();
   await expect(page.locator(".quick .tile")).toHaveCount(9);
 });
 
@@ -402,6 +404,7 @@ test("quick panel: right click previews, and the Stop button stops everything", 
 test("quick panel: one grid, category rail, no hint line", async ({ page }) => {
   await page.goto("/?view=quick");
   await expect(page.locator(".quick .quick-grid .tile")).toHaveCount(9);
+  await page.getByRole("button", { name: /^Category:/ }).click();
   await expect(page.locator(".quick-cat")).toHaveCount(8); // All, Uncategorized, six named
   await expect(page.locator(".quick-hint")).toHaveCount(0);
   await expect(page.locator(".quick-group-head")).toHaveCount(0);

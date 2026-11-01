@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { api, isTauri, onLibraryChanged, onPlayback } from "../api";
 import { SoundTile } from "./SoundTile";
 import type { CategoryMeta, Playing, SoundEntry } from "../types";
-import { GripVertical, Square, X } from "lucide-react";
+import { GripVertical, Layers, Square, X } from "lucide-react";
 
 const ALL = "all";
 const NONE = "uncategorized";
@@ -23,6 +23,8 @@ export function QuickPanel() {
   const [error, setError] = useState<string | null>(null);
   const [tileMin, setTileMin] = useState(56);
   const [tileH, setTileH] = useState(56);
+  const [catOpen, setCatOpen] = useState(false);
+  const rail = useRef<HTMLElement>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -93,7 +95,10 @@ export function QuickPanel() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") return void hide();
+      if (e.key === "Escape") {
+        if (catOpen) return void setCatOpen(false);
+        return void hide();
+      }
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
       const rows = [...document.querySelectorAll<HTMLButtonElement>(".quick .tile-play:not(:disabled)")];
       if (rows.length === 0) return;
@@ -105,7 +110,17 @@ export function QuickPanel() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [catOpen]);
+
+  // The category list closes on a click anywhere outside the rail.
+  useEffect(() => {
+    if (!catOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!rail.current?.contains(e.target as Node)) setCatOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [catOpen]);
 
   // Rail entries: All, Uncategorized, then the named categories; counts as in the main window.
   const filters: Filter[] = useMemo(() => {
@@ -164,50 +179,67 @@ export function QuickPanel() {
         )}
       </div>
 
-      <aside className="quick-rail" aria-label="Quick Panel controls">
-        <button
-          type="button"
-          className="quick-grip"
-          aria-label="Move panel"
-          title="Drag to move"
-          onPointerDown={(e) => {
-            if (e.button === 0 && isTauri) void getCurrentWebviewWindow().startDragging();
-          }}
-        >
-          <GripVertical size={16} aria-hidden="true" />
-        </button>
-
-        <nav className="quick-cats" aria-label="Categories">
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              className="quick-cat"
-              aria-pressed={filter === f.key}
-              title={`${f.label} (${f.count})`}
-              style={f.color ? ({ "--cat": f.color } as CSSProperties) : undefined}
-              onClick={() => setFilter(f.key)}
-            >
-              {f.color && <span className="quick-cat-dot" aria-hidden="true" />}
-              <span className="quick-cat-name">{f.label}</span>
-              <span className="quick-cat-count">{f.count}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="quick-rail-foot">
+      <aside className="quick-rail" aria-label="Quick Panel controls" ref={rail}>
+        <div className="quick-rail-row">
           <button
             type="button"
-            className="btn-icon"
+            className="quick-ico"
+            aria-label="Move panel"
+            title="Drag to move"
+            onPointerDown={(e) => {
+              if (e.button === 0 && isTauri) void getCurrentWebviewWindow().startDragging();
+            }}
+          >
+            <GripVertical size={14} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="quick-ico"
             aria-label="Stop all sounds"
             title="Stop all sounds (main and preview)"
             onClick={() => act(() => api.stopAll())}
           >
-            <Square size={14} fill="currentColor" aria-hidden="true" />
+            <Square size={12} fill="currentColor" aria-hidden="true" />
           </button>
-          <button type="button" className="btn-icon" aria-label="Hide Quick Panel" title="Hide (Esc)" onClick={() => void hide()}>
-            <X size={16} aria-hidden="true" />
+          <button type="button" className="quick-ico" aria-label="Hide Quick Panel" title="Hide (Esc)" onClick={() => void hide()}>
+            <X size={14} aria-hidden="true" />
           </button>
+        </div>
+
+        <div className="quick-cat-wrap">
+          <button
+            type="button"
+            className="quick-ico quick-ico-cat"
+            aria-label={`Category: ${(filters.find((f) => f.key === filter) ?? filters[0]).label}`}
+            aria-haspopup="listbox"
+            aria-expanded={catOpen}
+            title="Choose category"
+            onClick={() => setCatOpen((o) => !o)}
+          >
+            <Layers size={14} aria-hidden="true" />
+          </button>
+          {catOpen && (
+            <div className="quick-cat-pop" role="listbox" aria-label="Categories">
+              {filters.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  role="option"
+                  aria-selected={filter === f.key}
+                  className="quick-cat"
+                  style={f.color ? ({ "--cat": f.color } as CSSProperties) : undefined}
+                  onClick={() => {
+                    setFilter(f.key);
+                    setCatOpen(false);
+                  }}
+                >
+                  {f.color && <span className="quick-cat-dot" aria-hidden="true" />}
+                  <span className="quick-cat-name">{f.label}</span>
+                  <span className="quick-cat-count">{f.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </aside>
 
