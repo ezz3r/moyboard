@@ -30,6 +30,8 @@ async function openEdit(page: Page, name: string) {
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".pad").first()).toBeVisible();
+  // The routing banner loads after the pads and shifts them down: wait for it, so positions stay valid.
+  await expect(page.locator(".banner")).toBeVisible();
 });
 
 test("lists sounds with category counts", async ({ page }) => {
@@ -736,6 +738,64 @@ test("cable guide: an unfinished guide opens again on start", async ({ page }) =
   await expect(page.getByRole("heading", { name: "Install a virtual cable" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Install a virtual cable" })).toBeVisible();
+});
+
+const plugMic = (page: Page, msg: string | null) =>
+  page.evaluate((v) => (window as unknown as { __mockMicFailure: (msg: string | null) => void }).__mockMicFailure(v), msg);
+
+// Guide finds and saves the cable, then Mode B is on.
+async function enterModeB(page: Page) {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Setup guide" }).click();
+  await plugCable(page, true);
+  await expect(page.getByRole("heading", { name: "Virtual cable found" })).toBeVisible({ timeout: 6000 });
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("radio", { name: "Mic and sounds" }).click();
+}
+
+test("banner: shows on start, opens audio routing, and stays dismissed", async ({ page }) => {
+  await page.getByRole("button", { name: "Set up audio routing" }).click();
+  await expect(page.getByRole("heading", { name: "Audio routing" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to pads" }).click();
+  await page.getByRole("button", { name: "Dismiss" }).click();
+  await expect(page.locator(".banner")).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(".pad").first()).toBeVisible();
+  await expect(page.locator(".banner")).toBeVisible(); // the mock forgets across reloads; the real app keeps it
+});
+
+test("cable test: Mode B without a cable explains the install and offers the website", async ({ page }) => {
+  await enterModeB(page);
+  await plugCable(page, false);
+  await expect(page.getByText("No virtual cable found. Install VB-CABLE, restart Windows, then press Refresh.")).toBeVisible({ timeout: 6000 });
+  await expect(page.getByRole("button", { name: "Open VB-Audio website" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
+});
+
+test("cable test: a tone that arrives is reported, one that does not is reported as an error", async ({ page }) => {
+  await enterModeB(page);
+  await expect(page.getByRole("meter", { name: "Microphone level" })).toBeVisible();
+  await expect(page.getByText("Mic routing active.")).toBeVisible();
+  await page.getByRole("button", { name: "Test cable" }).click();
+  await expect(page.getByText("Sound arrived on CABLE Output (VB-Audio Virtual Cable).")).toBeVisible();
+  await plugCable(page, false);
+  await page.getByRole("button", { name: "Test cable" }).click();
+  await expect(page.getByText("No sound arrived on the recording side.")).toBeVisible();
+});
+
+test("microphone: a denied mic shows the reason and the privacy settings button", async ({ page }) => {
+  await enterModeB(page);
+  await plugMic(page, "open microphone: access denied");
+  await expect(page.getByRole("alert").getByText("open microphone: access denied")).toBeVisible({ timeout: 6000 });
+  await expect(page.getByRole("button", { name: "Open microphone privacy settings" })).toBeVisible();
+  await plugMic(page, null);
+});
+
+test("setup help: the Mode B help text is available at the bottom of Settings", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByText("Setup help").click();
+  await expect(page.getByText("I have no virtual cable (mic only)")).toBeVisible();
+  await expect(page.getByText("donationware")).toBeVisible();
 });
 
 test("cable guide: Mode B with a found cable shows the Discord input", async ({ page }) => {

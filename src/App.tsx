@@ -76,6 +76,20 @@ export default function App() {
     }
   }, [notify]);
 
+  // Non-blocking hint until Mode B has a cable or the user dismisses it. Rechecked when pads show.
+  const [routingBanner, setRoutingBanner] = useState(false);
+  // A refresh that was already in flight when the user dismissed must not bring the banner back.
+  const bannerGone = useRef(false);
+  useEffect(() => {
+    if (view !== "pads") return;
+    void api
+      .getRouting()
+      .then((r) => {
+        if (!bannerGone.current) setRoutingBanner(!r.bannerDismissed && !(r.mode === "mix" && r.cablePlayback));
+      })
+      .catch((e) => notify(String(e)));
+  }, [view, notify]);
+
   useEffect(() => {
     void (async () => {
       await loadSettings();
@@ -411,6 +425,28 @@ export default function App() {
           </IconButton>
         </div>
       </header>
+
+        {routingBanner && view === "pads" && (
+          <div className="banner" role="status">
+            <span>Set up audio routing to use moyboard in Discord.</span>
+            <div className="banner-actions">
+              <button type="button" className="btn" onClick={() => setView("settings")}>
+                Set up audio routing
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  bannerGone.current = true;
+                  setRoutingBanner(false);
+                  void api.dismissBanner().catch((e) => notify(String(e)));
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
 
         <main className="main">
           {dragView && dragged && (

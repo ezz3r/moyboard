@@ -59,6 +59,11 @@ let recentColors: string[] = [];
 let audioMode: "sounds" | "mix" = "sounds";
 let cablePlayback: string | null = null;
 let cableRecord: string | null = null;
+let micId: string | null = null;
+let micVolume = 1;
+let bannerDismissed = false;
+// Mock mic: running only in Mode B with a microphone chosen. `micFailure` lets e2e simulate a denied mic.
+let micFailure: string | null = null;
 // The guide state survives a reload in this tab, so e2e can test the resume on start.
 function readSetupState(): "guided" | "completed" | null {
   try {
@@ -76,6 +81,10 @@ const inputs = [
 const cableInputs = [
   { id: "wasapi:cable-out", name: "CABLE Output (VB-Audio Virtual Cable)", isDefault: false },
 ];
+// Dev and e2e only: makes the mock mic fail with this message (null = working).
+(window as unknown as { __mockMicFailure: (msg: string | null) => void }).__mockMicFailure = (msg: string | null) => {
+  micFailure = msg;
+};
 // Dev and e2e only: lets a test plug the cable in while the guide is waiting.
 (window as unknown as { __mockCable: (on: boolean) => void }).__mockCable = (on: boolean) => {
   cableConnected = on;
@@ -155,7 +164,31 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
     case "list_output_devices":
       return { devices, selected: output, masterVolume, monitorVolume, previewSelected: preview } as T;
     case "get_routing":
-      return { mode: audioMode, cablePlayback, cableRecord, setupState } as T;
+      return { mode: audioMode, cablePlayback, cableRecord, setupState, micId, micVolume, bannerDismissed } as T;
+    case "get_mic_status":
+      return {
+        active: audioMode === "mix",
+        running: audioMode === "mix" && micFailure === null,
+        error: audioMode === "mix" ? micFailure : null,
+      } as T;
+    case "get_mic_level":
+      return (audioMode === "mix" && micFailure === null ? 0.25 : 0) as T;
+    case "set_mic_device":
+      micId = (args.id as string | null) ?? null;
+      return undefined as T;
+    case "set_mic_volume":
+      micVolume = args.volume as number;
+      return undefined as T;
+    case "test_cable":
+      if (audioMode !== "mix") throw new Error('Choose "Mic and sounds" first.');
+      if (!cableRecord) throw new Error("Choose a cable first.");
+      if (!cableConnected) throw new Error("No sound arrived on the recording side. Check that moyboard is running and that Discord uses the recording side.");
+      return undefined as T;
+    case "dismiss_banner":
+      bannerDismissed = true;
+      return undefined as T;
+    case "open_mic_privacy":
+      return undefined as T;
     case "set_audio_mode": {
       const mode = args.mode as "sounds" | "mix";
       if (mode === "mix" && !cablePlayback) throw new Error("Choose a virtual cable first.");
@@ -318,6 +351,9 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       cablePlayback = null;
       cableRecord = null;
       setupState = null;
+      micId = null;
+      micVolume = 1;
+      bannerDismissed = false;
       return undefined as T;
     default:
       throw new Error(`unknown command: ${cmd}`);

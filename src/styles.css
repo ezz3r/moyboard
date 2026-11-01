@@ -2290,3 +2290,115 @@ body.is-dragging {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Audio routing (Mode B): hint box, mic meter, volume row, help, startup banner. */
+.hint-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius);
+  background: var(--raised);
+}
+
+.hint-box p {
+  margin: 0;
+  color: var(--ink);
+}
+
+.meter {
+  position: relative;
+  height: 6px;
+  margin: 10px 0 4px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.meter span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+  transition: width 80ms linear;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.slider-row input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.slider-value {
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.help {
+  margin-top: 16px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.help summary {
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.help h3 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.help ul,
+.help ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.help li + li {
+  margin-top: 4px;
+}
+
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+button.link:focus-visible,
+.help summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 8px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.banner-actions {
+  display: flex;
+  gap: 8px;
+}

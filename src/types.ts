@@ -103,6 +103,18 @@ export type RoutingState = {
   cablePlayback: string | null;
   cableRecord: string | null;
   setupState: SetupState;
+  /** Mode B microphone endpoint ID; null means the Windows default. */
+  micId: string | null;
+  /** Mic gain, 0..=2. */
+  micVolume: number;
+  bannerDismissed: boolean;
+};
+
+/** Mode B mic state. `error` is the reason the last start failed, or null. */
+export type MicStatus = {
+  active: boolean;
+  running: boolean;
+  error: string | null;
 };
 
 /** A virtual cable with both sides connected. Playback is written to, record is read by Discord. */

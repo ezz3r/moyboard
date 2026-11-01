@@ -8,6 +8,7 @@ import type {
   AudioMode,
   AutostartSettings,
   CablePair,
+  MicStatus,
   CategoryMeta,
   OutputDevice,
   QuickPanelSettings,
@@ -70,6 +71,14 @@ export const api = {
   detectCable: () => call<CablePair | null>("detect_cable"),
   setSetupState: (state: SetupState) => call<void>("set_setup_state", { state }),
   listInputDevices: () => call<OutputDevice[]>("list_input_devices"),
+  getMicStatus: () => call<MicStatus>("get_mic_status"),
+  getMicLevel: () => call<number>("get_mic_level"),
+  setMicDevice: (id: string | null) => call<void>("set_mic_device", { id }),
+  setMicVolume: (volume: number) => call<void>("set_mic_volume", { volume }),
+  /** Plays a tone into the cable and waits until it is heard on the recording side. Rejects with a reason. */
+  testCable: () => call<void>("test_cable"),
+  dismissBanner: () => call<void>("dismiss_banner"),
+  openMicPrivacy: () => call<void>("open_mic_privacy"),
   /** Opens a fixed help link in the default browser. The backend allows only known links. */
   openUrl: (url: string) => call<void>("open_url", { url }),
   setAutoRescan: (enabled: boolean) => call<void>("set_auto_rescan", { enabled }),
