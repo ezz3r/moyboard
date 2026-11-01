@@ -1,5 +1,6 @@
 mod audio;
 mod hotkeys;
+mod mic;
 mod quick_key;
 mod watch;
 
@@ -571,8 +572,40 @@ fn set_audio_mode(mode: String, store: tauri::State<Store>, engine: tauri::State
     } else {
         output
     };
-    lock(&engine)?.set_device(target.as_deref())?;
+    let (mic_id, gain) = store.get(|cfg| (cfg.mic_id.clone(), cfg.mic_volume.unwrap_or(1.0)));
+    let mut engine = lock(&engine)?;
+    engine.set_device(target.as_deref())?;
+    // A mic that fails to start does not block the mode change; `get_mic_status` reports it.
+    let _ = engine.set_mic(mode == "mix", mic_id.as_deref(), gain);
     store.update(|cfg| cfg.audio_mode = Some(mode))
+}
+
+/// Mode B microphone state for the Settings screen.
+#[tauri::command]
+fn get_mic_status(engine: tauri::State<AudioState>) -> Result<audio::MicStatus, String> {
+    Ok(lock(&engine)?.mic_status())
+}
+
+/// Peak mic level since the last call, 0..=1. The meter polls this.
+#[tauri::command]
+fn get_mic_level(engine: tauri::State<AudioState>) -> Result<f32, String> {
+    Ok(lock(&engine)?.mic_level())
+}
+
+/// Saves the microphone (`None` = Windows default) and applies it now in Mode B.
+/// The choice is saved even when the mic cannot start, so a replugged mic is picked up later.
+#[tauri::command]
+fn set_mic_device(id: Option<String>, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
+    let (mix, gain) = store.get(|cfg| (cfg.audio_mode.as_deref() == Some("mix"), cfg.mic_volume.unwrap_or(1.0)));
+    store.update(|cfg| cfg.mic_id = id.clone())?;
+    lock(&engine)?.set_mic(mix, id.as_deref(), gain)
+}
+
+#[tauri::command]
+fn set_mic_volume(volume: f32, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
+    let volume = volume.clamp(0.0, 2.0);
+    lock(&engine)?.set_mic_gain(volume);
+    store.update(|cfg| cfg.mic_volume = Some(volume))
 }
 
 /// Saves the Mode B cable. Both sides must be connected right now.
@@ -1127,6 +1160,10 @@ pub fn run() {
             }
             engine.set_monitor_gain(mon_gain.unwrap_or(1.0));
             engine.set_master(store.get(|cfg| cfg.master_volume).unwrap_or(1.0));
+            let (mix, mic_id, mic_gain) = store.get(|cfg| {
+                (cfg.audio_mode.as_deref() == Some("mix"), cfg.mic_id.clone(), cfg.mic_volume.unwrap_or(1.0))
+            });
+            let _ = engine.set_mic(mix, mic_id.as_deref(), mic_gain);
             if let Err(e) = engine.set_preview(prev.as_deref()) {
                 eprintln!("moyboard: saved preview device unavailable: {e}");
                 engine.keep_unavailable(None, prev.as_deref());
@@ -1150,6 +1187,15 @@ pub fn run() {
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_millis(150));
                 publish(&handle);
+            });
+
+            // Restarts a mic that was unplugged or not there yet. Cheap when nothing is wanted.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::from_secs(2));
+                if let Ok(mut engine) = lock(&handle.state::<AudioState>()) {
+                    let _ = engine.ensure_mic();
+                }
             });
 
             if let Err(e) = build_tray(app.handle()) {
@@ -1220,6 +1266,10 @@ pub fn run() {
             set_output_device,
             get_routing,
             set_audio_mode,
+            get_mic_status,
+            get_mic_level,
+            set_mic_device,
+            set_mic_volume,
             set_cable,
             detect_cable,
             set_setup_state,

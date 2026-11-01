@@ -1,3 +1,4 @@
+use crate::mic::Mic;
 use moyboard_core::config::SoundMeta;
 use moyboard_core::wav::{trim_window, wav_header};
 use cpal::traits::{DeviceTrait, HostTrait};
@@ -55,6 +56,23 @@ pub struct Engine {
     preview_id: Option<String>,
     voices: Vec<Voice>,
     master: f32,
+    /// Mode B: the microphone is mixed into the main output while this is set.
+    mic_on: bool,
+    mic_id: Option<String>,
+    mic_gain: f32,
+    mic: Option<Mic>,
+    /// Why the last mic start failed, shown in Settings. `None` when running or off.
+    mic_error: Option<String>,
+}
+
+/// Mic state as sent to the UI.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MicStatus {
+    /// Mode B is on and the mic should be running.
+    pub active: bool,
+    pub running: bool,
+    pub error: Option<String>,
 }
 
 impl Engine {
@@ -69,6 +87,11 @@ impl Engine {
             preview_id: None,
             voices: Vec::new(),
             master: 1.0,
+            mic_on: false,
+            mic_id: None,
+            mic_gain: 1.0,
+            mic: None,
+            mic_error: None,
         }
     }
 
@@ -104,7 +127,64 @@ impl Engine {
         self.voices.retain(|v| v.preview);
         self.sink = Some(sink);
         self.primary_id = id.map(str::to_string);
+        // The mic lives on the old output's mixer, so it moves to the new one.
+        self.mic = None;
+        let _ = self.ensure_mic();
         Ok(())
+    }
+
+    /// Turns the Mode B mic on or off. The mic is mixed into the main output's mixer.
+    /// A mic that cannot start is not an error for the mode change: the status reports it.
+    pub fn set_mic(&mut self, on: bool, id: Option<&str>, gain: f32) -> Result<(), String> {
+        self.mic_on = on;
+        self.mic_id = id.map(str::to_string);
+        self.mic_gain = gain.clamp(0.0, 2.0);
+        self.mic = None;
+        self.mic_error = None;
+        self.ensure_mic()
+    }
+
+    /// Starts the mic if it should run and is not running. Also restarts it after a failure
+    /// (unplugged, driver reset), so the caller can poll this.
+    pub fn ensure_mic(&mut self) -> Result<(), String> {
+        if !self.mic_on || self.mic.as_ref().is_some_and(|m| !m.failed()) {
+            return Ok(());
+        }
+        self.mic = None;
+        let Some(sink) = self.sink.as_ref() else {
+            return Err("no output stream".to_string());
+        };
+        match Mic::start(self.mic_id.as_deref(), sink.mixer(), self.mic_gain) {
+            Ok(mic) => {
+                self.mic = Some(mic);
+                self.mic_error = None;
+                Ok(())
+            }
+            Err(e) => {
+                self.mic_error = Some(e.clone());
+                Err(e)
+            }
+        }
+    }
+
+    pub fn set_mic_gain(&mut self, gain: f32) {
+        self.mic_gain = gain.clamp(0.0, 2.0);
+        if let Some(mic) = &self.mic {
+            mic.set_gain(self.mic_gain);
+        }
+    }
+
+    /// Peak of the mic since the last call, 0..=1 (0 when not running).
+    pub fn mic_level(&self) -> f32 {
+        self.mic.as_ref().map_or(0.0, Mic::level)
+    }
+
+    pub fn mic_status(&self) -> MicStatus {
+        MicStatus {
+            active: self.mic_on,
+            running: self.mic.as_ref().is_some_and(|m| !m.failed()),
+            error: self.mic_error.clone(),
+        }
     }
 
     /// "You" hears the sound on the Windows default output. It is off when that device is the

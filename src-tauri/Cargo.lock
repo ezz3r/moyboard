@@ -2308,6 +2308,7 @@ dependencies = [
  "moyboard-core",
  "notify",
  "rodio",
+ "rtrb",
  "serde",
  "serde_json",
  "tauri",
