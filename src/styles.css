@@ -1675,18 +1675,18 @@ button.group-title:hover {
 /* Rail: one row of icon buttons (move, stop, hide) and below it the category button. */
 .quick-rail {
   flex: none;
-  width: 104px;
+  width: 40px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 6px;
+  gap: 4px;
+  padding: 6px 4px;
   background: var(--surface);
   border-left: 1px solid var(--line);
 }
 
 .quick-rail-row {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 2px;
 }
 
