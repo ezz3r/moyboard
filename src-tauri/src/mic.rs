@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering::Relaxed};
 use std::time::Duration;
 
-/// Shown when the saved microphone is no longer connected.
+/// Shown when the saved microphone (or cable recording side) is no longer connected.
 pub const MIC_MISSING: &str = "Microphone not found. Choose a microphone in Settings.";
 
 /// A running capture. Dropping it stops the stream and ends its source in the mixer.
@@ -29,34 +29,32 @@ pub struct Mic {
 impl Mic {
     /// Opens the microphone `id` (`None` = Windows default) and adds it to `mixer`.
     pub fn start(id: Option<&str>, mixer: &Mixer, gain: f32) -> Result<Self, String> {
-        let host = cpal::default_host();
-        let device = match id {
-            Some(wanted) => wanted
-                .parse::<cpal::DeviceId>()
-                .ok()
-                .and_then(|parsed| host.device_by_id(&parsed))
-                .ok_or_else(|| MIC_MISSING.to_string())?,
-            None => host.default_input_device().ok_or("no default microphone")?,
-        };
+        let device = find_input(id)?;
         let supported = device.default_input_config().map_err(|e| format!("microphone: {e}"))?;
         let config = supported.config();
-        let channels = config.channels as usize;
         let rate = NonZero::new(config.sample_rate).ok_or("microphone reports rate 0")?;
 
         // One second of room. The mixer side keeps it near 10–60 ms (see `drift_action`).
-        let (prod, cons) = rtrb::RingBuffer::<f32>::new(rate.get() as usize);
+        let (mut prod, cons) = rtrb::RingBuffer::<f32>::new(rate.get() as usize);
         let failed = Arc::new(AtomicBool::new(false));
         let peak = Arc::new(AtomicU32::new(0));
-        let stream = match supported.sample_format() {
-            SampleFormat::F32 => build::<f32>(&device, &config, prod, peak.clone(), channels, failed.clone())?,
-            SampleFormat::I16 => build::<i16>(&device, &config, prod, peak.clone(), channels, failed.clone())?,
-            other => return Err(format!("unsupported microphone sample format: {other:?}")),
-        };
+        let peak_cb = peak.clone();
+        let stream = open_input(&device, &config, supported.sample_format(), failed.clone(), move |v| {
+            // A full buffer drops the newest sample; the drift rule keeps this rare.
+            let _ = prod.push(v);
+            track_peak(&peak_cb, v);
+        })?;
         stream.play().map_err(|e| format!("start microphone: {e}"))?;
 
         let stop = Arc::new(AtomicBool::new(false));
         let gain = Arc::new(AtomicU32::new(gain.clamp(0.0, 2.0).to_bits()));
-        mixer.add(MicSource { cons, stop: stop.clone(), gain: gain.clone(), rate, channels: NonZero::new(1).unwrap() });
+        mixer.add(MicSource {
+            cons,
+            stop: stop.clone(),
+            gain: gain.clone(),
+            rate,
+            channels: NonZero::new(1).unwrap(),
+        });
         Ok(Self { _stream: stream, stop, failed, gain, peak })
     }
 
@@ -80,31 +78,79 @@ impl Drop for Mic {
     }
 }
 
+/// Peak of recording endpoint `id` over `duration`. The cable test plays a tone into the cable
+/// and checks that it arrives here. Blocks for `duration`: call it off the UI thread.
+pub fn peak_of(id: &str, duration: Duration) -> Result<f32, String> {
+    let device = find_input(Some(id))?;
+    let supported = device.default_input_config().map_err(|e| format!("recording side: {e}"))?;
+    let peak = Arc::new(AtomicU32::new(0));
+    let peak_cb = peak.clone();
+    let stream = open_input(
+        &device,
+        &supported.config(),
+        supported.sample_format(),
+        Arc::new(AtomicBool::new(false)),
+        move |v| track_peak(&peak_cb, v),
+    )?;
+    stream.play().map_err(|e| format!("listen on recording side: {e}"))?;
+    std::thread::sleep(duration);
+    drop(stream);
+    Ok(f32::from_bits(peak.load(Relaxed)))
+}
+
+fn track_peak(peak: &AtomicU32, v: f32) {
+    if v.abs() > f32::from_bits(peak.load(Relaxed)) {
+        peak.store(v.abs().to_bits(), Relaxed);
+    }
+}
+
+fn find_input(id: Option<&str>) -> Result<cpal::Device, String> {
+    let host = cpal::default_host();
+    match id {
+        Some(wanted) => wanted
+            .parse::<cpal::DeviceId>()
+            .ok()
+            .and_then(|parsed| host.device_by_id(&parsed))
+            .ok_or_else(|| MIC_MISSING.to_string()),
+        None => host.default_input_device().ok_or_else(|| "no default microphone".to_string()),
+    }
+}
+
+/// Input stream that hands each mono sample (channels averaged) to `on_sample`.
+fn open_input(
+    device: &cpal::Device,
+    config: &StreamConfig,
+    format: SampleFormat,
+    failed: Arc<AtomicBool>,
+    on_sample: impl FnMut(f32) + Send + 'static,
+) -> Result<cpal::Stream, String> {
+    match format {
+        SampleFormat::F32 => build::<f32>(device, config, failed, on_sample),
+        SampleFormat::I16 => build::<i16>(device, config, failed, on_sample),
+        other => Err(format!("unsupported microphone sample format: {other:?}")),
+    }
+}
+
 fn build<T>(
     device: &cpal::Device,
     config: &StreamConfig,
-    mut prod: rtrb::Producer<f32>,
-    peak: Arc<AtomicU32>,
-    channels: usize,
     failed: Arc<AtomicBool>,
+    mut on_sample: impl FnMut(f32) + Send + 'static,
 ) -> Result<cpal::Stream, String>
 where
     T: SizedSample,
     f32: FromSample<T>,
 {
+    let channels = config.channels as usize;
     device
         .build_input_stream::<T, _, _>(
             config.clone(),
             move |data, _| {
-                let mut loudest = f32::from_bits(peak.load(Relaxed));
                 for frame in data.chunks_exact(channels) {
                     // Mono mean without allocating: this runs on the audio thread.
                     let v = frame.iter().map(|s| f32::from_sample(*s)).sum::<f32>() / channels as f32;
-                    loudest = loudest.max(v.abs());
-                    // A full buffer drops the newest sample; the drift rule keeps this rare.
-                    let _ = prod.push(v);
+                    on_sample(v);
                 }
-                peak.store(loudest.to_bits(), Relaxed);
             },
             move |e| {
                 failed.store(true, Relaxed);

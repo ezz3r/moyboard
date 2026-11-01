@@ -547,6 +547,9 @@ pub struct RoutingState {
     cable_playback: Option<String>,
     cable_record: Option<String>,
     setup_state: Option<String>,
+    mic_id: Option<String>,
+    mic_volume: f32,
+    banner_dismissed: bool,
 }
 
 #[tauri::command]
@@ -556,13 +559,21 @@ fn get_routing(store: tauri::State<Store>) -> RoutingState {
         cable_playback: cfg.cable_playback.clone(),
         cable_record: cfg.cable_record.clone(),
         setup_state: cfg.setup_state.clone(),
+        mic_id: cfg.mic_id.clone(),
+        mic_volume: cfg.mic_volume.unwrap_or(1.0),
+        banner_dismissed: cfg.banner_dismissed.unwrap_or(false),
     })
 }
 
 /// Mode A (`sounds`) uses the chosen output. Mode B (`mix`) uses the cable's playback side.
 /// The device opens before the mode is saved, so a failure changes nothing.
 #[tauri::command]
-fn set_audio_mode(mode: String, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
+fn set_audio_mode(
+    mode: String,
+    app: AppHandle,
+    store: tauri::State<Store>,
+    engine: tauri::State<AudioState>,
+) -> Result<(), String> {
     if mode != "sounds" && mode != "mix" {
         return Err(format!("unknown audio mode: {mode}"));
     }
@@ -577,7 +588,58 @@ fn set_audio_mode(mode: String, store: tauri::State<Store>, engine: tauri::State
     engine.set_device(target.as_deref())?;
     // A mic that fails to start does not block the mode change; `get_mic_status` reports it.
     let _ = engine.set_mic(mode == "mix", mic_id.as_deref(), gain);
+    set_tray_tooltip(&app, mode == "mix");
     store.update(|cfg| cfg.audio_mode = Some(mode))
+}
+
+/// Tray tooltip says when the mic is being mixed into the cable.
+fn set_tray_tooltip(app: &AppHandle, mix: bool) {
+    if let Some(tray) = app.tray_by_id("main") {
+        let text = if mix { "moyboard – Mic routing active" } else { "moyboard" };
+        let _ = tray.set_tooltip(Some(text));
+    }
+}
+
+/// Cable test: plays a tone into the cable and checks that it arrives on the recording side.
+/// Async because it waits for the tone to come back; the UI thread stays free.
+#[tauri::command]
+async fn test_cable(store: tauri::State<'_, Store>, engine: tauri::State<'_, AudioState>) -> Result<(), String> {
+    let (mix, record) = store.get(|cfg| (cfg.audio_mode.as_deref() == Some("mix"), cfg.cable_record.clone()));
+    if !mix {
+        return Err("Choose \"Mic and sounds\" first.".into());
+    }
+    let record = record.ok_or("Choose a cable first.")?;
+    lock(&engine)?.play_test_tone()?;
+    let peak = tauri::async_runtime::spawn_blocking(move || mic::peak_of(&record, Duration::from_millis(1500)))
+        .await
+        .map_err(|e| e.to_string())??;
+    if peak < 0.02 {
+        return Err("No sound arrived on the recording side. Check that moyboard is running and that Discord uses the recording side.".into());
+    }
+    Ok(())
+}
+
+/// Hides the main window's setup banner for good.
+#[tauri::command]
+fn dismiss_banner(store: tauri::State<Store>) -> Result<(), String> {
+    store.update(|cfg| cfg.banner_dismissed = Some(true))
+}
+
+/// Opens Windows Settings at the microphone privacy page, so the user can allow moyboard.
+#[tauri::command]
+fn open_mic_privacy() -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        std::process::Command::new("explorer.exe")
+            .arg("ms-settings:privacy-microphone")
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("open Settings: {e}"))
+    }
+    #[cfg(not(windows))]
+    {
+        Err("Microphone privacy settings exist only on Windows.".into())
+    }
 }
 
 /// Mode B microphone state for the Settings screen.
@@ -810,7 +872,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let menu = Menu::with_items(app, &[&open, &panel, &sep, &stop, &quit])?;
     let icon = app.default_window_icon().cloned();
 
-    let mut tray = TrayIconBuilder::new()
+    let mut tray = TrayIconBuilder::with_id("main")
         .tooltip("moyboard")
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -1201,6 +1263,7 @@ pub fn run() {
             if let Err(e) = build_tray(app.handle()) {
                 eprintln!("moyboard: tray icon: {e}");
             }
+            set_tray_tooltip(app.handle(), app.state::<Store>().get(|cfg| cfg.audio_mode.as_deref() == Some("mix")));
             if !hide_at_start {
                 show_main(app.handle());
             }
@@ -1270,6 +1333,9 @@ pub fn run() {
             get_mic_level,
             set_mic_device,
             set_mic_volume,
+            test_cable,
+            dismiss_banner,
+            open_mic_privacy,
             set_cable,
             detect_cable,
             set_setup_state,

@@ -179,6 +179,16 @@ impl Engine {
         self.mic.as_ref().map_or(0.0, Mic::level)
     }
 
+    /// Plays a short tone on the main output, for the Mode B cable test.
+    pub fn play_test_tone(&mut self) -> Result<(), String> {
+        let sink = self.sink.as_ref().ok_or("no output stream")?;
+        let tone = rodio::source::SineWave::new(440.0)
+            .take_duration(Duration::from_millis(1000))
+            .amplify(0.3);
+        sink.mixer().add(tone);
+        Ok(())
+    }
+
     pub fn mic_status(&self) -> MicStatus {
         MicStatus {
             active: self.mic_on,
