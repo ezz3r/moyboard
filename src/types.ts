@@ -117,7 +117,7 @@ export type MicStatus = {
   error: string | null;
 };
 
-/** A virtual cable with both sides connected. Playback is written to, record is read by Discord. */
+/** A virtual cable with both sides connected. Playback is written to, record is read by the app. */
 export type CablePair = {
   playbackId: string;
   playbackName: string;

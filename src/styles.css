@@ -2402,3 +2402,64 @@ button.link:focus-visible,
   display: flex;
   gap: 8px;
 }
+
+/* Audio routing layout: one card per topic, one status line on top. */
+.routing {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.routing-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.routing-status.alarm {
+  color: var(--alarm);
+}
+
+.routing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius);
+  background: var(--raised);
+}
+
+.routing-card h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.routing-card .hint-box {
+  margin-top: 0;
+}
+
+.routing-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 420px) {
+  .routing-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 12px;
+  color: var(--ink-2);
+}

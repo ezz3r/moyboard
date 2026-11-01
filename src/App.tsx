@@ -428,7 +428,7 @@ export default function App() {
 
         {routingBanner && view === "pads" && (
           <div className="banner" role="status">
-            <span>Set up audio routing to use moyboard in Discord.</span>
+            <span>Set up audio routing to use moyboard in your app.</span>
             <div className="banner-actions">
               <button type="button" className="btn" onClick={() => setView("settings")}>
                 Set up audio routing

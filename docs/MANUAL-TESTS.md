@@ -22,7 +22,7 @@ Setup: install VB-CABLE (or another virtual cable), then run
 
 ## Playback and devices
 - [ ] Output device list shows all WASAPI outputs with (default) marked.
-- [ ] Pick the virtual cable; play a pad; Discord (input = CABLE Output) hears it.
+- [ ] Pick the virtual cable; play a pad; the app with input = CABLE Output hears it.
 - [ ] Two sounds at once overlap.
 - [ ] Stop all stops everything.
 - [ ] Master volume and per-sound volume change loudness.
@@ -201,20 +201,10 @@ before a release.
 - [ ] Reset settings: after confirming, the output, preview, volumes, tile sizes, Quick Panel hotkey and mode, Stop all hotkey, library folder and "Start with Windows" are back to default; sounds and categories are still there.
 - [ ] Reset settings with "Start with Windows" on: the Run entry is removed (check the Startup folder or Task Manager's Startup tab).
 
-## Installer choice page (guided cable setup, not run on Windows)
-- [ ] Installer runs without admin prompt (`installMode: currentUser`).
-- [ ] English and German installer: "Virtual audio device" page appears after the directory page.
-- [ ] Default selection is "I already have one". Next writes `existing`.
-- [ ] Choosing "No, I only have a microphone" then Next writes `none`.
-- [ ] `reg query HKCU\Software\moyboard\Setup` shows `VirtualDevice` with the chosen value.
-- [ ] Silent `moyboard_*_x64-setup.exe /S` writes `existing`; `/S /VIRTUALDEVICE=none` writes `none`.
-- [ ] Silent install does not show the choice page.
-- [ ] Umlauts render correctly in the German page (`$\u` escapes in the template).
-
 ## Audio routing and cable guide (Mode A/B, not run on Windows)
 - [ ] Settings → Audio routing: "Sounds only" keeps the For others selector working.
 - [ ] "Mic and sounds" without a saved cable shows "Choose a virtual cable first." and stays on Sounds only.
-- [ ] With VB-CABLE installed, the cable line shows "Detected: CABLE Input / CABLE Output" and Discord input names the CABLE Output device.
+- [ ] With VB-CABLE installed, the cable line shows "Detected: CABLE Input / CABLE Output" and the app's input names the CABLE Output device.
 - [ ] Mode B: For others is replaced by the Mode B note; output really goes to the cable (play a pad, check the cable's meter in Windows).
 - [ ] Switching back to Sounds only restores the saved For others output.
 - [ ] Setup guide without a cable: "Waiting for the virtual cable…"; installing VB-CABLE (no reboot) turns it into "Virtual cable found" within about 2 s.
@@ -228,13 +218,13 @@ before a release.
 ## Mode B: mic and sounds (Windows, real devices)
 - [ ] Fresh VB-CABLE install on a clean VM or snapshot: after Refresh, the cable is detected and the install hint disappears.
 - [ ] No cable: the hint box shows "Open VB-Audio website", and it opens https://vb-audio.com/Cable/ in the browser.
-- [ ] Mic and sounds: Discord (input = CABLE Output) hears the microphone and sounds together.
-- [ ] Mic level meter moves while speaking; microphone volume changes what Discord hears.
+- [ ] Mic and sounds: the app with input = CABLE Output hears the microphone and sounds together.
+- [ ] Mic level meter moves while speaking; microphone volume changes what the app hears.
 - [ ] Test cable: success message on a working setup; error message after unplugging the cable.
 - [ ] Mic unplugged while running: Settings shows the error; plugging it back in restarts the mic within about 2 s.
 - [ ] Microphone privacy denied (Windows Settings → Privacy → Microphone off for desktop apps): error and the privacy button opens `ms-settings:privacy-microphone`.
 - [ ] Tray tooltip reads "moyboard – Mic routing active" in Mode B and "moyboard" in Mode A.
-- [ ] Latency: speaking and hearing it in Discord's self-view feels acceptable (no multi-second delay).
+- [ ] Latency: speaking and hearing it back in the app feels acceptable (no multi-second delay).
 - [ ] 30+ minute run with sounds and speech: no crackling, no growing delay (drift handling in `moyboard-core/src/mic.rs`).
 - [ ] Sample rates 44.1, 48 and 96 kHz for the mic and the cable (Windows sound settings).
 - [ ] Mixer setup (Wave Link, VoiceMeeter) still works in Sounds only mode.

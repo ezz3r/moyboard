@@ -182,7 +182,7 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
     case "test_cable":
       if (audioMode !== "mix") throw new Error('Choose "Mic and sounds" first.');
       if (!cableRecord) throw new Error("Choose a cable first.");
-      if (!cableConnected) throw new Error("No sound arrived on the recording side. Check that moyboard is running and that Discord uses the recording side.");
+      if (!cableConnected) throw new Error("No sound arrived on the recording side. Check that moyboard is running and that your app uses the recording side.");
       return undefined as T;
     case "dismiss_banner":
       bannerDismissed = true;

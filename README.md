@@ -1,4 +1,4 @@
-# moyboard – a simple, lightweight soundboard for Windows. Play sounds into Discord, games, and calls.
+# moyboard – a simple, lightweight soundboard for Windows. Play sounds into voice chats, games, and calls.
 
 ## Features
 
@@ -23,10 +23,10 @@
 
 ## How it works
 
-moyboard plays sounds into a virtual audio device. Your voice app (Discord, a game) records from the matching virtual input.
+moyboard plays sounds into a virtual audio device. Your voice app or game records from the matching virtual input.
 
 ```
-moyboard ──► virtual output ("CABLE Input") ──► virtual input ("CABLE Output") ──► Discord
+moyboard ──► virtual output ("CABLE Input") ──► virtual input ("CABLE Output") ──► your app
 ```
 
 Two modes, set in *Settings → Audio routing*:
@@ -40,8 +40,8 @@ Two modes, set in *Settings → Audio routing*:
 
 Wave Link, VoiceMeeter, VB-CABLE, or similar.
 
-- **Your mixer adds your mic** (Wave Link, VoiceMeeter): in moyboard choose **Sounds only** and pick the mixer's virtual output under *For others*. In Discord, select the input your mixer provides.
-- **Plain cable only** (VB-CABLE, Virtual Audio Cable): in moyboard choose **Mic and sounds**, select the cable's playback side and your microphone. In Discord, select the cable's recording side (`CABLE Output`).
+- **Your mixer adds your mic** (Wave Link, VoiceMeeter): in moyboard choose **Sounds only** and pick the mixer's virtual output under *For others*. In your app, select the input your mixer provides.
+- **Plain cable only** (VB-CABLE, Virtual Audio Cable): in moyboard choose **Mic and sounds**, select the cable's playback side and your microphone. In your app, select the cable's recording side (`CABLE Output`).
 
 ![Settings → Audio routing](docs/images/audio-routing.png)
 
@@ -50,7 +50,7 @@ Wave Link, VoiceMeeter, VB-CABLE, or similar.
 1. Download VB-CABLE from <https://vb-audio.com/Cable/>. It is donationware: please consider supporting the author.
 2. Extract the archive, run the setup as administrator, and restart Windows.
 3. In moyboard choose **Settings → Audio routing → Mic and sounds**. Select the cable and your microphone, then press **Test cable**.
-4. In Discord, go to *Voice & Video → Input Device* and select **CABLE Output**.
+4. In your app, set the microphone input to **CABLE Output**.
 
 ## Daily use
 
@@ -62,8 +62,8 @@ Wave Link, VoiceMeeter, VB-CABLE, or similar.
 ## Troubleshooting
 
 - **"No virtual cable found"**: install the cable, restart Windows, then press *Refresh* in Settings.
-- **Others can't hear me**: check that Discord's input is the cable's recording side, and that moyboard is running.
-- **Echo or feedback**: do not set the cable as the Windows default playback or recording device, and do not choose its playback side in Discord.
+- **Others can't hear me**: check that your app's input is the cable's recording side, and that moyboard is running.
+- **Echo or feedback**: do not set the cable as the Windows default playback or recording device, and do not choose its playback side in your app.
 - **Mic silent when moyboard is closed** (Mic and sounds): enable *Start with Windows* and *Close to tray* in Settings.
 - **"Microphone not found" or access denied**: choose the microphone again in Settings, or open the microphone privacy settings from the same section and allow desktop apps.
 

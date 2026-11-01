@@ -92,7 +92,7 @@ export function Settings({
           </>
         ) : (
           <>
-            <p className="hint">Pick the virtual cable that Discord or your game listens to.</p>
+            <p className="hint">Pick the virtual cable that your app or game listens to.</p>
             <Select
               aria-label="For others"
               value={output.selected ?? ""}

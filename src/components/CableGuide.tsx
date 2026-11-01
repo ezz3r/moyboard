@@ -62,7 +62,7 @@ export function CableGuide({ onFinish, onLater, onSomethingElse, onError }: Prop
         <p className="status ok" role="status">
           Detected: {cable.playbackName} / {cable.recordName} ✓
         </p>
-        <p className="hint">The cable is saved. Next, check the microphone and Discord in Settings → Audio routing.</p>
+        <p className="hint">The cable is saved. Next, check the microphone in Settings → Audio routing.</p>
         <div className="step-actions">
           <button type="button" className="btn btn-primary" onClick={onFinish}>
             Continue
@@ -76,7 +76,7 @@ export function CableGuide({ onFinish, onLater, onSomethingElse, onError }: Prop
     <section className="settings guide" aria-labelledby="guide-title">
       <h2 id="guide-title">Install a virtual cable</h2>
       <p className="hint">
-        moyboard needs a virtual audio cable to reach Discord and games through your microphone. Follow these steps.
+        moyboard needs a virtual audio cable to reach your app and games through your microphone. Follow these steps.
       </p>
 
       <ol className="steps">

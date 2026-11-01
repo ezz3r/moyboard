@@ -767,7 +767,8 @@ test("banner: shows on start, opens audio routing, and stays dismissed", async (
 test("cable test: Mode B without a cable explains the install and offers the website", async ({ page }) => {
   await enterModeB(page);
   await plugCable(page, false);
-  await expect(page.getByText("No virtual cable found. Install VB-CABLE, restart Windows, then press Refresh.")).toBeVisible({ timeout: 6000 });
+  await expect(page.getByText("No virtual cable found")).toBeVisible({ timeout: 6000 });
+  await expect(page.getByText("Install VB-CABLE, restart Windows, then press Refresh.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open VB-Audio website" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
 });
@@ -775,7 +776,7 @@ test("cable test: Mode B without a cable explains the install and offers the web
 test("cable test: a tone that arrives is reported, one that does not is reported as an error", async ({ page }) => {
   await enterModeB(page);
   await expect(page.getByRole("meter", { name: "Microphone level" })).toBeVisible();
-  await expect(page.getByText("Mic routing active.")).toBeVisible();
+  await expect(page.getByText("Ready. Keep moyboard running.")).toBeVisible();
   await page.getByRole("button", { name: "Test cable" }).click();
   await expect(page.getByText("Sound arrived on CABLE Output (VB-Audio Virtual Cable).")).toBeVisible();
   await plugCable(page, false);
@@ -798,7 +799,7 @@ test("setup help: the Mode B help text is available at the bottom of Settings", 
   await expect(page.getByText("donationware")).toBeVisible();
 });
 
-test("cable guide: Mode B with a found cable shows the Discord input", async ({ page }) => {
+test("cable guide: Mode B with a found cable shows the recording side for the app", async ({ page }) => {
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Setup guide" }).click();
   await plugCable(page, true);
@@ -806,5 +807,5 @@ test("cable guide: Mode B with a found cable shows the Discord input", async ({ 
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("radio", { name: "Mic and sounds" }).click();
   await expect(page.getByText("Detected: CABLE Input (VB-Audio Virtual Cable) / CABLE Output (VB-Audio Virtual Cable)")).toBeVisible();
-  await expect(page.getByText("Input Device → CABLE Output (VB-Audio Virtual Cable)")).toBeVisible();
+  await expect(page.getByText("set the input to CABLE Output (VB-Audio Virtual Cable)")).toBeVisible();
 });

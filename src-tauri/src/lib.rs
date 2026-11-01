@@ -614,7 +614,7 @@ async fn test_cable(store: tauri::State<'_, Store>, engine: tauri::State<'_, Aud
         .await
         .map_err(|e| e.to_string())??;
     if peak < 0.02 {
-        return Err("No sound arrived on the recording side. Check that moyboard is running and that Discord uses the recording side.".into());
+        return Err("No sound arrived on the recording side. Check that moyboard is running and that your app uses the recording side.".into());
     }
     Ok(())
 }
