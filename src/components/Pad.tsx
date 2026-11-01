@@ -1,4 +1,5 @@
 import { Headphones, Play, Square } from "lucide-react";
+import type { PointerEvent } from "react";
 import type { SoundEntry } from "../types";
 import { hotkeyLabel, stemOf } from "../names";
 import type { Counts } from "../playback";
@@ -18,6 +19,8 @@ type Props = {
   onPreview: () => void;
   onStopPreview: () => void;
   onForget: () => void;
+  /** Starts a drag onto a category (see dragToCategory.ts). */
+  onDragStart?: (e: PointerEvent<HTMLElement>) => void;
 };
 
 /**
@@ -35,6 +38,7 @@ export function Pad({
   onPreview,
   onStopPreview,
   onForget,
+  onDragStart,
 }: Props) {
   const name = stemOf(entry.fileName);
   const missing = entry.missing;
@@ -52,7 +56,7 @@ export function Pad({
     .join(" ");
 
   return (
-    <div className={classes} style={colorStyle(accent)}>
+    <div className={classes} style={colorStyle(accent)} onPointerDown={onDragStart}>
       <span className="pad-glyph" aria-hidden="true">
         <span className="pad-plate">{missing ? "!" : (entry.meta.emoji ?? "♪")}</span>
       </span>

@@ -167,7 +167,7 @@ test("emoji and category are saved from the sidebar", async ({ page }) => {
   await expect(picker).toHaveCount(0);
   await sidebar(page).getByRole("combobox", { name: "Category" }).click();
   await page.getByRole("option", { name: "Reactions" }).click();
-  expect(await categoryCount(page, "Reactions")).toBe("3");
+  await expect.poll(() => categoryCount(page, "Reactions")).toBe("3");
   await expect(pad(page, "frog").locator(".pad-glyph")).toHaveText("🎺");
 });
 
@@ -257,6 +257,46 @@ test("category colour is applied to its sounds", async ({ page }) => {
   await picker.getByRole("textbox", { name: "Hex" }).fill("#5fb3c9");
   await page.keyboard.press("Escape");
   await expect(pad(page, "airhorn")).toHaveAttribute("style", /#5fb3c9/);
+});
+
+/** A point on the name strip under the button row, where a drag can start. The centre is the Play button. */
+async function padGrip(page: Page, name: string) {
+  const select = pad(page, name).locator(".pad-select");
+  await select.scrollIntoViewIfNeeded();
+  const box = (await select.boundingBox())!;
+  return { x: box.x + box.width / 2, y: box.y + box.height - 8 };
+}
+
+test("drag a pad onto a category chip moves it", async ({ page }) => {
+  const from = await padGrip(page, "airhorn");
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x, from.y + 30, { steps: 4 });
+  const chip = page.locator(".drop-chip", { hasText: "Reactions" });
+  await expect(chip).toBeVisible();
+  const target = (await chip.boundingBox())!;
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 10 });
+  await expect(chip).toHaveClass(/is-over/);
+  await page.mouse.up();
+  await expect(page.locator(".toast")).toHaveText("Moved to Reactions");
+  await expect.poll(() => categoryCount(page, "Reactions")).toBe("3");
+});
+
+test("drag is cancelled with Escape and a plain click still selects", async ({ page }) => {
+  const from = await padGrip(page, "rimshot");
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x, from.y + 40, { steps: 4 });
+  const chip = page.locator(".drop-chip", { hasText: "Reactions" });
+  const target = (await chip.boundingBox())!;
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 10 });
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(page.locator(".toast")).toHaveCount(0);
+  await expect(chip).toHaveCount(0);
+  await expect(pad(page, "rimshot")).not.toHaveClass(/is-selected/);
+  await page.mouse.click(from.x, from.y);
+  await expect(pad(page, "rimshot")).toHaveClass(/is-selected/);
 });
 
 test("colour picker: invalid hex is refused, presets and reset apply", async ({ page }) => {

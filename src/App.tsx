@@ -11,7 +11,8 @@ import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry, type TileSizes } from "./types";
 import { stemOf } from "./names";
 import { countsOf } from "./playback";
-import { resolveColor } from "./colorTokens";
+import { resolveColor, colorStyle } from "./colorTokens";
+import { DROP_ATTR, useCategoryDrag } from "./dragToCategory";
 import { ChevronDown, RefreshCw, Search, Settings, Square, X } from "lucide-react";
 
 const ALL = "all";
@@ -292,11 +293,32 @@ export default function App() {
     selection?.type === "sound" ? (sounds.find((s) => s.fileName === selection.id) ?? null) : null;
   const selectedCategory = selection?.type === "category" ? selection.id : null;
 
+  // Drag a pad onto a category (the drop bar, or a section in the All view). Saves the category.
+  const moveSound = useCallback(
+    async (fileName: string, target: string) => {
+      const s = sounds.find((x) => x.fileName === fileName);
+      if (!s) return;
+      const category = target === NONE ? null : target;
+      if ((s.meta.category ?? null) === category) return;
+      try {
+        await api.setSoundMeta(fileName, { ...s.meta, category });
+        await refresh();
+        say(`Moved to ${category ? nameOf(category) : "Uncategorized"}`);
+      } catch (e) {
+        notify(String(e));
+      }
+    },
+    [sounds, refresh, say, notify, categories],
+  );
+  const { view: dragView, startDrag } = useCategoryDrag(moveSound);
+  const dragged = dragView ? sounds.find((x) => x.fileName === dragView.fileName) : undefined;
+
   const renderPad = (s: SoundEntry) => (
     <Pad
       key={s.fileName}
       entry={s}
       accent={resolveColor(s.meta, categories)}
+      onDragStart={(e) => startDrag(e, s.fileName)}
       selected={selection?.type === "sound" && selection.id === s.fileName}
       counts={countsOf(playing, s.fileName)}
       onSelect={() => setSelection({ type: "sound", id: s.fileName })}
@@ -372,6 +394,29 @@ export default function App() {
       </header>
 
         <main className="main">
+          {dragView && (
+            <div className="drop-bar" role="group" aria-label="Move sound to category">
+              {[{ id: NONE, name: "Uncategorized", color: null }, ...catList.map((c) => ({ id: c.id, name: c.name, color: categories[c.id]?.color ?? null }))].map(
+                (c) => (
+                  <div
+                    key={c.id}
+                    className={`drop-chip${dragView.over === c.id ? " is-over" : ""}`}
+                    {...{ [DROP_ATTR]: c.id }}
+                    style={colorStyle(c.color)}
+                  >
+                    <span className="drop-dot" aria-hidden="true" />
+                    {c.name}
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+          {dragView && dragged && (
+            <div className="drag-ghost" style={{ left: dragView.x + 12, top: dragView.y + 12 }} aria-hidden="true">
+              <span>{dragged.meta.emoji ?? "♪"}</span>
+              {stemOf(dragged.fileName)}
+            </div>
+          )}
           {view === "settings" ? (
             <SettingsView
               libraryDir={libraryDir}
@@ -411,6 +456,8 @@ export default function App() {
                         })
                       }
                       onSelect={g.selectable ? () => setSelection({ type: "category", id: g.key }) : undefined}
+                      dropKey={g.key}
+                      dropActive={dragView?.over === g.key}
                     >
                       {!isCollapsed &&
                         (g.entries.length > 0 ? (
@@ -598,6 +645,8 @@ function Group({
   collapsed,
   onToggle,
   onSelect,
+  dropKey,
+  dropActive,
   children,
 }: {
   name: string;
@@ -606,11 +655,17 @@ function Group({
   collapsed: boolean;
   onToggle: () => void;
   onSelect?: () => void;
+  dropKey: string;
+  dropActive: boolean;
   children: ReactNode;
 }) {
   const style = color ? ({ "--cat": color } as CSSProperties) : undefined;
   return (
-    <section className="group" style={style}>
+    <section
+      className={`group${dropActive ? " is-over" : ""}`}
+      style={style}
+      {...{ [DROP_ATTR]: dropKey }}
+    >
       <header className="group-head">
         <button
           type="button"
