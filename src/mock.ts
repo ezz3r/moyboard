@@ -17,6 +17,7 @@ const missing: Record<string, SoundMeta> = {
 };
 let output: string | null = null;
 let monitorVolume = 1;
+let masterVolume = 1;
 let preview: string | null = null;
 // Playback is simulated: a sound plays for 3 s, then ends on its own.
 type Playing = { fileName: string; previewing: boolean };
@@ -127,7 +128,7 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       return undefined as T;
     }
     case "list_output_devices":
-      return { devices, selected: output, monitorActive: true, monitorVolume, previewSelected: preview } as T;
+      return { devices, selected: output, masterVolume, monitorVolume, previewSelected: preview } as T;
     case "set_preview_device":
       preview = (args.name as string | null) ?? null;
       return undefined as T;
@@ -236,6 +237,23 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       setPlaying([]);
       return undefined as T;
     case "set_master_volume":
+      masterVolume = args.volume as number;
+      return undefined as T;
+    case "reset_settings":
+      // Same defaults as the backend's Config::default; sounds and categories are kept.
+      output = null;
+      preview = null;
+      monitorVolume = 1;
+      masterVolume = 1;
+      tileSizes = { pad: 128, padHeight: 128, quick: 56, quickHeight: 56 };
+      sidebarWidth = 300;
+      quickHotkey = null;
+      quickMode = "toggle";
+      stopHotkey = null;
+      autoRescan = true;
+      closeToTray = true;
+      autostart = false;
+      startMinimized = false;
       return undefined as T;
     default:
       throw new Error(`unknown command: ${cmd}`);

@@ -192,3 +192,11 @@ before a release.
 - [ ] Corrupt `%APPDATA%\com.moyboard.app\moyboard.json`: app shows an error at startup and does not overwrite the file.
 - [ ] Remove the library folder while running: Rescan shows an error, app stays responsive.
 - [ ] Idle CPU near zero; memory stays low with the window open for 10 minutes.
+
+## You, Others and Reset settings (v10, not run on Windows)
+
+- [ ] "You" moves on a machine where the Windows default output is the main output (headset for both): sounds still play, and previews follow the "You" volume.
+- [ ] "You" and "Others" keep their values after a restart.
+- [ ] Changing "Play to" or the preview device does not disable "You".
+- [ ] Reset settings: after confirming, the output, preview, volumes, tile sizes, Quick Panel hotkey and mode, Stop all hotkey, library folder and "Start with Windows" are back to default; sounds and categories are still there.
+- [ ] Reset settings with "Start with Windows" on: the Run entry is removed (check the Startup folder or Task Manager's Startup tab).

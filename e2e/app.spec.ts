@@ -691,3 +691,18 @@ test("quick panel: the wheel scrolls the board while Ctrl, Alt or Shift is held 
     expect(top.prevented, mod).toBe(true);
   }
 });
+
+test("You and Others sliders are always adjustable", async ({ page }) => {
+  await expect(page.getByRole("slider", { name: "Volume for you (monitor output)" })).toBeEnabled();
+  await expect(page.getByRole("slider", { name: "Volume for others (main output)" })).toBeEnabled();
+});
+
+test("reset settings puts a changed tile size back to its default", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings" }).click();
+  const quick = page.locator("label.inline-field", { hasText: "Quick Panel width" }).locator("input");
+  await quick.fill("90");
+  await expect(quick).toHaveValue("90");
+  await page.getByRole("button", { name: "Reset settings", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(quick).toHaveValue("56");
+});

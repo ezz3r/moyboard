@@ -28,11 +28,11 @@ export default function App() {
   const [output, setOutput] = useState<OutputState>({
     devices: [],
     selected: null,
-    monitorActive: false,
+    masterVolume: 1,
     monitorVolume: 1,
     previewSelected: null,
   });
-  const [master, setMaster] = useState(1);
+  const [settingsKey, setSettingsKey] = useState(0);
   const [view, setView] = useState<"pads" | "settings">("pads");
   const [filter, setFilter] = useState(ALL);
   const [selection, setSelection] = useState<Selection>(null);
@@ -63,19 +63,31 @@ export default function App() {
     }
   }, [notify]);
 
+  // Reads everything Settings shows. Used at start and after "Reset settings".
+  const loadSettings = useCallback(async () => {
+    try {
+      setLibraryDir(await api.getLibraryDir());
+      setOutput(await api.listOutputDevices());
+      setSideWidth(await api.getSidebarWidth());
+      setTileSizes(await api.getTileSizes());
+    } catch (e) {
+      notify(String(e));
+    }
+  }, [notify]);
+
   useEffect(() => {
     void (async () => {
-      try {
-        setLibraryDir(await api.getLibraryDir());
-        setOutput(await api.listOutputDevices());
-        setSideWidth(await api.getSidebarWidth());
-        setTileSizes(await api.getTileSizes());
-      } catch (e) {
-        notify(String(e));
-      }
+      await loadSettings();
       await refresh();
     })();
-  }, [notify, refresh]);
+  }, [loadSettings, refresh]);
+
+  // Settings are remounted so their own sections (autostart, Quick Panel, ...) read the new values.
+  const onReset = useCallback(async () => {
+    await loadSettings();
+    await refresh();
+    setSettingsKey((k) => k + 1);
+  }, [loadSettings, refresh]);
 
   useEffect(() => {
     if (!toast) return;
@@ -402,12 +414,14 @@ export default function App() {
           )}
           {view === "settings" ? (
             <SettingsView
+              key={settingsKey}
               libraryDir={libraryDir}
               output={output}
               onLibraryChanged={setLibraryDir}
               onOutputChanged={(patch) => setOutput((o) => ({ ...o, ...patch }))}
               onRefresh={() => void refresh()}
               onError={notify}
+              onReset={() => void onReset()}
               tileSizes={tileSizes}
               onTileSizeChanged={(kind, size) => {
                 setTileSizes((t) => ({ ...t, [kind]: size }));
@@ -488,19 +502,19 @@ export default function App() {
               min={0}
               max={2}
               step={0.01}
-              value={master}
+              value={output.masterVolume}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                setMaster(v);
+                setOutput((o) => ({ ...o, masterVolume: v }));
                 void api.setMasterVolume(v).catch((err) => notify(String(err)));
               }}
               aria-label="Volume for others (main output)"
-              aria-valuetext={`${Math.round(master * 100)} percent`}
+              aria-valuetext={`${Math.round(output.masterVolume * 100)} percent`}
             />
-            <output className="value">{Math.round(master * 100)} %</output>
+            <output className="value">{Math.round(output.masterVolume * 100)} %</output>
           </label>
 
-          <label className="top-field volume" title={yourVolumeHint(output)}>
+          <label className="top-field volume" title="Your volume: what you hear on your Windows default output, and headphone previews">
             <span>You</span>
             <input
               type="range"
@@ -508,7 +522,6 @@ export default function App() {
               max={2}
               step={0.01}
               value={output.monitorVolume}
-              disabled={!output.monitorActive}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 setOutput((o) => ({ ...o, monitorVolume: v }));
@@ -694,10 +707,3 @@ function IconButton({
   );
 }
 
-/** Tooltip for the "You" slider: what it controls right now. */
-function yourVolumeHint(output: OutputState): string {
-  if (output.monitorActive && output.previewSelected) return "Your volume: sounds on the Windows default output and headphone previews";
-  if (output.monitorActive) return "Your volume: sounds you hear on the Windows default output";
-  if (output.previewSelected) return "Your volume: headphone previews only";
-  return "Off: set a preview output in Settings, or make the Windows default output something other than the main output";
-}

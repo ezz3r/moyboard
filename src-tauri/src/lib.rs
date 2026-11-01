@@ -36,8 +36,8 @@ pub struct OutputState {
     devices: Vec<DeviceInfo>,
     /// Saved choice; `None` means system default.
     selected: Option<String>,
-    /// True when "You" hears sounds: the Windows default output is not the main output.
-    monitor_active: bool,
+    /// Volume for "Others" (main output), 0..=2.
+    master_volume: f32,
     monitor_volume: f32,
     /// Saved preview choice; `None` means system default.
     preview_selected: Option<String>,
@@ -498,15 +498,14 @@ fn ensure_unique_name(cfg: &Config, name: &str, own: Option<&str>) -> Result<(),
 }
 
 #[tauri::command]
-fn list_output_devices(store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<OutputState, String> {
-    let (selected, monitor_volume, preview_selected) = store.get(|cfg| {
-        (cfg.output_device.clone(), cfg.monitor_volume, cfg.preview_device.clone())
+fn list_output_devices(store: tauri::State<Store>) -> Result<OutputState, String> {
+    let (selected, monitor_volume, master_volume, preview_selected) = store.get(|cfg| {
+        (cfg.output_device.clone(), cfg.monitor_volume, cfg.master_volume, cfg.preview_device.clone())
     });
-    let monitor_active = lock(&engine)?.you_active();
     Ok(OutputState {
         devices: Engine::list_devices()?,
         selected,
-        monitor_active,
+        master_volume: master_volume.unwrap_or(1.0),
         monitor_volume: monitor_volume.unwrap_or(1.0),
         preview_selected,
     })
@@ -907,11 +906,39 @@ fn save_quick_panel_geometry(
 /// Forgets the saved position and size, and puts the panel back at its default size, centred.
 #[tauri::command]
 fn reset_quick_panel_geometry(app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
+    reset_quick_geometry(&app, &store)
+}
+
+/// Forgets the saved Quick Panel position and size, and puts the window back at its default size.
+fn reset_quick_geometry(app: &AppHandle, store: &Store) -> Result<(), String> {
     store.update(|cfg| cfg.quick_panel_geometry = None)?;
-    if let Some(w) = quick_window(&app) {
+    if let Some(w) = quick_window(app) {
         w.set_size(tauri::LogicalSize::new(360.0, 420.0)).map_err(|e| e.to_string())?;
         w.center().map_err(|e| e.to_string())?;
     }
+    Ok(())
+}
+
+/// "Reset settings": every setting goes back to its default, including the library folder and
+/// "Start with Windows". Sounds, categories and recent colours stay.
+#[tauri::command]
+fn reset_settings(app: AppHandle, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
+    store.update(|cfg| cfg.reset_settings())?;
+    {
+        let mut engine = lock(&engine)?;
+        engine.set_device(None)?;
+        engine.set_preview(None)?;
+        engine.set_monitor_gain(1.0);
+        engine.set_master(1.0);
+    }
+    let autostart = app.autolaunch();
+    if autostart.is_enabled().map_err(|e| e.to_string())? {
+        autostart.disable().map_err(|e| format!("start with Windows: {e}"))?;
+    }
+    reset_quick_geometry(&app, &store)?;
+    hotkeys::sync(&app)?;
+    restart_watch(&app)?;
+    notify_changed(&app);
     Ok(())
 }
 
@@ -933,9 +960,9 @@ fn stop_all(app: AppHandle, engine: tauri::State<AudioState>) -> Result<(), Stri
 }
 
 #[tauri::command]
-fn set_master_volume(volume: f32, engine: tauri::State<AudioState>) -> Result<(), String> {
+fn set_master_volume(volume: f32, store: tauri::State<Store>, engine: tauri::State<AudioState>) -> Result<(), String> {
     lock(&engine)?.set_master(volume);
-    Ok(())
+    store.update(|cfg| cfg.master_volume = Some(volume.clamp(0.0, 2.0)))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -976,6 +1003,7 @@ pub fn run() {
                 engine.keep_unavailable(out.as_deref(), None);
             }
             engine.set_monitor_gain(mon_gain.unwrap_or(1.0));
+            engine.set_master(store.get(|cfg| cfg.master_volume).unwrap_or(1.0));
             if let Err(e) = engine.set_preview(prev.as_deref()) {
                 eprintln!("moyboard: saved preview device unavailable: {e}");
                 engine.keep_unavailable(None, prev.as_deref());
@@ -1096,7 +1124,8 @@ pub fn run() {
             waveform,
             export_trim,
             stop_all,
-            set_master_volume
+            set_master_volume,
+            reset_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running moyboard");

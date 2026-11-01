@@ -81,6 +81,7 @@ export const api = {
   resetQuickPanelGeometry: () => call<void>("reset_quick_panel_geometry"),
   stopAll: () => call<void>("stop_all"),
   setMasterVolume: (volume: number) => call<void>("set_master_volume", { volume }),
+  resetSettings: () => call<void>("reset_settings"),
 };
 
 /**

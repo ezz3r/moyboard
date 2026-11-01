@@ -87,6 +87,8 @@ pub struct Config {
     /// Unused since "You" follows the Windows default output. Kept so older configs still load.
     pub monitor_device: Option<String>,
     pub monitor_volume: Option<f32>,
+    /// Volume for "Others" (the main output), 0..=2. `None` means 1.0.
+    pub master_volume: Option<f32>,
     /// `None` means system default output. Used for headphone previews.
     pub preview_device: Option<String>,
     /// `None` means on.
@@ -117,6 +119,17 @@ pub struct Config {
     pub recent_colors: Vec<String>,
     pub sounds: BTreeMap<String, SoundMeta>,
     pub categories: BTreeMap<String, CategoryMeta>,
+}
+
+impl Config {
+    /// "Reset settings": every setting goes back to its default. Sounds, categories and recent
+    /// colours are kept. New fields are reset too, without a line here.
+    pub fn reset_settings(&mut self) {
+        let sounds = std::mem::take(&mut self.sounds);
+        let categories = std::mem::take(&mut self.categories);
+        let recent_colors = std::mem::take(&mut self.recent_colors);
+        *self = Config { sounds, categories, recent_colors, ..Default::default() };
+    }
 }
 
 /// Holds `moyboard.json` in the app data dir. Writes go through a temp file, then rename.
@@ -176,6 +189,28 @@ mod tests {
         assert!(text.contains("emoji"));
         let back: Config = serde_json::from_str(&text).unwrap();
         assert_eq!(back.sounds["a.mp3"], cfg.sounds["a.mp3"]);
+    }
+
+    #[test]
+    fn reset_settings_keeps_sounds_categories_and_recent_colours() {
+        let mut cfg = Config {
+            library_dir: Some("D:/sounds".into()),
+            master_volume: Some(1.5),
+            quick_tile_size: Some(90),
+            stop_all_hotkey: Some("Ctrl+Shift+KeyS".into()),
+            recent_colors: vec!["#5fb3c9".into()],
+            ..Default::default()
+        };
+        cfg.sounds.insert("a.mp3".into(), SoundMeta { emoji: Some("📣".into()), ..Default::default() });
+        cfg.categories.insert("c-memes".into(), CategoryMeta { name: "Memes".into(), color: None });
+        cfg.reset_settings();
+        assert_eq!(cfg.library_dir, None);
+        assert_eq!(cfg.master_volume, None);
+        assert_eq!(cfg.quick_tile_size, None);
+        assert_eq!(cfg.stop_all_hotkey, None);
+        assert_eq!(cfg.sounds["a.mp3"].emoji.as_deref(), Some("📣"));
+        assert_eq!(cfg.categories["c-memes"].name, "Memes");
+        assert_eq!(cfg.recent_colors, vec!["#5fb3c9".to_string()]);
     }
 
     #[test]

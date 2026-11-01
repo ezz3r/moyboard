@@ -34,8 +34,9 @@ export type OutputDevice = {
 export type OutputState = {
   devices: OutputDevice[];
   selected: string | null;
-  /** "You" hears sounds: the Windows default output is not the main output. */
-  monitorActive: boolean;
+  /** Volume for "Others" (the main output), 0..2. */
+  masterVolume: number;
+  /** Volume for "You" (the Windows default output and previews), 0..2. */
   monitorVolume: number;
   previewSelected: string | null;
 };

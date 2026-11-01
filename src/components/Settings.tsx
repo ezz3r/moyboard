@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, pickFolder } from "../api";
 import type { AppSettings, AutostartSettings, OutputState, QuickPanelSettings, TileSizeKind, TileSizes } from "../types";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { HotkeyField } from "./HotkeyField";
 import { Select } from "./Select";
 
@@ -11,6 +12,7 @@ type Props = {
   onOutputChanged: (patch: Partial<OutputState>) => void;
   onRefresh: () => void;
   onError: (message: string) => void;
+  onReset: () => void;
   tileSizes: TileSizes;
   onTileSizeChanged: (kind: TileSizeKind, size: number) => void;
 };
@@ -22,6 +24,7 @@ export function Settings({
   onOutputChanged,
   onRefresh,
   onError,
+  onReset,
   tileSizes,
   onTileSizeChanged,
 }: Props) {
@@ -74,8 +77,7 @@ export function Settings({
       <section className="settings-section">
         <h2>For you</h2>
         <p className="hint">
-          Each sound also plays on your Windows default output, so you hear it.
-          {output.monitorActive ? "" : output.previewSelected ? " Your default output is the main output, so only previews use this volume." : " Your default output is the main output, so nothing extra plays."}
+          Your copy of each sound plays on your Windows default output, when that is not the main output. Previews always use this volume.
         </p>
         <label className="inline-field">
           <span>Your volume <output className="value">{Math.round(output.monitorVolume * 100)}%</output></span>
@@ -85,7 +87,6 @@ export function Settings({
             max={2}
             step={0.05}
             value={output.monitorVolume}
-            disabled={!output.monitorActive}
             onChange={(e) => {
               const v = Number(e.target.value);
               onOutputChanged({ monitorVolume: v });
@@ -131,7 +132,7 @@ export function Settings({
       <section className="settings-section">
         <h2>Preview output</h2>
         <p className="hint">
-          Headphone previews play here and never on the output above. Must differ from it.
+          Headphone previews play here. If this is the output above too (a headset with mic), the preview is heard there as well.
         </p>
         <Select
           aria-label="Preview output"
@@ -161,6 +162,8 @@ export function Settings({
       <StopAllSection onError={onError} />
 
       <StartupSection onError={onError} />
+
+      <ResetSection onError={onError} onReset={onReset} />
 
     </div>
   );
@@ -336,6 +339,35 @@ function StopAllSection({ onError }: { onError: (m: string) => void }) {
             <HotkeyField value={hotkey} onChange={(h) => void save(h)} />
           </span>
         </div>
+      )}
+    </section>
+  );
+}
+
+/** Puts every setting back to its default. Sounds and categories stay. */
+function ResetSection({ onError, onReset }: { onError: (m: string) => void; onReset: () => void }) {
+  const [asking, setAsking] = useState(false);
+  return (
+    <section className="settings-section">
+      <h2>Reset settings</h2>
+      <p className="hint">
+        Sets every setting back to its default: outputs, volumes, tile sizes, hotkeys, library folder and Start with
+        Windows. Your sounds and categories stay.
+      </p>
+      <button type="button" className="btn btn-danger" onClick={() => setAsking(true)}>
+        Reset settings
+      </button>
+      {asking && (
+        <ConfirmDialog
+          title="Reset settings?"
+          body="Every setting goes back to its default. Sounds and categories stay."
+          confirmLabel="Reset"
+          onCancel={() => setAsking(false)}
+          onConfirm={() => {
+            setAsking(false);
+            void api.resetSettings().then(onReset).catch((e) => onError(String(e)));
+          }}
+        />
       )}
     </section>
   );
