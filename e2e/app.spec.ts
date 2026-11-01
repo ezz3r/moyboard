@@ -267,16 +267,16 @@ async function padGrip(page: Page, name: string) {
   return { x: box.x + box.width / 2, y: box.y + box.height - 8 };
 }
 
-test("drag a pad onto a category chip moves it", async ({ page }) => {
+test("drag a pad onto a category section moves it", async ({ page }) => {
   const from = await padGrip(page, "airhorn");
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(from.x, from.y + 30, { steps: 4 });
-  const chip = page.locator(".drop-chip", { hasText: "Reactions" });
-  await expect(chip).toBeVisible();
-  const target = (await chip.boundingBox())!;
-  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 10 });
-  await expect(chip).toHaveClass(/is-over/);
+  await expect(pad(page, "airhorn")).toHaveClass(/is-dragging/);
+  const section = page.locator("section.group", { hasText: "Reactions" });
+  await section.scrollIntoViewIfNeeded();
+  const box = (await section.boundingBox())!;
+  await page.mouse.move(box.x + 40, box.y + 20, { steps: 10 });
   await page.mouse.up();
   await expect(page.locator(".toast")).toHaveText("Moved to Reactions");
   await expect.poll(() => categoryCount(page, "Reactions")).toBe("3");
@@ -287,13 +287,13 @@ test("drag is cancelled with Escape and a plain click still selects", async ({ p
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(from.x, from.y + 40, { steps: 4 });
-  const chip = page.locator(".drop-chip", { hasText: "Reactions" });
-  const target = (await chip.boundingBox())!;
-  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 10 });
+  const section = page.locator("section.group", { hasText: "Reactions" });
+  const box = (await section.boundingBox())!;
+  await page.mouse.move(box.x + 40, box.y + 20, { steps: 10 });
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect(page.locator(".toast")).toHaveCount(0);
-  await expect(chip).toHaveCount(0);
+  await expect(pad(page, "rimshot")).not.toHaveClass(/is-dragging/);
   await expect(pad(page, "rimshot")).not.toHaveClass(/is-selected/);
   await page.mouse.click(from.x, from.y);
   await expect(pad(page, "rimshot")).toHaveClass(/is-selected/);
@@ -309,7 +309,7 @@ test("colour picker: invalid hex is refused, presets and reset apply", async ({ 
   await expect(picker.getByRole("textbox", { name: "Hex" })).toHaveAttribute("aria-invalid", "true");
   await picker.getByRole("radio", { name: "Teal" }).click();
   await expect(pad(page, "airhorn")).toHaveAttribute("style", /#30b0c7/);
-  await picker.getByRole("button", { name: "No colour" }).click();
+  await sidebar(page).getByRole("button", { name: "Remove category colour" }).click();
   await expect(sidebar(page).getByRole("button", { name: /^Category colour:/ })).toHaveAccessibleName(/none/);
 });
 
@@ -651,7 +651,6 @@ test("drag a pad onto a section header in the All view", async ({ page }) => {
   await section.scrollIntoViewIfNeeded();
   const box = (await section.boundingBox())!;
   await page.mouse.move(box.x + 40, box.y + 20, { steps: 10 });
-  await expect(section).toHaveClass(/is-over/);
   await page.mouse.up();
   await expect(page.locator(".toast")).toHaveText("Moved to Ideas");
 });

@@ -11,7 +11,7 @@ import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry, type TileSizes } from "./types";
 import { stemOf } from "./names";
 import { countsOf } from "./playback";
-import { resolveColor, colorStyle } from "./colorTokens";
+import { resolveColor } from "./colorTokens";
 import { DROP_ATTR, useCategoryDrag } from "./dragToCategory";
 import { ChevronDown, RefreshCw, Search, Settings, Square, X } from "lucide-react";
 
@@ -319,6 +319,7 @@ export default function App() {
       entry={s}
       accent={resolveColor(s.meta, categories)}
       onDragStart={(e) => startDrag(e, s.fileName)}
+      dragging={dragView?.fileName === s.fileName}
       selected={selection?.type === "sound" && selection.id === s.fileName}
       counts={countsOf(playing, s.fileName)}
       onSelect={() => setSelection({ type: "sound", id: s.fileName })}
@@ -394,23 +395,6 @@ export default function App() {
       </header>
 
         <main className="main">
-          {dragView && (
-            <div className="drop-bar" role="group" aria-label="Move sound to category">
-              {[{ id: NONE, name: "Uncategorized", color: null }, ...catList.map((c) => ({ id: c.id, name: c.name, color: categories[c.id]?.color ?? null }))].map(
-                (c) => (
-                  <div
-                    key={c.id}
-                    className={`drop-chip${dragView.over === c.id ? " is-over" : ""}`}
-                    {...{ [DROP_ATTR]: c.id }}
-                    style={colorStyle(c.color)}
-                  >
-                    <span className="drop-dot" aria-hidden="true" />
-                    {c.name}
-                  </div>
-                ),
-              )}
-            </div>
-          )}
           {dragView && dragged && (
             <div className="drag-ghost" style={{ left: dragView.x + 12, top: dragView.y + 12 }} aria-hidden="true">
               <span>{dragged.meta.emoji ?? "♪"}</span>
@@ -457,7 +441,6 @@ export default function App() {
                       }
                       onSelect={g.selectable ? () => setSelection({ type: "category", id: g.key }) : undefined}
                       dropKey={g.key}
-                      dropActive={dragView?.over === g.key}
                     >
                       {!isCollapsed &&
                         (g.entries.length > 0 ? (
@@ -646,7 +629,6 @@ function Group({
   onToggle,
   onSelect,
   dropKey,
-  dropActive,
   children,
 }: {
   name: string;
@@ -656,16 +638,11 @@ function Group({
   onToggle: () => void;
   onSelect?: () => void;
   dropKey: string;
-  dropActive: boolean;
   children: ReactNode;
 }) {
   const style = color ? ({ "--cat": color } as CSSProperties) : undefined;
   return (
-    <section
-      className={`group${dropActive ? " is-over" : ""}`}
-      style={style}
-      {...{ [DROP_ATTR]: dropKey }}
-    >
+    <section className="group" style={style} {...{ [DROP_ATTR]: dropKey }}>
       <header className="group-head">
         <button
           type="button"

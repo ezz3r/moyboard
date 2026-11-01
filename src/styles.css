@@ -18,9 +18,7 @@
   /* Playing for others (green) and for yourself in the headphone preview (yellow). */
   --playing-others: #1d7f3a;
   --playing-self: #9a6700;
-  /* Colour marking strength: the disc behind the icon. Dark themes need more. */
-  --plate-pct: 22%;
-  --scrim: rgb(0 0 0 / 0.35);
+    --scrim: rgb(0 0 0 / 0.35);
   --elevation: 0 8px 24px rgb(0 0 0 / 0.14);
   --rgb-accent: 0, 102, 204;
   --rgb-background: 255, 255, 255;
@@ -54,7 +52,6 @@
     --alarm: #ff6961;
     --playing-others: #5fd17f;
     --playing-self: #ffd60a;
-    --plate-pct: 30%;
     --scrim: rgb(0 0 0 / 0.55);
     --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
     --rgb-accent: 77, 163, 255;
@@ -78,7 +75,6 @@
   --alarm: #ff6961;
   --playing-others: #5fd17f;
   --playing-self: #ffd60a;
-  --plate-pct: 30%;
   --scrim: rgb(0 0 0 / 0.55);
   --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
   --rgb-accent: 77, 163, 255;
@@ -762,6 +758,18 @@ button.group-title:hover {
   border-color: var(--ink-2);
 }
 
+/* Category or pad colour as a stripe on the top edge. */
+.pad::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  height: 4px;
+  border-radius: 10px 10px 0 0;
+  background: var(--cat, transparent);
+}
+
 /* Button row: Stop, Play and Preview. Shown on hover or keyboard focus; Stop also while playing.
    Hidden, not removed, so the slots keep their place and nothing moves. */
 /* Taken out of flow and centred in the area above the name, so it sits in the middle of the tile. */
@@ -881,28 +889,12 @@ button.group-title:hover {
   z-index: 0;
   display: grid;
   place-items: center;
-  pointer-events: none;
-}
-
-/* Colour: a soft disc behind the icon. No frame or border. Clamped to the pad height, so it never reaches the name. */
-.pad-plate,
-.tile-plate {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--plate, transparent);
-}
-
-.pad-plate {
-  height: min(100%, calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.7));
-}
-
-.pad-mark {
   font-size: calc(min(var(--pad-min, 128px), var(--pad-h, 96px)) * 0.5);
   line-height: 1;
   opacity: 0.28;
+  pointer-events: none;
 }
+
 
 /* One line. A long name fades out at the end instead of wrapping. The full name is in the tooltip. */
 .pad-name {
@@ -1967,6 +1959,17 @@ button.group-title:hover {
   border-color: var(--ink-2);
 }
 
+/* Category or pad colour as a stripe on the top edge. */
+.tile::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: var(--cat, transparent);
+}
+
 .tile.is-playing {
   border-color: var(--playing-others);
 }
@@ -2014,18 +2017,12 @@ button.group-title:hover {
   width: 100%;
   display: grid;
   place-items: center;
-  pointer-events: none;
-}
-
-.tile-plate {
-  height: min(100%, calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.7));
-}
-
-.tile-mark {
   font-size: calc(min(var(--tile-min, 56px), var(--tile-h, 56px)) * 0.5);
   line-height: 1;
   opacity: 0.28;
+  pointer-events: none;
 }
+
 
 .tile-name {
   position: relative;
@@ -2139,51 +2136,6 @@ body.is-dragging {
   user-select: none;
 }
 
-/* Drop bar: one chip per category, shown at the top of the board while a pad is dragged. */
-.drop-bar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-  padding: 8px;
-  border: 1px dashed var(--control-line);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.drop-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid var(--control-line);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 13px;
-}
-
-.drop-chip.is-over {
-  border: 2px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-}
-
-.drop-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--cat, var(--line));
-}
-
-/* All view: a section highlights while a pad is dragged over it. */
-.group.is-over {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: var(--radius);
-}
 
 /* Ghost: follows the pointer. Never takes clicks. */
 .drag-ghost {
@@ -2200,4 +2152,34 @@ body.is-dragging {
   font-size: 13px;
   font-weight: 600;
   pointer-events: none;
+}
+
+/* The pad being dragged stays in place, dimmed, so it is clear what moves. */
+.pad.is-dragging,
+.tile.is-dragging {
+  opacity: 0.45;
+}
+
+/* Red X beside a colour swatch: removes the colour. */
+.color-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-clear {
+  all: unset;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius);
+  color: var(--alarm);
+  cursor: pointer;
+}
+
+.color-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

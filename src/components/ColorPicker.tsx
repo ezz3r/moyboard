@@ -1,10 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { HexColorPicker } from "react-colorful";
+import { X } from "lucide-react";
 import { api } from "../api";
 import { COLOR_PRESETS } from "../colors";
-
-type EyeDropperCtor = new () => { open: () => Promise<{ sRGBHex: string }> };
 
 const FALLBACK = "#8e8e93";
 const HEX = /^#?([0-9a-f]{6})$/i;
@@ -15,14 +14,15 @@ type Props = {
   /** Saved colour, `#rrggbb`. `null` means none or inherit. */
   value: string | null;
   onChange: (color: string | null) => void;
-  /** Text of the reset action, e.g. "Use category colour" or "No colour". Reset saves `null`. */
+  /** What removing the colour means, e.g. "Use category colour" or "No colour". Shown as the X's tooltip. */
   resetLabel: string;
   onError: (message: string) => void;
 };
 
 /**
- * Colour swatch that opens a popover: a saturation and hue area, a hex field, preset swatches,
- * recent custom colours and a reset. Dragging saves after a short pause; closing saves at once.
+ * Colour swatch that opens a popover: a saturation and hue area, a hex field, preset swatches and
+ * recent custom colours. Dragging saves after a short pause; closing saves at once. A red X beside
+ * the swatch removes the colour.
  */
 export function ColorPicker({ label, value, onChange, resetLabel, onError }: Props) {
   const [open, setOpen] = useState(false);
@@ -36,7 +36,6 @@ export function ColorPicker({ label, value, onChange, resetLabel, onError }: Pro
   const timer = useRef<number | undefined>(undefined);
   const savedRef = useRef(value);
   savedRef.current = value;
-  const EyeDropper = (window as unknown as { EyeDropper?: EyeDropperCtor }).EyeDropper;
 
   const presetHexes = COLOR_PRESETS.map((p) => p.hex);
 
@@ -111,20 +110,10 @@ export function ColorPicker({ label, value, onChange, resetLabel, onError }: Pro
     apply(`#${m[1].toLowerCase()}`, false);
   };
 
-  const pickFromScreen = async () => {
-    if (!EyeDropper) return;
-    try {
-      const { sRGBHex } = await new EyeDropper().open();
-      apply(sRGBHex.toLowerCase(), true);
-    } catch (e) {
-      if (!(e instanceof Error && e.name === "AbortError")) onError(String(e));
-    }
-  };
-
   const shown = open ? draft : value;
 
   return (
-    <>
+    <span className="color-row">
       <button
         ref={trigger}
         type="button"
@@ -139,16 +128,25 @@ export function ColorPicker({ label, value, onChange, resetLabel, onError }: Pro
         {shown ? null : "–"}
       </button>
 
+      {value !== null && (
+        <button
+          type="button"
+          className="color-clear"
+          aria-label={`Remove ${label.toLowerCase()}`}
+          title={resetLabel}
+          onClick={() => {
+            window.clearTimeout(timer.current);
+            setOpen(false);
+            onChange(null);
+          }}
+        >
+          <X size={14} aria-hidden="true" />
+        </button>
+      )}
+
       {open &&
         createPortal(
-          <div
-            ref={pop}
-            className="color-pop"
-            role="dialog"
-            aria-label={label}
-            tabIndex={-1}
-            style={pos}
-          >
+          <div ref={pop} className="color-pop" role="dialog" aria-label={label} tabIndex={-1} style={pos}>
             <HexColorPicker
               color={draft}
               onChange={(c) => {
@@ -168,7 +166,7 @@ export function ColorPicker({ label, value, onChange, resetLabel, onError }: Pro
                   maxLength={7}
                   spellCheck={false}
                   aria-invalid={invalid}
-                  aria-describedby={invalid ? "color-hex-error" : undefined}
+                  aria-describedby="color-hex-error"
                   onChange={(e) => onHexText(e.target.value)}
                   onBlur={() => {
                     if (invalid) {
@@ -217,28 +215,9 @@ export function ColorPicker({ label, value, onChange, resetLabel, onError }: Pro
                 ))}
               </div>
             )}
-
-            <div className="color-foot">
-              {EyeDropper && (
-                <button type="button" className="btn btn-quiet" onClick={() => void pickFromScreen()}>
-                  Pick from screen
-                </button>
-              )}
-              <button
-                type="button"
-                className="btn btn-quiet"
-                onClick={() => {
-                  window.clearTimeout(timer.current);
-                  onChange(null);
-                  setOpen(false);
-                }}
-              >
-                {resetLabel}
-              </button>
-            </div>
           </div>,
           document.body,
         )}
-    </>
+    </span>
   );
 }

@@ -1,14 +1,13 @@
 import { Headphones, Play, Square } from "lucide-react";
-import type { PointerEvent } from "react";
+import type { CSSProperties, PointerEvent } from "react";
 import type { SoundEntry } from "../types";
 import { hotkeyLabel, stemOf } from "../names";
 import type { Counts } from "../playback";
 import { PlayingBadge } from "./PlayingBadge";
-import { colorStyle } from "../colorTokens";
 
 type Props = {
   entry: SoundEntry;
-  /** Category or per-sound colour, `#rrggbb`, or null for neutral. Sets the plate and tint. */
+  /** Category or per-sound colour, `#rrggbb`, or null for neutral. Drawn as a stripe on the top edge. */
   accent: string | null;
   selected: boolean;
   /** Voices still sounding per output. Play always starts one more. */
@@ -21,6 +20,8 @@ type Props = {
   onForget: () => void;
   /** Starts a drag onto a category (see dragToCategory.ts). */
   onDragStart?: (e: PointerEvent<HTMLElement>) => void;
+  /** This pad is being dragged. */
+  dragging?: boolean;
 };
 
 /**
@@ -39,6 +40,7 @@ export function Pad({
   onStopPreview,
   onForget,
   onDragStart,
+  dragging,
 }: Props) {
   const name = stemOf(entry.fileName);
   const missing = entry.missing;
@@ -51,16 +53,15 @@ export function Pad({
     playing && "is-playing",
     previewing && "is-previewing",
     missing && "is-missing",
+    dragging && "is-dragging",
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <div className={classes} style={colorStyle(accent)} onPointerDown={onDragStart}>
+    <div className={classes} style={accent ? ({ "--cat": accent } as CSSProperties) : undefined} onPointerDown={onDragStart}>
       <span className="pad-glyph" aria-hidden="true">
-        <span className="pad-plate">
-          <span className="pad-mark">{missing ? "!" : (entry.meta.emoji ?? "♪")}</span>
-        </span>
+        {missing ? "!" : (entry.meta.emoji ?? "♪")}
       </span>
 
       {missing ? null : (

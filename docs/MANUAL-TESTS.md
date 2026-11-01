@@ -178,8 +178,8 @@ Run on the Windows build. Debug builds print `moyboard: quick panel key Pressed/
 - [ ] Stop all hotkey clashes: setting it to a key a sound or the Quick Panel uses is refused with a message.
 - [ ] Real audio: a sound played for others shows the green speaker badge; a headphone preview for yourself shows the yellow headphones badge; both at once show two badges. Quick Panel tiles show only the coloured border, no badge.
 - [ ] Hover only: the Stop button appears only while the pointer is on a playing pad.
-- [ ] Colour picker: the popover stays on screen in the narrow sidebar; EyeDropper "Pick from screen" appears only if WebView2 supports it, and works.
-- [ ] Drag a pad by press-and-hold into another category (drop bar, and All-view sections). OS file drop of an audio file onto the window still imports the file after a pad drag.
+- [ ] Colour picker: the popover stays on screen in the narrow sidebar; the red X beside the swatch removes the colour.
+- [ ] Drag a pad by press-and-hold onto a category section in the All view (the dragged pad is dimmed). OS file drop of an audio file onto the window still imports the file after a pad drag.
 - [ ] Drag inside WebView2 does not start a native file drag or a text selection.
 
 ## Windows-only items not run in WSL
