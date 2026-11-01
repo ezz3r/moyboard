@@ -758,15 +758,15 @@ button.group-title:hover {
   border-color: var(--ink-2);
 }
 
-/* Category or pad colour as a stripe on the top edge. */
+/* Category or pad colour as a stripe on the top edge. Sits inside the border, with the inner corner radius. */
 .pad::before {
   content: "";
   position: absolute;
-  left: -1px;
-  right: -1px;
-  top: -1px;
-  height: 4px;
-  border-radius: 10px 10px 0 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 8px;
+  border-radius: 9px 9px 0 0;
   background: var(--cat, transparent);
 }
 
@@ -1959,14 +1959,15 @@ button.group-title:hover {
   border-color: var(--ink-2);
 }
 
-/* Category or pad colour as a stripe on the top edge. */
+/* Category or pad colour as a stripe on the top edge. Sits inside the border, with the inner corner radius. */
 .tile::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  height: 3px;
+  height: 6px;
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
   background: var(--cat, transparent);
 }
 
