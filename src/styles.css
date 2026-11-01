@@ -758,6 +758,15 @@ button.group-title:hover {
   border-color: var(--ink-2);
 }
 
+/* Hover: the icon comes forward a little. The card does not change colour. */
+.pad:hover .pad-glyph {
+  opacity: 0.5;
+}
+
+.pad-glyph {
+  transition: opacity 120ms ease;
+}
+
 /* Category or pad colour as a stripe on the top edge. Sits inside the border, with the inner corner radius. */
 .pad::before {
   content: "";
@@ -876,10 +885,21 @@ button.group-title:hover {
 }
 
 /* Selected: accent border and a faint tint, drawn inside the tile so the grid cannot clip it. */
-.pad.is-selected {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+/* Selected: a short accent bar under the name, and the name in accent. The card keeps its look. */
+.pad.is-selected .pad-select::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 28px;
+  height: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.pad.is-selected .pad-name {
+  color: var(--accent);
 }
 
 /* Icon as the tile background: behind the buttons and the name, faint, not clickable. */
@@ -923,15 +943,7 @@ button.group-title:hover {
 }
 
 /* Live ring: a steady ring in the category colour while the pad sounds. No animation. */
-.pad.is-playing {
-  border-color: var(--playing-others);
-  box-shadow: 0 0 0 2px var(--playing-others);
-}
 
-.pad.is-previewing:not(.is-playing) {
-  border-color: var(--playing-self);
-  box-shadow: 0 0 0 2px var(--playing-self);
-}
 
 /* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
 .pad-key {
@@ -1971,12 +1983,21 @@ button.group-title:hover {
   background: var(--cat, transparent);
 }
 
-.tile.is-playing {
-  border-color: var(--playing-others);
+/* Playing: a small dot in the output colour, not a frame. Green for others, yellow for yourself. */
+.tile.is-playing::after,
+.tile.is-previewing::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--playing-others);
 }
 
-.tile.is-previewing:not(.is-playing) {
-  border-color: var(--playing-self);
+.tile.is-previewing:not(.is-playing)::after {
+  background: var(--playing-self);
 }
 
 .tile.is-missing {
