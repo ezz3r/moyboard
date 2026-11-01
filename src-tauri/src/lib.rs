@@ -609,9 +609,9 @@ fn get_tile_sizes(store: tauri::State<Store>) -> TileSizes {
 fn set_tile_size(kind: String, size: u32, app: AppHandle, store: tauri::State<Store>) -> Result<(), String> {
     let range = match kind.as_str() {
         "pad" => 96..=240,
-        "quick" => 48..=120,
+        "quick" => 16..=400,
         "padHeight" => 64..=240,
-        "quickHeight" => 40..=140,
+        "quickHeight" => 16..=400,
         _ => return Err(format!("unknown tile kind: {kind}")),
     };
     if !range.contains(&size) {

@@ -462,7 +462,7 @@ test("quick panel: one grid, category rail, no hint line", async ({ page }) => {
   await page.goto("/?view=quick");
   await expect(page.locator(".quick .quick-grid .tile")).toHaveCount(9);
   await page.getByRole("button", { name: /^Category:/ }).click();
-  await expect(page.locator(".quick-cat")).toHaveCount(8); // All, Uncategorized, six named
+  await expect(page.locator(".quick-cat")).toHaveCount(7); // All, then six named
   await expect(page.locator(".quick-hint")).toHaveCount(0);
   await expect(page.locator(".quick-group-head")).toHaveCount(0);
 });

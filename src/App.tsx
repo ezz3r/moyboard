@@ -168,7 +168,6 @@ export default function App() {
 
   const categoryOptions: CategoryOption[] = [
     { key: ALL, label: "All", color: null, count: sounds.length },
-    { key: NONE, label: "Uncategorized", color: null, count: countFor(NONE) },
     ...catList.map((c) => ({
       key: c.id,
       label: c.name,

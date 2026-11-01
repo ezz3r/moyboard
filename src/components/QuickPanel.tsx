@@ -124,7 +124,7 @@ export function QuickPanel() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [catOpen]);
 
-  // Rail entries: All, Uncategorized, then the named categories; counts as in the main window.
+  // Rail entries: All, then the named categories; counts as in the main window.
   const filters: Filter[] = useMemo(() => {
     const ids = new Set<string>(Object.keys(categories));
     for (const s of sounds) if (s.meta.category) ids.add(s.meta.category);
@@ -139,7 +139,6 @@ export function QuickPanel() {
           : sounds.filter((s) => s.meta.category === key).length;
     return [
       { key: ALL, label: "All", color: null, count: count(ALL) },
-      { key: NONE, label: "Uncategorized", color: null, count: count(NONE) },
       ...named.map((c) => ({ key: c.id, label: c.name, color: categories[c.id]?.color ?? null, count: count(c.id) })),
     ];
   }, [sounds, categories]);

@@ -119,18 +119,14 @@ export function Settings({
           max={240}
           onChange={(v) => onTileSizeChanged("padHeight", v)}
         />
-        <TileSlider
+        <TileNumber
           label="Quick Panel width"
           value={tileSizes.quick}
-          min={48}
-          max={120}
           onChange={(v) => onTileSizeChanged("quick", v)}
         />
-        <TileSlider
+        <TileNumber
           label="Quick Panel height"
           value={tileSizes.quickHeight}
-          min={40}
-          max={140}
           onChange={(v) => onTileSizeChanged("quickHeight", v)}
         />
       </section>
@@ -403,6 +399,32 @@ function StartupSection({ onError }: { onError: (m: string) => void }) {
       </label>
       <p className="hint">Minimized start only applies when moyboard starts with Windows.</p>
     </section>
+  );
+}
+
+/** Free number entry in px for the Quick Panel tiles. Saves each valid value; 16 px is the smallest that still lays out. */
+function TileNumber({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
+  return (
+    <label className="inline-field">
+      <span>{label}</span>
+      <span className="tile-number">
+        <input
+          type="number"
+          min={16}
+          max={400}
+          step={1}
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            const n = Number(e.target.value);
+            if (Number.isInteger(n) && n >= 16 && n <= 400) onChange(n);
+          }}
+        />
+        <span>px</span>
+      </span>
+    </label>
   );
 }
 
