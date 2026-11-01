@@ -25,13 +25,6 @@ export function Settings({
   tileSizes,
   onTileSizeChanged,
 }: Props) {
-  // Effective devices: an unset choice means the system default. Checked here so the
-  // conflict shows before Preview is pressed.
-  const defaultId = output.devices.find((d) => d.isDefault)?.id ?? null;
-  const mainId = output.selected ?? defaultId;
-  const previewId = output.previewSelected ?? defaultId;
-  const previewSame = previewId !== null && previewId === mainId;
-
   return (
     <div className="settings">
       <section className="settings-section">
@@ -157,11 +150,6 @@ export function Settings({
             }
           }}
         />
-        {previewSame && (
-          <p className="warning" role="alert">
-            Preview and main output use the same device. Choose a different preview device.
-          </p>
-        )}
       </section>
 
       <AutoRescan onError={onError} onChanged={onRefresh} />

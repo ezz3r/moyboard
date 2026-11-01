@@ -171,17 +171,12 @@ impl Engine {
         Ok(())
     }
 
-    /// Plays `path` on the preview device only. Refuses if that device is the main output,
-    /// so a preview can never reach the virtual cable.
+    /// Plays `path` on the preview device. The preview may be the main device too (one headset
+    /// for headphones and mic); it then also reaches the main output.
     pub fn play_preview(&mut self, file: &str, path: &Path, meta: &SoundMeta) -> Result<(), String> {
         let (start, take) = trim_window(meta.trim_start, meta.trim_end)?;
         let volume = meta.volume.unwrap_or(1.0).clamp(0.0, 2.0);
 
-        let primary = resolved(&self.primary_id);
-        let preview = resolved(&self.preview_id);
-        if preview.is_some() && preview == primary {
-            return Err("Preview and main output use the same device. Choose a different preview device in Settings.".into());
-        }
         if self.preview_sink.is_none() {
             self.preview_sink = Some(open(self.preview_id.as_deref())?);
         }

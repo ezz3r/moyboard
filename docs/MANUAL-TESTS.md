@@ -57,7 +57,7 @@ Setup: install VB-CABLE (or another virtual cable), then run
 - [ ] Play button turns into Stop while the sound plays; Stop stops only that sound.
 - [ ] Headphone button plays only on the Settings → Preview output device; the virtual cable hears nothing.
 - [ ] Headphone Stop stops the preview but leaves the same sound playing on the main output.
-- [ ] Preview output set to the same device as the main output: preview is refused with an error.
+- [ ] Preview output set to the same device as the main output (headset with mic): preview plays, and it is heard on the main output too. No error.
 - [ ] A sound that ends on its own flips its Stop button back to Play without a click.
 - [ ] Hotkey starts a playing sound; the same hotkey stops it.
 - [ ] Trim "Play region" plays on the preview device, not on the cable.
