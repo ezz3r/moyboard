@@ -856,6 +856,18 @@ fn set_quick_panel_settings(
 }
 
 #[tauri::command]
+fn get_recent_colors(store: tauri::State<Store>) -> Vec<String> {
+    store.get(|cfg| cfg.recent_colors.clone())
+}
+
+/// Remembers a colour the user applied. Only `#rrggbb` is kept.
+#[tauri::command]
+fn push_recent_color(color: String, store: tauri::State<Store>) -> Result<(), String> {
+    check_color(&color)?;
+    store.update(|cfg| config::push_recent(&mut cfg.recent_colors, &color))
+}
+
+#[tauri::command]
 fn get_stop_all_hotkey(store: tauri::State<Store>) -> Option<String> {
     store.get(|cfg| cfg.stop_all_hotkey.clone())
 }
@@ -1070,6 +1082,8 @@ pub fn run() {
             get_quick_panel_settings,
             set_quick_panel_settings,
             get_stop_all_hotkey,
+            get_recent_colors,
+            push_recent_color,
             set_stop_all_hotkey,
             show_quick_panel,
             hide_quick_panel,

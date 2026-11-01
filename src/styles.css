@@ -1586,6 +1586,82 @@ button.group-title:hover {
   line-height: 1;
 }
 
+/* Colour picker: the trigger is a swatch; the popover is portalled to the body, placed by ColorPicker. */
+.color-trigger {
+  border: 1px solid var(--control-line);
+  cursor: pointer;
+}
+
+.color-trigger[aria-expanded="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.color-pop {
+  position: fixed;
+  z-index: 30;
+  box-sizing: border-box;
+  width: 232px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--elevation);
+  outline: none;
+}
+
+.color-pop .react-colorful {
+  width: 100%;
+  height: 150px;
+}
+
+.color-pop .react-colorful__saturation {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.color-hex label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.color-hex-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.color-hex-input[aria-invalid="true"] {
+  border-color: var(--alarm);
+}
+
+.color-hex-error {
+  display: block;
+  min-height: 16px;
+  margin-top: 4px;
+  color: var(--alarm);
+  font-size: 12px;
+}
+
+.color-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+}
+
 .swatch-none[aria-checked="true"] {
   border-color: var(--ink);
 }

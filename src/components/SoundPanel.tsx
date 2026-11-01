@@ -4,7 +4,7 @@ import { EmojiField } from "./EmojiField";
 import { HotkeyField } from "./HotkeyField";
 import { TrimEditor } from "./TrimEditor";
 import { extOf, stemOf } from "../names";
-import { Swatches } from "./Swatches";
+import { ColorPicker } from "./ColorPicker";
 import { Select } from "./Select";
 import type { SoundEntry, SoundMeta } from "../types";
 
@@ -113,11 +113,12 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
 
         <div className="field">
           <span>Colour</span>
-          <Swatches
+          <ColorPicker
             label="Pad colour"
             value={entry.meta.color ?? null}
-            inheritLabel="Use category colour"
+            resetLabel="Use category colour"
             onChange={(c) => void save({ color: c })}
+            onError={onError}
           />
         </div>
       </Section>

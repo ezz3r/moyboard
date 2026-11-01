@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api";
-import { Swatches } from "./Swatches";
+import { ColorPicker } from "./ColorPicker";
 import type { CategoryMeta } from "../types";
 
 type Props = {
@@ -47,11 +47,12 @@ export function CategoryPanel({ id, category, count, onChanged, onDeleted, onErr
 
       <div className="field">
         <span>Colour for all sounds in this category</span>
-        <Swatches
+        <ColorPicker
           label="Category colour"
           value={color}
-          inheritLabel="No colour"
+          resetLabel="No colour"
           onChange={(c) => void save({ color: c })}
+          onError={onError}
         />
       </div>
 

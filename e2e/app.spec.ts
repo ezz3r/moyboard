@@ -252,8 +252,25 @@ test("category: new category is created and selected", async ({ page }) => {
 test("category colour is applied to its sounds", async ({ page }) => {
   await pickCategory(page, "Memes");
   await page.getByRole("button", { name: "Edit category" }).click();
-  await sidebar(page).getByRole("radio", { name: "Colour #5fb3c9" }).click();
+  await sidebar(page).getByRole("button", { name: /^Category colour:/ }).click();
+  const picker = page.getByRole("dialog", { name: "Category colour" });
+  await picker.getByRole("textbox", { name: "Hex" }).fill("#5fb3c9");
+  await page.keyboard.press("Escape");
   await expect(pad(page, "airhorn")).toHaveAttribute("style", /#5fb3c9/);
+});
+
+test("colour picker: invalid hex is refused, presets and reset apply", async ({ page }) => {
+  await pickCategory(page, "Memes");
+  await page.getByRole("button", { name: "Edit category" }).click();
+  await sidebar(page).getByRole("button", { name: /^Category colour:/ }).click();
+  const picker = page.getByRole("dialog", { name: "Category colour" });
+  await picker.getByRole("textbox", { name: "Hex" }).fill("#zz");
+  await expect(picker.getByRole("alert")).toHaveText(/six hex digits/);
+  await expect(picker.getByRole("textbox", { name: "Hex" })).toHaveAttribute("aria-invalid", "true");
+  await picker.getByRole("radio", { name: "Teal" }).click();
+  await expect(pad(page, "airhorn")).toHaveAttribute("style", /#30b0c7/);
+  await picker.getByRole("button", { name: "No colour" }).click();
+  await expect(sidebar(page).getByRole("button", { name: /^Category colour:/ })).toHaveAccessibleName(/none/);
 });
 
 test("all view: sections per category, Uncategorized last", async ({ page }) => {

@@ -70,6 +70,8 @@ export const api = {
   getQuickPanelSettings: () => call<QuickPanelSettings>("get_quick_panel_settings"),
   setQuickPanelSettings: (hotkey: string | null, mode: "hold" | "toggle") =>
     call<void>("set_quick_panel_settings", { hotkey, mode }),
+  getRecentColors: () => call<string[]>("get_recent_colors"),
+  pushRecentColor: (color: string) => call<void>("push_recent_color", { color }),
   getStopAllHotkey: () => call<string | null>("get_stop_all_hotkey"),
   setStopAllHotkey: (hotkey: string | null) => call<void>("set_stop_all_hotkey", { hotkey }),
   showQuickPanel: () => call<void>("show_quick_panel"),

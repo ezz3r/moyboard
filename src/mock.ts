@@ -53,6 +53,7 @@ let startMinimized = false;
 let quickHotkey: string | null = null;
 let quickMode: "hold" | "toggle" = "toggle";
 let stopHotkey: string | null = null;
+let recentColors: string[] = [];
 let library = dir;
 
 function blank(): SoundMeta {
@@ -147,6 +148,14 @@ export async function call<T>(cmd: string, args: Record<string, unknown> = {}): 
       if (hotkey && hotkey === stopHotkey) throw new Error("Stop all sounds already uses this hotkey");
       quickHotkey = hotkey;
       quickMode = args.mode as "hold" | "toggle";
+      return undefined as T;
+    }
+    case "get_recent_colors":
+      return [...recentColors] as T;
+    case "push_recent_color": {
+      const color = String(args.color).toLowerCase();
+      if (!/^#[0-9a-f]{6}$/.test(color)) throw new Error(`invalid colour: ${color}`);
+      recentColors = [color, ...recentColors.filter((c) => c !== color)].slice(0, 8);
       return undefined as T;
     }
     case "get_stop_all_hotkey":

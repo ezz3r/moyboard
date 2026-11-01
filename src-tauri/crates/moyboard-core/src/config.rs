@@ -55,6 +55,17 @@ pub fn check_color(color: &str) -> Result<(), String> {
     if ok { Ok(()) } else { Err(format!("invalid colour: {color}")) }
 }
 
+/// How many custom colours the picker remembers.
+pub const RECENT_COLORS: usize = 8;
+
+/// Puts `color` first in the recent list. Case-insensitive, no duplicates, capped at `RECENT_COLORS`.
+pub fn push_recent(list: &mut Vec<String>, color: &str) {
+    let color = color.to_ascii_lowercase();
+    list.retain(|c| *c != color);
+    list.insert(0, color);
+    list.truncate(RECENT_COLORS);
+}
+
 /// Trims and checks a category name. Names are short labels, not paragraphs.
 pub fn clean_category_name(name: &str) -> Result<String, String> {
     let name = name.trim();
@@ -102,6 +113,8 @@ pub struct Config {
     pub quick_tile_height: Option<u32>,
     /// Last position and size of the Quick Panel. `None` means the default.
     pub quick_panel_geometry: Option<PanelGeometry>,
+    /// Custom colours used lately, newest first, `#rrggbb`, at most `RECENT_COLORS`.
+    pub recent_colors: Vec<String>,
     pub sounds: BTreeMap<String, SoundMeta>,
     pub categories: BTreeMap<String, CategoryMeta>,
 }
@@ -172,6 +185,20 @@ mod tests {
         assert!(check_color("#fff").is_err());
         assert!(check_color("red").is_err());
         assert!(check_color("#zzzzzz").is_err());
+    }
+
+    #[test]
+    fn recent_colours_newest_first_no_duplicates_capped() {
+        let mut list = Vec::new();
+        for i in 0..10 {
+            push_recent(&mut list, &format!("#0000{i:02x}"));
+        }
+        assert_eq!(list.len(), RECENT_COLORS);
+        assert_eq!(list[0], "#000009");
+        push_recent(&mut list, "#00000A");
+        assert_eq!(list[0], "#00000a");
+        assert_eq!(list.iter().filter(|c| *c == "#00000a").count(), 1);
+        assert_eq!(list.len(), RECENT_COLORS);
     }
 
     #[test]
