@@ -156,6 +156,15 @@ Run on the Windows build. Debug builds print `moyboard: quick panel key Pressed/
 - [ ] Idle CPU and memory are unchanged from before the redesign (no blur or continuous animation).
 - [ ] Empty board (no sounds): the empty-state text is shown.
 
+## Layout v7
+- [ ] Output device and both volume sliders in the bottom bar change the audio on the cable and on the headphones.
+- [ ] Monitor slider ("You") is disabled when the monitor output is off; the bar says why on hover.
+- [ ] Window minimum 640 × 480 is enforced by Windows; nothing is cut off at that size.
+- [ ] Edit card resize handle (left edge of the card) appears on hover, drags, and double-click resets to 300.
+- [ ] Window at 150% and 200% display scaling: header title, bottom bar and card fit without overlap.
+- [ ] Grid scrolls; the header and the bottom bar do not move.
+- [ ] Dark mode: card shadow is visible against the window background.
+
 ## Windows-only items not run in WSL
 The v2 playback routing (preview device, Stop per sound, playback events),
 global hotkey toggling, Recycle Bin delete and the Windows installer were not
