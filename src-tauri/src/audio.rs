@@ -235,7 +235,8 @@ impl Engine {
     fn apply_volumes(&self) {
         for v in &self.voices {
             if v.preview {
-                v.main.set_volume(v.volume);
+                // Previews follow "You" (monitor gain), not "Others": they never reach the cable.
+                v.main.set_volume(v.volume * self.monitor_gain);
                 continue;
             }
             v.main.set_volume(v.volume * self.master);
