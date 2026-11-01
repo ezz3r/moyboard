@@ -15,6 +15,9 @@
   --accent: #0066cc;
   --accent-ink: #ffffff;
   --alarm: #c9372c;
+  /* Playing on the main output (blue) and in the headphone preview (green). Icon and bars carry the meaning too. */
+  --playing-main: #0066cc;
+  --playing-preview: #1d7f3a;
   --scrim: rgb(0 0 0 / 0.35);
   --elevation: 0 8px 24px rgb(0 0 0 / 0.14);
   --rgb-accent: 0, 102, 204;
@@ -47,6 +50,8 @@
     --accent: #4da3ff;
     --accent-ink: #001a33;
     --alarm: #ff6961;
+    --playing-main: #4da3ff;
+    --playing-preview: #5fd17f;
     --scrim: rgb(0 0 0 / 0.55);
     --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
     --rgb-accent: 77, 163, 255;
@@ -68,6 +73,8 @@
   --accent: #4da3ff;
   --accent-ink: #001a33;
   --alarm: #ff6961;
+  --playing-main: #4da3ff;
+  --playing-preview: #5fd17f;
   --scrim: rgb(0 0 0 / 0.55);
   --elevation: 0 8px 24px rgb(0 0 0 / 0.45);
   --rgb-accent: 77, 163, 255;
@@ -791,7 +798,8 @@ button.group-title:hover {
 }
 
 @media (pointer: coarse) {
-  .pad-row .pad-btn:not(.pad-stop) {
+  .pad-row .pad-btn:not(.pad-stop),
+  .pad-stop:not(:disabled) {
     opacity: 1;
     visibility: visible;
   }
@@ -832,10 +840,12 @@ button.group-title:hover {
   color: var(--accent-ink);
 }
 
-/* Stop shows only while an instance sounds. Its slot is reserved when idle, so Play never moves. */
-.pad-stop:not(:disabled) {
+/* Stop shows on hover or focus, and only while the pad sounds. Its slot stays reserved, so Play never moves. */
+.pad:hover .pad-stop:not(:disabled),
+.pad:focus-within .pad-stop:not(:disabled) {
   opacity: 1;
   visibility: visible;
+  transition-delay: 0s;
   color: var(--ink);
 }
 
@@ -913,13 +923,15 @@ button.group-title:hover {
 
 /* Live ring: a steady ring in the category colour while the pad sounds. No animation. */
 .pad.is-playing {
-  border-color: var(--cat, var(--accent));
-  box-shadow: 0 0 0 2px var(--cat, var(--accent));
-  background: color-mix(in srgb, var(--cat, var(--accent)) 12%, transparent);
+  border-color: var(--playing-main);
+  box-shadow: 0 0 0 2px var(--playing-main);
+  background: color-mix(in srgb, var(--playing-main) 10%, transparent);
 }
 
-.pad.is-playing .pad-glyph {
-  color: var(--cat, var(--accent));
+.pad.is-previewing:not(.is-playing) {
+  border-color: var(--playing-preview);
+  box-shadow: 0 0 0 2px var(--playing-preview);
+  background: color-mix(in srgb, var(--playing-preview) 10%, transparent);
 }
 
 /* Hotkey badge, bottom-left. Read-only; set it in the sidebar. */
@@ -943,7 +955,7 @@ button.group-title:hover {
   pointer-events: none;
 }
 
-/* Bottom-right: instance count and equalizer. */
+/* Bottom-right: one badge per output that sounds. */
 .pad-status {
   position: absolute;
   z-index: 1;
@@ -955,28 +967,51 @@ button.group-title:hover {
   pointer-events: none;
 }
 
-.pad-eq {
+/* Output badge: icon, equalizer bars and the count. Colour is set per output. */
+.playing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.playing-badge.is-main {
+  color: var(--playing-main);
+}
+
+.playing-badge.is-preview {
+  color: var(--playing-preview);
+}
+
+.playing-eq {
   display: inline-flex;
   align-items: flex-end;
   gap: 2px;
-  height: 12px;
-  width: 12px;
+  height: 10px;
+  width: 9px;
 }
 
-.pad-eq i {
+.playing-eq i {
   display: block;
-  width: 3px;
+  width: 2px;
   height: 100%;
-  background: var(--accent);
+  background: currentColor;
   transform-origin: bottom;
   animation: eq 900ms ease-in-out infinite;
 }
 
-.pad-eq i:nth-child(2) {
+.playing-eq i:nth-child(2) {
   animation-delay: -300ms;
 }
 
-.pad-eq i:nth-child(3) {
+.playing-eq i:nth-child(3) {
   animation-delay: -600ms;
 }
 
@@ -988,16 +1023,6 @@ button.group-title:hover {
   50% {
     transform: scaleY(1);
   }
-}
-
-.pad-count {
-  padding: 1px 6px;
-  border-radius: var(--radius);
-  background: var(--accent-ink);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
 }
 
 .pad.is-missing {
@@ -1871,8 +1896,13 @@ button.group-title:hover {
 }
 
 .tile.is-playing {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: var(--playing-main);
+  background: color-mix(in srgb, var(--playing-main) 12%, transparent);
+}
+
+.tile.is-previewing:not(.is-playing) {
+  border-color: var(--playing-preview);
+  background: color-mix(in srgb, var(--playing-preview) 12%, transparent);
 }
 
 .tile.is-missing {
@@ -1958,16 +1988,12 @@ button.group-title:hover {
   pointer-events: none;
 }
 
-.tile-count {
+.tile-status {
   position: absolute;
-  right: 3px;
-  top: 6px;
-  padding: 0 3px;
-  border-radius: var(--radius);
-  background: var(--accent-ink);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 650;
+  right: 4px;
+  top: 4px;
+  display: flex;
+  gap: 3px;
   pointer-events: none;
 }
 

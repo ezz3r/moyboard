@@ -10,6 +10,7 @@ import { SoundPanel } from "./components/SoundPanel";
 import { Settings as SettingsView } from "./components/Settings";
 import { emptyMeta, type CategoryMeta, type OutputState, type Playing, type SoundEntry, type TileSizes } from "./types";
 import { stemOf } from "./names";
+import { countsOf } from "./playback";
 import { ChevronDown, RefreshCw, Search, Settings, Square, X } from "lucide-react";
 
 const ALL = "all";
@@ -296,8 +297,7 @@ export default function App() {
       entry={s}
       accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
       selected={selection?.type === "sound" && selection.id === s.fileName}
-      instances={playing.filter((p) => p.fileName === s.fileName && !p.previewing).length}
-      previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
+      counts={countsOf(playing, s.fileName)}
       onSelect={() => setSelection({ type: "sound", id: s.fileName })}
       onPlay={() => act(() => api.playSound(s.fileName))}
       onStop={() => act(() => api.stopSound(s.fileName, false))}

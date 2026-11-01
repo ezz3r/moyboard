@@ -2,15 +2,16 @@ import { Headphones, Play, Square } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { SoundEntry } from "../types";
 import { hotkeyLabel, stemOf } from "../names";
+import type { Counts } from "../playback";
+import { PlayingBadge } from "./PlayingBadge";
 
 type Props = {
   entry: SoundEntry;
   /** Category or per-sound colour, `#rrggbb`. Drawn as a stripe on the left edge. */
   accent: string | null;
   selected: boolean;
-  /** Number of main-output instances still sounding. Play always starts one more. */
-  instances: number;
-  previewing: boolean;
+  /** Voices still sounding per output. Play always starts one more. */
+  counts: Counts;
   onSelect: () => void;
   onPlay: () => void;
   onStop: () => void;
@@ -27,8 +28,7 @@ export function Pad({
   entry,
   accent,
   selected,
-  instances,
-  previewing,
+  counts,
   onSelect,
   onPlay,
   onStop,
@@ -38,7 +38,9 @@ export function Pad({
 }: Props) {
   const name = stemOf(entry.fileName);
   const missing = entry.missing;
-  const playing = instances > 0;
+  const { main, preview } = counts;
+  const playing = main > 0;
+  const previewing = preview > 0;
   const classes = [
     "pad",
     selected && "is-selected",
@@ -62,7 +64,7 @@ export function Pad({
             className="pad-btn pad-stop"
             onClick={onStop}
             disabled={!playing}
-            aria-label={`Stop all ${instances > 1 ? `${instances} instances of ` : ""}${name}`}
+            aria-label={`Stop all ${main > 1 ? `${main} instances of ` : ""}${name}`}
             title="Stop all instances"
           >
             <Square size={14} fill="currentColor" aria-hidden="true" />
@@ -116,18 +118,8 @@ export function Pad({
 
       {(playing || previewing) && !missing && (
         <div className="pad-status">
-          {instances > 1 && (
-            <span className="pad-count" aria-label={`${instances} playing`}>
-              x{instances}
-            </span>
-          )}
-          {playing && (
-            <span className="pad-eq" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-          )}
+          {playing && <PlayingBadge output="main" count={main} />}
+          {previewing && <PlayingBadge output="preview" count={preview} />}
         </div>
       )}
 

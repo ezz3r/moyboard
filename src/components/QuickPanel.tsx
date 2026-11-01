@@ -3,6 +3,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { api, isTauri, onLibraryChanged, onPlayback } from "../api";
 import { SoundTile } from "./SoundTile";
 import type { CategoryMeta, Playing, SoundEntry } from "../types";
+import { countsOf } from "../playback";
 import { GripVertical, Layers, Square, X } from "lucide-react";
 
 const ALL = "all";
@@ -169,8 +170,7 @@ export function QuickPanel() {
                 key={s.fileName}
                 entry={s}
                 accent={s.meta.color ?? (s.meta.category ? (categories[s.meta.category]?.color ?? null) : null)}
-                instances={playing.filter((p) => p.fileName === s.fileName && !p.previewing).length}
-                previewing={playing.some((p) => p.fileName === s.fileName && p.previewing)}
+                counts={countsOf(playing, s.fileName)}
                 onPlay={() => act(() => api.playSound(s.fileName))}
                 onPreview={() => act(() => api.previewSound(s.fileName))}
               />

@@ -1,14 +1,15 @@
 import type { CSSProperties } from "react";
 import type { SoundEntry } from "../types";
 import { hotkeyLabel, stemOf } from "../names";
+import type { Counts } from "../playback";
+import { PlayingBadge } from "./PlayingBadge";
 
 type Props = {
   entry: SoundEntry;
   /** Category or per-sound colour, `#rrggbb`. Drawn as a stripe on the top edge. */
   accent: string | null;
-  /** Main-output instances still sounding. Play always starts one more. */
-  instances: number;
-  previewing: boolean;
+  /** Voices still sounding per output. Play always starts one more. */
+  counts: Counts;
   onPlay: () => void;
   onPreview: () => void;
 };
@@ -17,10 +18,12 @@ type Props = {
  * One small tile in the Quick Panel grid. Left click plays on the main output, right click
  * previews on the headphones. Stopping is done with the panel's Stop button, not per tile.
  */
-export function SoundTile({ entry, accent, instances, previewing, onPlay, onPreview }: Props) {
+export function SoundTile({ entry, accent, counts, onPlay, onPreview }: Props) {
   const name = stemOf(entry.fileName);
   const missing = entry.missing;
-  const playing = instances > 0;
+  const { main, preview } = counts;
+  const playing = main > 0;
+  const previewing = preview > 0;
   const classes = ["tile", playing && "is-playing", previewing && "is-previewing", missing && "is-missing"]
     .filter(Boolean)
     .join(" ");
@@ -46,10 +49,11 @@ export function SoundTile({ entry, accent, instances, previewing, onPlay, onPrev
       </button>
 
       {entry.meta.hotkey && !missing && <span className="tile-key">{hotkeyLabel(entry.meta.hotkey)}</span>}
-      {instances > 1 && (
-        <span className="tile-count" aria-label={`${instances} playing`}>
-          x{instances}
-        </span>
+      {(playing || previewing) && !missing && (
+        <div className="tile-status">
+          {playing && <PlayingBadge output="main" count={main} />}
+          {previewing && <PlayingBadge output="preview" count={preview} />}
+        </div>
       )}
     </div>
   );
