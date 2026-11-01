@@ -247,7 +247,8 @@ impl Engine {
             }
             v.main.set_volume(v.volume * self.master);
             if let Some(m) = &v.monitor {
-                m.set_volume(v.volume * self.master * self.monitor_gain);
+                // "You" hears the sound as it is: Others (master) only affects the cable.
+                m.set_volume(v.volume * self.monitor_gain);
             }
         }
     }
