@@ -1147,8 +1147,15 @@ button.group-title:hover {
 
 /* ---------- Trim editor (sidebar) ---------- */
 
+/* Trim: waveform, the three times, then the actions in three rows. */
+.trim {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .trim h3 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 15px;
   font-weight: 650;
 }
@@ -1192,9 +1199,41 @@ button.group-title:hover {
 
 .trim-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  align-items: end;
+  align-items: start;
+}
+
+.trim-fields .field > span {
+  white-space: nowrap;
+}
+
+/* Length is read-only; it sits at the height of the inputs beside it. */
+.trim-fields output.value {
+  display: flex;
+  align-items: center;
+  height: 36px;
+}
+
+.trim-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trim-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trim-row-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.btn-block {
+  width: 100%;
 }
 
 .trim-fields input[type="number"] {

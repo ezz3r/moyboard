@@ -115,8 +115,8 @@ export function TrimEditor({ entry, onSaved, onExported }: Props) {
         {status && <p className="hint" role="status">{status}</p>}
         {error && <p className="error" role="alert">{error}</p>}
 
-        <div className="sheet-actions sheet-split">
-          <div className="sheet-actions">
+        <div className="trim-actions">
+          <div className="trim-row">
             <button
               type="button"
               className="btn"
@@ -134,7 +134,8 @@ export function TrimEditor({ entry, onSaved, onExported }: Props) {
               Stop
             </button>
           </div>
-          <div className="sheet-actions">
+
+          <div className="trim-row trim-row-split">
             <button
               type="button"
               className="btn btn-quiet"
@@ -159,24 +160,25 @@ export function TrimEditor({ entry, onSaved, onExported }: Props) {
             >
               Save as new file
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={busy || !wave}
-              onClick={() =>
-                run("", async () => {
-                  await api.setSoundMeta(entry.fileName, {
-                    ...entry.meta,
-                    trimStart,
-                    trimEnd,
-                  });
-                  onSaved();
-                })
-              }
-            >
-              Save trim
-            </button>
           </div>
+
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            disabled={busy || !wave}
+            onClick={() =>
+              run("", async () => {
+                await api.setSoundMeta(entry.fileName, {
+                  ...entry.meta,
+                  trimStart,
+                  trimEnd,
+                });
+                onSaved();
+              })
+            }
+          >
+            Save trim
+          </button>
         </div>
     </section>
   );
