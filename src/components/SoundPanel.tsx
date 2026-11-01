@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { EmojiField } from "./EmojiField";
 import { HotkeyField } from "./HotkeyField";
@@ -80,79 +80,80 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
   const hotkey = entry.meta.hotkey;
   const clash = hotkey ? sounds.find((s) => s.fileName !== entry.fileName && s.meta.hotkey === hotkey) : undefined;
 
-  // Edit card order: Name, Emoji and Category, Volume, Trim, Colour, Hotkey, then Delete.
+  // The card is split into three sections with a heading each: what the sound is, how it plays,
+  // and how it is trimmed. Deleting sits apart at the bottom.
   return (
-    <div className="panel">
-      <label className="field">
-        <span>Name</span>
-        <span className="name-row">
-          <input
-            value={stem}
-            onChange={(e) => setStem(e.target.value)}
-            onBlur={() => void rename()}
-            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-          />
-          <span className="ext">{ext}</span>
-        </span>
-      </label>
+    <div className="panel sound-panel">
+      <Section title="Sound">
+        <label className="field">
+          <span>Name</span>
+          <span className="name-row">
+            <input
+              value={stem}
+              onChange={(e) => setStem(e.target.value)}
+              onBlur={() => void rename()}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            />
+            <span className="ext">{ext}</span>
+          </span>
+        </label>
 
-      <div className="field-row">
-        <EmojiField value={entry.meta.emoji} onChange={(e) => void save({ emoji: e })} />
+        <div className="field-row">
+          <EmojiField value={entry.meta.emoji} onChange={(e) => void save({ emoji: e })} />
+          <div className="field grow">
+            <span>Category</span>
+            <Select
+              aria-label="Category"
+              value={entry.meta.category ?? ""}
+              options={[{ value: "", label: "Uncategorized" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+              onChange={(v) => void save({ category: v || null })}
+            />
+          </div>
+        </div>
 
-        <div className="field grow">
-          <span>Category</span>
-          <Select
-            aria-label="Category"
-            value={entry.meta.category ?? ""}
-            options={[{ value: "", label: "Uncategorized" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
-            onChange={(v) => void save({ category: v || null })}
+        <div className="field">
+          <span>Colour</span>
+          <Swatches
+            label="Pad colour"
+            value={entry.meta.color ?? null}
+            inheritLabel="Use category colour"
+            onChange={(c) => void save({ color: c })}
           />
         </div>
-      </div>
+      </Section>
 
-      <label className="field">
-        <span className="field-head">
-          Volume <output className="value">{Math.round(volume * 100)}%</output>
-        </span>
-        <input
-          type="range"
-          min={0}
-          max={2}
-          step={0.05}
-          value={volume}
-          onChange={(e) => setVolume(Number(e.target.value))}
-        />
-      </label>
+      <Section title="Playback">
+        <label className="field">
+          <span className="field-head">
+            Volume <output className="value">{Math.round(volume * 100)}%</output>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+          />
+        </label>
 
-      <TrimEditor
-        key={entry.fileName}
-        entry={entry}
-        onSaved={onChanged}
-        onExported={onExported}
-      />
+        <div className="field">
+          <span>Hotkey</span>
+          <span className="hotkey-row">
+            <HotkeyField value={hotkey ?? null} onChange={(h) => void save({ hotkey: h })} />
+            {hotkey && (
+              <button type="button" className="btn btn-quiet" onClick={() => void save({ hotkey: null })}>
+                Clear
+              </button>
+            )}
+          </span>
+          {clash && <p className="warn">{stemOf(clash.fileName)} already uses this hotkey.</p>}
+        </div>
+      </Section>
 
-      <div className="field">
-        <span>Colour</span>
-        <Swatches
-          label="Pad colour"
-          value={entry.meta.color ?? null}
-          inheritLabel="Use category colour"
-          onChange={(c) => void save({ color: c })}
-        />
-      </div>
-
-      <div className="field">
-        <span>Hotkey</span>
-        <span className="hotkey-row">
-          <HotkeyField value={hotkey ?? null} onChange={(h) => void save({ hotkey: h })} />
-          {hotkey && (
-            <button type="button" className="btn btn-quiet" onClick={() => void save({ hotkey: null })}>
-              Clear
-            </button>
-          )}
-        </span>
-        {clash && <p className="warn">{stemOf(clash.fileName)} already uses this hotkey.</p>}
-      </div>
+      <Section title="Trim" bare>
+        <TrimEditor key={entry.fileName} entry={entry} onSaved={onChanged} onExported={onExported} />
+      </Section>
 
       <div className="panel-foot">
         <button type="button" className="btn btn-danger" onClick={onDelete}>
@@ -161,5 +162,15 @@ export function SoundPanel({ entry, sounds, categories, onChanged, onRenamed, on
         <p className="hint">Moves the file to the Recycle Bin. Shortcut: Delete key with the pad selected.</p>
       </div>
     </div>
+  );
+}
+
+/** One titled block of the edit card. `bare` skips the heading when the child brings its own. */
+function Section({ title, bare, children }: { title: string; bare?: boolean; children: ReactNode }) {
+  return (
+    <section className="edit-section" aria-label={title}>
+      {!bare && <h3 className="edit-heading">{title}</h3>}
+      {children}
+    </section>
   );
 }

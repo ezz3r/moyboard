@@ -1966,3 +1966,33 @@ button.group-title:hover {
   margin-bottom: 4px;
   color: var(--ink-2);
 }
+
+/* ---------- Edit card sections (SoundPanel) ----------
+   Three blocks with a heading and a hairline between them; delete sits apart at the bottom. */
+.sound-panel {
+  gap: 0;
+}
+
+.edit-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sound-panel > .edit-section:first-child {
+  padding-top: 0;
+}
+
+.edit-heading {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+
+.sound-panel > .panel-foot {
+  margin-top: 16px;
+}

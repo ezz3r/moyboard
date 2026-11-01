@@ -82,7 +82,7 @@ export function Settings({
         <h2>For you</h2>
         <p className="hint">
           Each sound also plays on your Windows default output, so you hear it.
-          {output.monitorActive ? "" : " Your default output is the main output, so nothing extra plays."}
+          {output.monitorActive ? "" : output.previewSelected ? " Your default output is the main output, so only previews use this volume." : " Your default output is the main output, so nothing extra plays."}
         </p>
         <label className="inline-field">
           <span>Your volume <output className="value">{Math.round(output.monitorVolume * 100)}%</output></span>

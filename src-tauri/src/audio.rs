@@ -100,6 +100,12 @@ impl Engine {
         default.is_some() && default != resolved(&self.primary_id)
     }
 
+    /// Whether "You" can be used: the monitor copy plays, or previews have their own device and
+    /// "You" sets their level. Only `monitor_active` decides whether the monitor stream opens.
+    pub fn you_active(&self) -> bool {
+        self.monitor_active() || self.preview_id.is_some()
+    }
+
     /// Opens (or reuses) the monitor stream on the Windows default output. `None` when the
     /// default is the main output.
     fn monitor_stream(&mut self) -> Result<Option<&MixerDeviceSink>, String> {

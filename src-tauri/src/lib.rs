@@ -473,7 +473,7 @@ fn list_output_devices(store: tauri::State<Store>, engine: tauri::State<AudioSta
     let (selected, monitor_volume, preview_selected) = store.get(|cfg| {
         (cfg.output_device.clone(), cfg.monitor_volume, cfg.preview_device.clone())
     });
-    let monitor_active = lock(&engine)?.monitor_active();
+    let monitor_active = lock(&engine)?.you_active();
     Ok(OutputState {
         devices: Engine::list_devices()?,
         selected,

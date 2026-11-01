@@ -470,7 +470,7 @@ export default function App() {
             <output className="value">{Math.round(master * 100)} %</output>
           </label>
 
-          <label className="top-field volume" title={output.monitorActive ? "Your volume: sounds you hear on the Windows default output" : "Off: the Windows default output is the main output"}>
+          <label className="top-field volume" title={yourVolumeHint(output)}>
             <span>You</span>
             <input
               type="range"
@@ -660,4 +660,12 @@ function IconButton({
       {children}
     </button>
   );
+}
+
+/** Tooltip for the "You" slider: what it controls right now. */
+function yourVolumeHint(output: OutputState): string {
+  if (output.monitorActive && output.previewSelected) return "Your volume: sounds on the Windows default output and headphone previews";
+  if (output.monitorActive) return "Your volume: sounds you hear on the Windows default output";
+  if (output.previewSelected) return "Your volume: headphone previews only";
+  return "Off: set a preview output in Settings, or make the Windows default output something other than the main output";
 }
