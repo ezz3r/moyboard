@@ -112,45 +112,6 @@ export function Settings({
             />
           </>
         )}
-        <label className="inline-field">
-          <span>Others volume <output className="value">{Math.round(output.masterVolume * 100)}%</output></span>
-          <input
-            type="range"
-            min={0}
-            max={2}
-            step={0.05}
-            value={output.masterVolume}
-            aria-label="Volume for others (main output)"
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              onOutputChanged({ masterVolume: v });
-              void api.setMasterVolume(v).catch((err) => onError(String(err)));
-            }}
-          />
-        </label>
-      </section>
-
-      <section className="settings-section">
-        <h2>For you</h2>
-        <p className="hint">
-          Your copy of each sound plays on your Windows default output, when that is not the main output. Previews always use this volume.
-        </p>
-        <label className="inline-field">
-          <span>Your volume <output className="value">{Math.round(output.monitorVolume * 100)}%</output></span>
-          <input
-            type="range"
-            min={0}
-            max={2}
-            step={0.05}
-            value={output.monitorVolume}
-            aria-label="Volume for you (monitor output)"
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              onOutputChanged({ monitorVolume: v });
-              void api.setMonitorVolume(v).catch((err) => onError(String(err)));
-            }}
-          />
-        </label>
       </section>
 
       <section className="settings-section">

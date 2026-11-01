@@ -1738,13 +1738,41 @@ button.group-title:hover {
 
 /* ---------- Search (top bar) ---------- */
 
+.top-volumes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-left: auto;
+}
+
+.top-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.volume {
+  color: var(--ink-2);
+}
+
+.volume input[type="range"] {
+  width: 72px;
+}
+
+.volume output {
+  min-width: 3.5em;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
 .top-search {
   position: relative;
   display: flex;
   align-items: center;
-  flex: 0 1 240px;
+  flex: 0 1 200px;
   min-width: 140px;
-  margin-left: auto;
   color: var(--ink-2);
 }
 
